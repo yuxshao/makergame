@@ -7,7 +7,7 @@ open Ast
 %token SEMI LPAREN RPAREN LBRACK RBRACK LCURLY RCURLY COMMA
 %token PLUS MINUS TIMES DIVIDE ASSIGN NOT
 %token EQ NEQ LT LEQ GT GEQ TRUE FALSE AND OR
-%token RETURN IF ELSE FOR WHILE INT BOOL VOID
+%token RETURN IF ELSE FOR WHILE INT BOOL FLOAT STRING VOID
 %token <int> LITERAL
 %token <string> ID
 %token EOF
@@ -56,6 +56,8 @@ typ:
     INT { Int }
   | BOOL { Bool }
   | VOID { Void }
+  | FLOAT { Float }
+  | STRING { String }
   | typ LBRACK LITERAL RBRACK { Arr($1, $3) }
 
 vdecl_list:

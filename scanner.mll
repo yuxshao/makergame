@@ -5,14 +5,17 @@
 rule token = parse
   [' ' '\t' '\r' '\n'] { token lexbuf } (* Whitespace *)
 | "/*"     { comment lexbuf }           (* Comments *)
+(* grouping *)
 | '['      { LBRACK }
 | ']'      { RBRACK }
 | '('      { LPAREN }
 | ')'      { RPAREN }
 | '{'      { LCURLY }
 | '}'      { RCURLY }
+(* separators *)
 | ';'      { SEMI }
 | ','      { COMMA }
+(* arithmetic and logical *)
 | '+'      { PLUS }
 | '-'      { MINUS }
 | '*'      { TIMES }
@@ -27,14 +30,19 @@ rule token = parse
 | "&&"     { AND }
 | "||"     { OR }
 | "!"      { NOT }
+(* control flow *)
 | "if"     { IF }
 | "else"   { ELSE }
 | "for"    { FOR }
 | "while"  { WHILE }
 | "return" { RETURN }
+(* datatypes *)
 | "int"    { INT }
 | "bool"   { BOOL }
+| "string" { STRING }
+| "float"  { FLOAT }
 | "void"   { VOID }
+(* literals *)
 | "true"   { TRUE }
 | "false"  { FALSE }
 | ['0'-'9']+ as lxm { LITERAL(int_of_string lxm) }

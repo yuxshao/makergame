@@ -8,6 +8,8 @@ type uop = Neg | Not
 type typ =
     Int
   | Bool
+  | Float
+  | String
   | Void
   | Arr of typ * int
 
@@ -16,6 +18,8 @@ type bind = typ * string
 type expr =
     Literal of int
   | BoolLit of bool
+  | FloatLit of float
+  | StringLit of string
   | Id of string
   | Binop of expr * op * expr
   | Unop of uop * expr
@@ -91,6 +95,8 @@ let string_of_typ = function
     Int -> "int"
   | Bool -> "bool"
   | Void -> "void"
+  | Float -> "float"
+  | String -> "string"
 
 let string_of_vdecl (t, id) = string_of_typ t ^ " " ^ id ^ ";\n"
 
