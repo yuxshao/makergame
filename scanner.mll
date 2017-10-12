@@ -20,6 +20,8 @@ rule token = parse
 | '-'      { MINUS }
 | '*'      { TIMES }
 | '/'      { DIVIDE }
+| '^'      { EXPONENT }
+| '%'      { MODULO }
 | '='      { ASSIGN }
 | "=="     { EQ }
 | "!="     { NEQ }
