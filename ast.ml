@@ -74,11 +74,22 @@ let make_game_obj name members events =
     ; draw = empty }
   in
   let add_event obj event = match event with
-    | (Create, block) -> { obj with create = block }
-    | (Step, block) -> { obj with step = block }
-    | (Destroy, block) -> { obj with destroy = block }
-    | (Draw, block) -> { obj with draw = block }
-     (* TODO: fail if multiple CREATE blocks *)
+    | (Create, block) ->
+      if obj.create != empty
+      then failwith ("CREATE already defined in " ^ obj.name)
+      else { obj with create = block }
+    | (Step, block) ->
+      if obj.step != empty
+      then failwith ("STEP already defined in " ^ obj.name)
+      else { obj with step = block }
+    | (Destroy, block) ->
+      if obj.destroy != empty
+      then failwith ("DESTROY already defined in " ^ obj.name)
+      else { obj with destroy = block }
+    | (Draw, block) ->
+      if obj.draw != empty
+      then failwith ("DRAW already defined in " ^ obj.name)
+      else { obj with draw = block }
   in
   List.fold_left add_event initial_obj events
 
