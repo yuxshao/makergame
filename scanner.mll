@@ -38,6 +38,7 @@ rule token = parse
   | "else"   { ELSE }
   | "for"    { FOR }
   | "while"  { WHILE }
+  | "foreach" { FOREACH }
   | "return" { RETURN }
   (* datatypes *)
   | "int"    { INT }
@@ -47,6 +48,11 @@ rule token = parse
   | "void"   { VOID }
   | "sprite" { SPRITE }
   | "sound"  { SOUND }
+  (* game keywords *)
+  | "CREATE" { CREATE }
+  | "DESTROY" { DESTROY }
+  | "DRAW" { DRAW }
+  | "STEP" { STEP }
   (* literals *)
   | "true"   { TRUE }
   | "false"  { FALSE }

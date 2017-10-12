@@ -7,8 +7,9 @@ open Ast
 %token SEMI LPAREN RPAREN LBRACK RBRACK LCURLY RCURLY COMMA
 %token PLUS MINUS TIMES DIVIDE EXPONENT MODULO ASSIGN NOT
 %token EQ NEQ LT LEQ GT GEQ TRUE FALSE AND OR
-%token RETURN IF ELSE FOR WHILE
+%token RETURN IF ELSE FOR WHILE FOREACH
 %token INT BOOL FLOAT STRING SPRITE SOUND VOID
+%token CREATE DESTROY DRAW STEP
 %token <int> LITERAL
 %token <string> ID
 %token EOF
@@ -34,17 +35,36 @@ program:
   decls EOF { $1 }
 
 decls:
-   /* nothing */ { [], [] }
- | decls vdecl { ($2 :: fst $1), snd $1 }
- | decls fdecl { fst $1, ($2 :: snd $1) }
+   /* nothing */ { [], [], [] }
+ | decls vdecl { add_vdecl $1 $2 }
+ | decls fdecl { add_fdecl $1 $2 }
+ | decls odecl { add_odecl $1 $2 }
+
+code_block:
+   LCURLY vdecl_list stmt_list RCURLY
+   { { locals = List.rev $2
+     ; body = List.rev $3} }
 
 fdecl:
-   typ ID LPAREN formals_opt RPAREN LCURLY vdecl_list stmt_list RCURLY
-     { { typ = $1;
-	 fname = $2;
-	 formals = $4;
-	 locals = List.rev $7;
-	 body = List.rev $8 } }
+   typ ID LPAREN formals_opt RPAREN code_block
+     { { typ = $1
+	     ; fname = $2
+	     ; formals = $4
+       ; block = $6 } }
+
+event:
+  | CREATE code_block { (Create, $2) }
+  | DESTROY code_block { (Destroy, $2) }
+  | STEP code_block { (Step, $2) }
+  | DRAW code_block { (Draw, $2) }
+
+event_list:
+    /* nothing */    { [] }
+  | event_list event { $2 :: $1 }
+
+odecl:
+   ID LCURLY vdecl_list event_list RCURLY
+     { make_game_obj $1 (List.rev $3) $4 }
 
 formals_opt:
     /* nothing */ { [] }
@@ -85,6 +105,7 @@ stmt:
   | FOR LPAREN expr_opt SEMI expr SEMI expr_opt RPAREN stmt
      { For($3, $5, $7, $9) }
   | WHILE LPAREN expr RPAREN stmt { While($3, $5) }
+  | FOREACH LPAREN ID ID RPAREN stmt { Foreach($3, $4, $6) }
 
 expr_opt:
     /* nothing */ { Noexpr }
