@@ -7,7 +7,8 @@ open Ast
 %token SEMI LPAREN RPAREN LBRACK RBRACK LCURLY RCURLY COMMA
 %token PLUS MINUS TIMES DIVIDE EXPONENT MODULO ASSIGN NOT
 %token EQ NEQ LT LEQ GT GEQ TRUE FALSE AND OR
-%token RETURN IF ELSE FOR WHILE INT BOOL FLOAT STRING VOID
+%token RETURN IF ELSE FOR WHILE
+%token INT BOOL FLOAT STRING SPRITE SOUND VOID
 %token <int> LITERAL
 %token <string> ID
 %token EOF
@@ -56,6 +57,8 @@ formal_list:
 typ:
     INT { Int }
   | BOOL { Bool }
+  | SPRITE { Sprite }
+  | SOUND { Sound }
   | VOID { Void }
   | FLOAT { Float }
   | STRING { String }

@@ -10,6 +10,8 @@ type typ =
   | Bool
   | Float
   | String
+  | Sprite
+  | Sound
   | Void
   | Arr of typ * int
 
@@ -100,6 +102,8 @@ let rec string_of_typ = function
   | Bool -> "bool"
   | Void -> "void"
   | Float -> "float"
+  | Sprite -> "sprite"
+  | Sound -> "sound"
   | Arr(typ, len) -> (string_of_typ typ) ^ "[" ^ (string_of_int len) ^ "]"
   | String -> "string"
 

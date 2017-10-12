@@ -44,6 +44,8 @@ rule token = parse
 | "string" { STRING }
 | "float"  { FLOAT }
 | "void"   { VOID }
+| "sprite" { SPRITE }
+| "sound"  { SOUND }
 (* literals *)
 | "true"   { TRUE }
 | "false"  { FALSE }
