@@ -1,2 +1,5 @@
 parser.ml
 parser.mli
+_build
+*.o
+*.native
