@@ -17,24 +17,27 @@ module A = Ast
 
 module StringMap = Map.Make(String)
 
-let translate (globals, functions) =
+let translate ((globals, functions, _) : Ast.program) =
   let context = L.global_context () in
   let the_module = L.create_module context "MicroC"
   and i32_t   = L.i32_type   context
   and i8_t    = L.i8_type    context
   and i1_t    = L.i1_type    context
-  and float_t = L.float_type context
+  (* and float_t = L.float_type context *)
   and void_t  = L.void_type  context in
 
-  let rec ltype_of_typ = function
+  let ltype_of_typ = function
     | A.Int -> i32_t
     | A.Bool -> i1_t
-    | A.Float -> float_t
-    | A.Char -> i8_t
-    | A.Arr(typ, len) -> L.array_type (ltype_of_typ typ) len
+    | A.Float -> failwith "not implemented"
+    | A.Char -> failwith "not implemented"
+    | A.Arr _ -> failwith "not implemented"
+    (* | A.Float -> float_t *)
+    (* | A.Char -> i8_t *)
+    (* | A.Arr (typ, len) -> L.array_type (ltype_of_typ typ) len *)
     | A.Sprite -> failwith "not implemented"
     | A.Sound -> failwith "not implemented"
-    | A.Object o -> failwith "not implemented"
+    | A.Object _ -> failwith "not implemented"
     | A.Void -> void_t in
 
   (* Declare each global variable; remember its value in a map *)
@@ -84,7 +87,7 @@ let translate (globals, functions) =
 
       let formals = List.fold_left2 add_formal StringMap.empty fdecl.A.formals
           (Array.to_list (L.params the_function)) in
-      List.fold_left add_local formals fdecl.A.locals in
+      List.fold_left add_local formals fdecl.A.block.A.locals in
 
     (* Return the value for a variable or formal argument *)
     let lookup n = try StringMap.find n local_vars
@@ -93,18 +96,22 @@ let translate (globals, functions) =
 
     (* Construct code for an expression; return its value *)
     let rec expr builder = function
-	      A.Literal i -> L.const_int i32_t i
+	    | A.Literal i -> L.const_int i32_t i
       | A.BoolLit b -> L.const_int i1_t (if b then 1 else 0)
+      | A.StringLit _ -> failwith "not implemented"
+      | A.FloatLit _ -> failwith "not implemented"
       | A.Noexpr -> L.const_int i32_t 0
       | A.Id s -> L.build_load (lookup s) s builder
       | A.Binop (e1, op, e2) ->
 	      let e1' = expr builder e1
 	      and e2' = expr builder e2 in
 	      (match op with
-	         A.Add     -> L.build_add
+	       | A.Add     -> L.build_add
 	       | A.Sub     -> L.build_sub
 	       | A.Mult    -> L.build_mul
          | A.Div     -> L.build_sdiv
+         | A.Expo    -> failwith "not implemented"
+         | A.Modulo  -> failwith "not implemented"
 	       | A.And     -> L.build_and
 	       | A.Or      -> L.build_or
 	       | A.Equal   -> L.build_icmp L.Icmp.Eq
@@ -181,10 +188,11 @@ let translate (globals, functions) =
 
       | A.For (e1, e2, e3, body) -> stmt builder
 	                                    ( A.Block [A.Expr e1 ; A.While (e2, A.Block [body ; A.Expr e3]) ] )
+      | A.Foreach _ -> failwith "not implemented"
     in
 
     (* Build the code for each statement in the function *)
-    let builder = stmt builder (A.Block fdecl.A.body) in
+    let builder = stmt builder (A.Block fdecl.A.block.A.body) in
 
     (* Add a return if the last block falls off the end *)
     add_terminal builder (match fdecl.A.typ with

@@ -161,7 +161,7 @@ let check ((globals, functions, game_objs) : Ast.program) =
       | For(e1, e2, e3, st) -> ignore (expr e1); check_bool_expr e2;
         ignore (expr e3); stmt st
       | While(p, s) -> check_bool_expr p; stmt s
-      | Foreach(obj_t, id, s) -> ignore(game_obj_decl obj_t); stmt s
+      | Foreach(obj_t, _id, s) -> ignore(game_obj_decl obj_t); stmt s
     in
 
     stmt (Block block.body)
