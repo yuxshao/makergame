@@ -76,7 +76,7 @@ let check ((globals, functions, game_objs) : Ast.program) =
     with Not_found -> failwith ("unrecognized game object " ^ s)
   in
 
-  let _ = game_obj_decl "main" in (* Ensure "main" is defined *)
+  let _ = function_decl "main" in (* Ensure "main" is defined *)
 
   let check_block ~symbols ~func block =
     List.iter
