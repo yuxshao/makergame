@@ -10,7 +10,7 @@ type typ =
   | Int
   | Bool
   | Float
-  | String
+  | Char
   | Sprite
   | Sound
   | Object of string (* TODO: forbid making objects called void, int, etc. *)
@@ -31,7 +31,7 @@ type expr =
   | Noexpr
 
 type stmt =
-    Block of stmt list
+  | Block of stmt list
   | Expr of expr
   | Return of expr
   | If of expr * stmt * stmt
@@ -168,7 +168,7 @@ let rec string_of_typ = function
   | Sound -> "sound"
   | Object obj_t -> "object(" ^ obj_t ^ ")"
   | Arr(typ, len) -> (string_of_typ typ) ^ "[" ^ (string_of_int len) ^ "]"
-  | String -> "string"
+  | Char -> "char"
 
 let string_of_vdecl (t, id) = string_of_typ t ^ " " ^ id ^ ";\n"
 

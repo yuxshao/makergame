@@ -8,7 +8,7 @@ open Ast
 %token PLUS MINUS TIMES DIVIDE EXPONENT MODULO ASSIGN NOT
 %token EQ NEQ LT LEQ GT GEQ TRUE FALSE AND OR
 %token RETURN IF ELSE FOR WHILE FOREACH
-%token INT BOOL FLOAT STRING SPRITE SOUND VOID
+%token INT BOOL FLOAT CHAR SPRITE SOUND VOID
 %token CREATE DESTROY DRAW STEP
 %token <int> LITERAL
 %token <string> ID
@@ -81,7 +81,7 @@ typ:
   | SOUND { Sound }
   | VOID { Void }
   | FLOAT { Float }
-  | STRING { String }
+  | CHAR { Char }
   | typ LBRACK LITERAL RBRACK { Arr($1, $3) }
 
 vdecl_list:

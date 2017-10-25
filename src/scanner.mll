@@ -43,7 +43,7 @@ rule token = parse
   (* datatypes *)
   | "int"    { INT }
   | "bool"   { BOOL }
-  | "string" { STRING }
+  | "char" { CHAR }
   | "float"  { FLOAT }
   | "void"   { VOID }
   | "sprite" { SPRITE }

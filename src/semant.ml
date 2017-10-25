@@ -93,8 +93,10 @@ let check (globals, functions) =
 
     (* Return the type of an expression or throw an exception *)
     let rec expr = function
-	      Literal _ -> Int
+	    | Literal _ -> Int
       | BoolLit _ -> Bool
+      | FloatLit _ -> Float
+      | StringLit l -> Arr(Char, String.length l)
       | Id s -> type_of_identifier s
       | Binop(e1, op, e2) as e -> let t1 = expr e1 and t2 = expr e2 in
 	      (match op with
@@ -137,7 +139,7 @@ let check (globals, functions) =
 
     (* Verify a statement or throw an exception *)
     let rec stmt = function
-	      Block sl -> let rec check_block = function
+	    | Block sl -> let rec check_block = function
             [Return _ as s] -> stmt s
           | Return _ :: _ -> raise (Failure "nothing may follow a return")
           | Block sl :: ss -> check_block (sl @ ss)
