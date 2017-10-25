@@ -3,3 +3,5 @@ parser.mli
 _build
 *.o
 *.native
+*.ll
+*.mc
