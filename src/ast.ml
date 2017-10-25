@@ -54,6 +54,7 @@ type func_decl = {
 type event_type = Create | Destroy | Step | Draw
 type event = event_type * block
 
+(* consider using this for the AST post-semant *)
 type game_obj = {
   name : string;
   members : bind list;
