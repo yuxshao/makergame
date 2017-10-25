@@ -9,7 +9,7 @@ module StringMap = Map.Make(String)
 
    Check each global variable, then check each function *)
 
-let check (globals, functions) =
+let check ((globals, functions, game_objs) : Ast.program) =
 
   (* Raise an exception if the given list has a duplicate *)
   let report_duplicate exceptf list =
@@ -58,34 +58,40 @@ let check (globals, functions) =
     |> add ~fname:"printbig" ~arg_type:Int
   in
 
-  let function_decls = List.fold_left (fun m fd -> StringMap.add fd.fname fd m)
-      built_in_decls functions
+  let function_decls =
+    List.fold_left (fun m fd -> StringMap.add fd.fname fd m) built_in_decls functions
   in
 
-  let function_decl s = try StringMap.find s function_decls
-    with Not_found -> raise (Failure ("unrecognized function " ^ s))
+  let game_obj_decls =
+    List.fold_left (fun m obj -> StringMap.add obj.name obj m) StringMap.empty game_objs
   in
 
-  let _ = function_decl "main" in (* Ensure "main" is defined *)
+  let function_decl s =
+    try StringMap.find s function_decls
+    with Not_found -> failwith ("unrecognized function " ^ s)
+  in
 
-  let check_function func =
-    List.iter (check_not_void (fun n -> "illegal void formal " ^ n ^
-                                        " in " ^ func.fname)) func.formals;
+  let game_obj_decl s =
+    try StringMap.find s game_obj_decls
+    with Not_found -> failwith ("unrecognized game object " ^ s)
+  in
 
-    report_duplicate (fun n -> "duplicate formal " ^ n ^ " in " ^ func.fname)
-      (List.map snd func.formals);
+  let _ = game_obj_decl "main" in (* Ensure "main" is defined *)
 
-    List.iter (check_not_void (fun n -> "illegal void local " ^ n ^
-                                        " in " ^ func.fname)) func.locals;
+  let check_block ~symbols ~func block =
+    List.iter
+      (check_not_void (fun n -> "illegal void local " ^ n ^ " in " ^ func.fname))
+      block.locals;
 
-    report_duplicate (fun n -> "duplicate local " ^ n ^ " in " ^ func.fname)
-      (List.map snd func.locals);
+    report_duplicate
+      (fun n -> "duplicate local " ^ n ^ " in " ^ func.fname)
+      (List.map snd block.locals);
 
-    (* Type of each variable (global, formal, or local *)
-    let symbols = List.fold_left (fun m (t, n) -> StringMap.add n t m)
-	      StringMap.empty (globals @ func.formals @ func.locals )
+    let symbols =
+      List.fold_left (fun m (t, n) -> StringMap.add n t m) symbols block.locals
     in
 
+    (* Type of each variable (global, formal, or local *)
     let type_of_identifier s =
       try StringMap.find s symbols
       with Not_found -> raise (Failure ("undeclared identifier " ^ s))
@@ -155,9 +161,24 @@ let check (globals, functions) =
       | For(e1, e2, e3, st) -> ignore (expr e1); check_bool_expr e2;
         ignore (expr e3); stmt st
       | While(p, s) -> check_bool_expr p; stmt s
+      | Foreach(obj_t, id, s) -> ignore(game_obj_decl obj_t); stmt s
     in
 
-    stmt (Block func.body)
+    stmt (Block block.body)
 
   in
-  List.iter check_function functions
+  let check_function ~symbols func =
+    List.iter
+      (check_not_void (fun n -> "illegal void formal " ^ n ^ " in " ^ func.fname))
+      func.formals;
+
+    let symbols = List.fold_left (fun m (t, n) -> StringMap.add n t m) symbols func.formals in
+
+    report_duplicate
+      (fun n -> "duplicate formal " ^ n ^ " in " ^ func.fname)
+      (List.map snd func.formals);
+
+    check_block ~symbols ~func func.block;
+  in
+  let symbols = List.fold_left (fun m (t, n) -> StringMap.add n t m) StringMap.empty globals in
+  List.iter (check_function ~symbols) functions
