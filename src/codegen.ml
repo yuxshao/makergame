@@ -20,6 +20,7 @@ module StringMap = Map.Make(String)
 let translate ((globals, functions, _) : Ast.program) =
   let context = L.global_context () in
   let the_module = L.create_module context "MicroC"
+  and i64_t   = L.i64_type   context
   and i32_t   = L.i32_type   context
   and i8_t    = L.i8_type    context
   and i1_t    = L.i1_type    context
@@ -62,7 +63,7 @@ let translate ((globals, functions, _) : Ast.program) =
       and formal_types =
         Array.of_list (List.map (fun (t,_) -> ltype_of_typ t) fdecl.A.formals)
       in let ftype = L.function_type (ltype_of_typ fdecl.A.typ) formal_types in
-      StringMap.add name (L.define_function name ftype the_module, fdecl) m in
+      StringMap.add name (L.define_function ("f_" ^ name) ftype the_module, fdecl) m in
     List.fold_left function_decl StringMap.empty functions in
 
   (* Fill in the body of the given function *)
@@ -136,8 +137,9 @@ let translate ((globals, functions, _) : Ast.program) =
       | A.Call (f, act) ->
         let (fdef, fdecl) = StringMap.find f function_decls in
         let actuals = List.rev (List.map (expr builder) (List.rev act)) in
-        let result = (match fdecl.A.typ with A.Void -> ""
-                                           | _ -> f ^ "_result") in
+        let result =
+          match fdecl.A.typ with A.Void -> "" | _ -> f ^ "_result"
+        in
         L.build_call fdef (Array.of_list actuals) result builder
     in
 
@@ -154,7 +156,7 @@ let translate ((globals, functions, _) : Ast.program) =
         A.Block sl -> List.fold_left stmt builder sl
       | A.Expr e -> ignore (expr builder e); builder
       | A.Return e -> ignore (match fdecl.A.typ with
-            A.Void -> L.build_ret_void builder
+          | A.Void -> L.build_ret_void builder
           | _ -> L.build_ret (expr builder e) builder); builder
       | A.If (predicate, then_stmt, else_stmt) ->
         let bool_val = expr builder predicate in
@@ -186,8 +188,8 @@ let translate ((globals, functions, _) : Ast.program) =
         ignore (L.build_cond_br bool_val body_bb merge_bb pred_builder);
         L.builder_at_end context merge_bb
 
-      | A.For (e1, e2, e3, body) -> stmt builder
-                                      ( A.Block [A.Expr e1 ; A.While (e2, A.Block [body ; A.Expr e3]) ] )
+      | A.For (e1, e2, e3, body) ->
+        stmt builder (A.Block [A.Expr e1; A.While (e2, A.Block [body; A.Expr e3])])
       | A.Foreach _ -> failwith "not implemented"
     in
 
@@ -201,4 +203,65 @@ let translate ((globals, functions, _) : Ast.program) =
   in
 
   List.iter build_function_body functions;
+
+  (* define the main game loop *)
+  (* this is a while loop. maybe find a way to just add a while loop *)
+  let entry_type = L.function_type i32_t [||] in
+  let entry = L.define_function ("main") entry_type the_module in
+  let builder = L.builder_at_end context (L.entry_block entry) in
+  let window_title_str = L.build_global_stringptr "Hello world!" "title" builder in
+  let sf_window_ptr_t = L.pointer_type (L.named_struct_type context "sfWindow") in
+  let context_ptr_t = L.pointer_type (L.named_struct_type context "sfContextSettings") in
+  let char_ptr_t = L.pointer_type i8_t in
+  let sf_window_create = L.function_type sf_window_ptr_t [|i64_t; i32_t; char_ptr_t; i32_t; context_ptr_t |] in
+  let sf_window_create_fn = L.declare_function "sfWindow_create" sf_window_create the_module in
+  (* let sf_mode_t = L.struct_type context [|i32_t; i32_t; i32_t |] in *)
+  let sf_mode_val = L.const_struct context [|L.const_int i32_t 800; L.const_int i32_t 600; L.const_int i32_t 32|] in
+  let sf_mode_global = L.define_global "video_mode" sf_mode_val the_module in
+  let sf_mode_wh_ptr = L.build_bitcast sf_mode_global (L.pointer_type i64_t) "vm_wh_ptr" builder in
+  let sf_mode_wh = L.build_load sf_mode_wh_ptr "vm_wh" builder in
+  let sf_mode_bpp_ptr = L.build_gep sf_mode_global [|L.const_int i32_t 0; L.const_int i32_t 2|] "vm_bpp_ptr" builder in
+  let sf_mode_bpp = L.build_load sf_mode_bpp_ptr "vm_bpp" builder in
+  let window_style_val = L.const_int i32_t 6 in
+  let sf_window_val =
+    L.build_call
+      sf_window_create_fn
+      [| sf_mode_wh; sf_mode_bpp; window_title_str; window_style_val; L.const_null context_ptr_t |]
+      "sfwindow"
+      builder
+  in
+
+  let sf_window_is_open = L.function_type i1_t [|sf_window_ptr_t|] in
+  let sf_window_is_open_fn =
+    L.declare_function "sfWindow_isOpen" sf_window_is_open the_module
+  in
+  let pred_bb = L.append_block context "loop_cond" entry in
+  let _ = L.build_br pred_bb builder in
+  let sf_window_is_open_val =
+    L.build_call
+      sf_window_is_open_fn
+      [| sf_window_val |]
+      "is_open"
+      (L.builder_at_end context pred_bb)
+  in
+
+  let merge_bb = L.append_block context "loop_end" entry in
+
+  let loop_bb = L.append_block context "loop_body" entry in
+  let _ = L.build_br loop_bb (L.builder_at_end context pred_bb) in
+  let (main_fn, _) = StringMap.find "main" function_decls in
+  let _ =
+    L.build_call main_fn [||] "main_call" (L.builder_at_end context loop_bb)
+  in
+  let _ =
+    L.build_cond_br
+      sf_window_is_open_val
+      loop_bb
+      merge_bb
+      (L.builder_at_end context loop_bb)
+  in
+
+  let _ =
+    L.build_ret (L.const_int i32_t 0) (L.builder_at_end context merge_bb)
+  in
   the_module

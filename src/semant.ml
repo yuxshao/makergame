@@ -176,6 +176,8 @@ let check ((globals, functions, game_objs) : Ast.program) =
 
     let symbols = List.fold_left (fun m (t, n) -> StringMap.add n t m) symbols func.formals in
 
+    (* formals can have the same name as locals. is this okay? think about these
+       edge cases *)
     report_duplicate
       (fun n -> "duplicate formal " ^ n ^ " in " ^ func.fname)
       (List.map snd func.formals);
