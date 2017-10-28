@@ -10,6 +10,7 @@ open Ast
 %token RETURN IF ELSE FOR WHILE FOREACH
 %token INT BOOL FLOAT STRING SPRITE SOUND VOID
 %token CREATE DESTROY DRAW STEP
+%token EXTERN
 %token <int> LITERAL
 %token <string> ID
 %token <string> STRLIT
@@ -47,11 +48,16 @@ code_block:
      ; body = List.rev $3} }
 
 fdecl:
-   typ ID LPAREN formals_opt RPAREN code_block
+ | EXTERN typ ID LPAREN formals_opt RPAREN SEMI
+     { { typ = $2
+       ; fname = $3
+       ; formals = $5
+       ; block = None } }
+ | typ ID LPAREN formals_opt RPAREN code_block
      { { typ = $1
        ; fname = $2
        ; formals = $4
-       ; block = $6 } }
+       ; block = Some $6 } }
 
 event:
   | CREATE code_block { (Create, $2) }

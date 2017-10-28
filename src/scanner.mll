@@ -53,6 +53,8 @@ rule token = parse
   | "DESTROY" { DESTROY }
   | "DRAW" { DRAW }
   | "STEP" { STEP }
+  (* misc keywords *)
+  | "extern" { EXTERN }
   (* literals *)
   | "true"   { TRUE }
   | "false"  { FALSE }

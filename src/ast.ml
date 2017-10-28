@@ -48,7 +48,7 @@ type func_decl = {
   typ : typ;
   fname : string;
   formals : bind list;
-  block : block;
+  block : block option;
 }
 
 type event_type = Create | Destroy | Step | Draw
@@ -179,9 +179,13 @@ let string_of_block block =
   "}\n"
 
 let string_of_fdecl fdecl =
-  string_of_typ fdecl.typ ^ " " ^
-  fdecl.fname ^ "(" ^ String.concat ", " (List.map snd fdecl.formals) ^ ")\n" ^
-  string_of_block fdecl.block
+  let prefix, suffix =
+    match fdecl.block with
+    | None -> "extern ", ""
+    | Some block -> "", string_of_block block
+  in
+  prefix ^ string_of_typ fdecl.typ ^ " " ^ fdecl.fname ^ "(" ^
+  String.concat ", " (List.map snd fdecl.formals) ^ ")\n" ^ suffix
 
 let string_of_game_obj obj =
   obj.name ^ " {\n" ^

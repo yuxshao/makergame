@@ -44,24 +44,22 @@ let check ((globals, functions, game_objs) : Ast.program) =
   if List.mem "print" (List.map (fun fd -> fd.fname) functions)
   then failwith "function print may not be defined" else ();
 
-  report_duplicate (fun n -> "duplicate function " ^ n)
-    (List.map (fun fd -> fd.fname) functions);
-
-  (* Function declaration for a named function *)
-  let built_in_decls =
+  (* Add built-in function declarations *)
+  let functions =
     let add ~fname ~arg_type =
-      StringMap.add fname
-        { typ = Void; fname; formals = [(arg_type, "x")]; block = { locals = []; body = [] } }
+      List.cons { typ = Void; fname; formals = [(arg_type, "x")]; block = None }
     in
-    StringMap.empty
+    functions
     |> add ~fname:"print"    ~arg_type:Int
     |> add ~fname:"printb"   ~arg_type:Bool
-    |> add ~fname:"printbig" ~arg_type:Int
     |> add ~fname:"printstr" ~arg_type:String
   in
 
+  report_duplicate (fun n -> "duplicate function " ^ n)
+    (List.map (fun fd -> fd.fname) functions);
+
   let function_decls =
-    List.fold_left (fun m fd -> StringMap.add fd.fname fd m) built_in_decls functions
+    List.fold_left (fun m fd -> StringMap.add fd.fname fd m) StringMap.empty functions
   in
 
   let game_obj_decls =
@@ -104,7 +102,7 @@ let check ((globals, functions, game_objs) : Ast.program) =
       | Literal _ -> Int
       | BoolLit _ -> Bool
       | FloatLit _ -> Float
-      | StringLit l -> String
+      | StringLit _ -> String
       | Id s -> type_of_identifier s
       | Binop(e1, op, e2) as e -> let t1 = expr e1 and t2 = expr e2 in
         (match op with
@@ -184,7 +182,9 @@ let check ((globals, functions, game_objs) : Ast.program) =
       (fun n -> "duplicate formal " ^ n ^ " in " ^ func.fname)
       (List.map snd func.formals);
 
-    check_block ~symbols ~func func.block;
+    match func.block with
+    | Some block -> check_block ~symbols ~func block
+    | None -> ()
   in
   let symbols = List.fold_left (fun m (t, n) -> StringMap.add n t m) StringMap.empty globals in
   List.iter (check_function ~symbols) functions
