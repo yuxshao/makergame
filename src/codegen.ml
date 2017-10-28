@@ -24,7 +24,7 @@ let translate ((globals, functions, _) : Ast.program) =
   and i32_t   = L.i32_type   context
   and i8_t    = L.i8_type    context
   and i1_t    = L.i1_type    context
-  (* and float_t = L.float_type context *)
+  and float_t = L.float_type context
   and void_t  = L.void_type  context in
 
   let ltype_of_typ = function
@@ -207,11 +207,9 @@ let translate ((globals, functions, _) : Ast.program) =
   (* define the main game loop *)
   (* this is a while loop. maybe find a way to just add a while loop *)
   let entry_type = L.function_type i32_t [||] in
-  let entry = L.define_function ("main") entry_type the_module in
+  let entry = L.define_function ("game_main") entry_type the_module in
   let builder = L.builder_at_end context (L.entry_block entry) in
-  let window_title_str = L.build_global_stringptr "Hello world!" "title" builder in
-  let sf_window_ptr_t = L.pointer_type (L.named_struct_type context "sfWindow") in
-  let context_ptr_t = L.pointer_type (L.named_struct_type context "sfContextSettings") in
+
   let char_ptr_t = L.pointer_type i8_t in
   let sf_window_create = L.function_type sf_window_ptr_t [|i64_t; i32_t; char_ptr_t; i32_t; context_ptr_t |] in
   let sf_window_create_fn = L.declare_function "sfWindow_create" sf_window_create the_module in
@@ -230,38 +228,27 @@ let translate ((globals, functions, _) : Ast.program) =
       "sfwindow"
       builder
   in
-
-  let sf_window_is_open = L.function_type i1_t [|sf_window_ptr_t|] in
-  let sf_window_is_open_fn =
-    L.declare_function "sfWindow_isOpen" sf_window_is_open the_module
+  let set_sprite_position_fn =
+    L.declare_function "set_sprite_position"
+      (L.function_type void_t [|sf_sprite_ptr_t; float_t; float_t|]) the_module
   in
-  let pred_bb = L.append_block context "loop_cond" entry in
-  let _ = L.build_br pred_bb builder in
-  let sf_window_is_open_val =
-    L.build_call
-      sf_window_is_open_fn
-      [| sf_window_val |]
-      "is_open"
-      (L.builder_at_end context pred_bb)
+  let draw_sprite_fn =
+    L.declare_function "draw_sprite" (L.function_type void_t [|sf_sprite_ptr_t|]) the_module
   in
+  let texture_name_var = L.build_global_stringptr "cute_image.png" "texture_name" builder in
+  let my_sprite = L.build_call create_sprite_fn [|texture_name_var|] "sprite" builder in
 
   let merge_bb = L.append_block context "loop_end" entry in
 
   let loop_bb = L.append_block context "loop_body" entry in
   let _ = L.build_br loop_bb (L.builder_at_end context pred_bb) in
   let (main_fn, _) = StringMap.find "main" function_decls in
+  let _ = L.build_call main_fn [||] "main_call" builder in
   let _ =
-    L.build_call main_fn [||] "main_call" (L.builder_at_end context loop_bb)
+    L.build_call
+      set_sprite_position_fn
+      [|my_sprite; L.const_float float_t 30.; L.const_float float_t 50. |] "" builder
   in
-  let _ =
-    L.build_cond_br
-      sf_window_is_open_val
-      loop_bb
-      merge_bb
-      (L.builder_at_end context loop_bb)
-  in
-
-  let _ =
-    L.build_ret (L.const_int i32_t 0) (L.builder_at_end context merge_bb)
-  in
+  let _ = L.build_call draw_sprite_fn [|my_sprite|] "" builder in
+  let _ = L.build_ret (L.const_int i32_t 0) builder in
   the_module
