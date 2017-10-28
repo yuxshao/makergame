@@ -11,6 +11,7 @@ module StringMap = Map.Make(String)
 
 let check ((globals, functions, game_objs) : Ast.program) =
 
+  (* TODO: replace raise (Failure (...)) with failwith *)
   (* Raise an exception if the given list has a duplicate *)
   let report_duplicate exceptf list =
     let rec helper = function
@@ -56,6 +57,7 @@ let check ((globals, functions, game_objs) : Ast.program) =
     |> add ~fname:"print"    ~arg_type:Int
     |> add ~fname:"printb"   ~arg_type:Bool
     |> add ~fname:"printbig" ~arg_type:Int
+    |> add ~fname:"printstr" ~arg_type:String
   in
 
   let function_decls =
@@ -102,7 +104,7 @@ let check ((globals, functions, game_objs) : Ast.program) =
       | Literal _ -> Int
       | BoolLit _ -> Bool
       | FloatLit _ -> Float
-      | StringLit l -> Arr(Char, String.length l)
+      | StringLit l -> String
       | Id s -> type_of_identifier s
       | Binop(e1, op, e2) as e -> let t1 = expr e1 and t2 = expr e2 in
         (match op with

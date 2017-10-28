@@ -43,7 +43,7 @@ rule token = parse
   (* datatypes *)
   | "int"    { INT }
   | "bool"   { BOOL }
-  | "char" { CHAR }
+  | "string" { STRING }
   | "float"  { FLOAT }
   | "void"   { VOID }
   | "sprite" { SPRITE }
@@ -58,6 +58,8 @@ rule token = parse
   | "false"  { FALSE }
   | ['0'-'9']+ as lxm { LITERAL(int_of_string lxm) }
   | ['a'-'z' 'A'-'Z']['a'-'z' 'A'-'Z' '0'-'9' '_']* as lxm { ID(lxm) }
+  | ['a'-'z' 'A'-'Z']['a'-'z' 'A'-'Z' '0'-'9' '_']* as lxm { ID(lxm) }
+  | '"' { string_literal "" lexbuf }
   | eof { EOF }
   | _ as char { raise (Failure("illegal character " ^ Char.escaped char)) }
 
@@ -68,3 +70,13 @@ and line_comment = parse
 and block_comment = parse
     "*/" { token lexbuf }
   | _    { block_comment lexbuf }
+
+and string_literal accum = parse
+  | '\\' { escaped_string_literal accum lexbuf }
+  | '"' { STRLIT accum }
+  | [^'\"' '\\'] as c { string_literal (accum ^ (Char.escaped c)) lexbuf }
+
+and escaped_string_literal accum = parse
+    (* only n, \, quote escape characters for now *)
+  | ['\\' '\"' 'n'] as c { string_literal (accum ^ (Char.escaped c)) lexbuf }
+  | _ as c { failwith ("unsupported escape character \\" ^ Char.escaped c) }

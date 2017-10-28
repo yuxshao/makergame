@@ -10,7 +10,7 @@ type typ =
   | Int
   | Bool
   | Float
-  | Char
+  | String
   | Sprite
   | Sound
   | Object of string (* TODO: forbid making objects called void, int, etc. *)
@@ -168,7 +168,7 @@ let rec string_of_typ = function
   | Sound -> "sound"
   | Object obj_t -> "object(" ^ obj_t ^ ")"
   | Arr(typ, len) -> (string_of_typ typ) ^ "[" ^ (string_of_int len) ^ "]"
-  | Char -> "char"
+  | String -> "string"
 
 let string_of_vdecl (t, id) = string_of_typ t ^ " " ^ id ^ ";\n"
 

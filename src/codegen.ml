@@ -30,10 +30,9 @@ let translate ((globals, functions, _) : Ast.program) =
     | A.Int -> i32_t
     | A.Bool -> i1_t
     | A.Float -> failwith "not implemented"
-    | A.Char -> failwith "not implemented"
     | A.Arr _ -> failwith "not implemented"
     (* | A.Float -> float_t *)
-    (* | A.Char -> i8_t *)
+    | A.String -> L.pointer_type i8_t
     (* | A.Arr (typ, len) -> L.array_type (ltype_of_typ typ) len *)
     | A.Sprite -> failwith "not implemented"
     | A.Sound -> failwith "not implemented"
@@ -71,6 +70,7 @@ let translate ((globals, functions, _) : Ast.program) =
     let builder = L.builder_at_end context (L.entry_block the_function) in
 
     let int_format_str = L.build_global_stringptr "%d\n" "fmt" builder in
+    let str_format_str = L.build_global_stringptr "%s\n" "fmt" builder in
 
     (* Construct the function's "locals": formal arguments and locally
        declared variables.  Allocate each on the stack, initialize their
@@ -98,7 +98,7 @@ let translate ((globals, functions, _) : Ast.program) =
     let rec expr builder = function
       | A.Literal i -> L.const_int i32_t i
       | A.BoolLit b -> L.const_int i1_t (if b then 1 else 0)
-      | A.StringLit _ -> failwith "not implemented"
+      | A.StringLit l -> L.build_global_stringptr l "literal" builder
       | A.FloatLit _ -> failwith "not implemented"
       | A.Noexpr -> L.const_int i32_t 0
       | A.Id s -> L.build_load (lookup s) s builder
@@ -127,7 +127,9 @@ let translate ((globals, functions, _) : Ast.program) =
            A.Neg     -> L.build_neg
          | A.Not     -> L.build_not) e' "tmp" builder
       | A.Assign (s, e) -> let e' = expr builder e in
-        ignore (L.build_store e' (lookup s) builder); e'
+	      ignore (L.build_store e' (lookup s) builder); e'
+      | A.Call ("printstr", [e]) ->
+        L.build_call printf_func [| str_format_str; (expr builder e) |] "printf" builder
       | A.Call ("print", [e]) | A.Call ("printb", [e]) ->
         L.build_call printf_func [| int_format_str ; (expr builder e) |]
           "printf" builder
