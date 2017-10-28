@@ -72,10 +72,10 @@ and block_comment = parse
 
 and string_literal accum = parse
   | '\\' { escaped_string_literal accum lexbuf }
-  | '"' { STRLIT accum }
+  | '"' { STRLIT (Scanf.unescaped accum) }
   | [^'\"' '\\'] as c { string_literal (accum ^ (Char.escaped c)) lexbuf }
 
 and escaped_string_literal accum = parse
     (* only n, \, quote escape characters for now *)
-  | ['\\' '\"' 'n'] as c { string_literal (accum ^ (Char.escaped c)) lexbuf }
+  | ['\\' '\"' 'n'] as c { string_literal (accum ^ "\\" ^ (String.make 1 c)) lexbuf }
   | _ as c { failwith ("unsupported escape character \\" ^ Char.escaped c) }
