@@ -48,8 +48,8 @@ code_block:
 fdecl:
    typ ID LPAREN formals_opt RPAREN code_block
      { { typ = $1
-	     ; fname = $2
-	     ; formals = $4
+       ; fname = $2
+       ; formals = $4
        ; block = $6 } }
 
 event:
