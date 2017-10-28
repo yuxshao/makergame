@@ -20,10 +20,11 @@ module StringMap = Map.Make(String)
 let translate ((globals, functions, _) : Ast.program) =
   let context = L.global_context () in
   let the_module = L.create_module context "MicroC"
+  and i64_t   = L.i64_type   context
   and i32_t   = L.i32_type   context
   and i8_t    = L.i8_type    context
   and i1_t    = L.i1_type    context
-  (* and float_t = L.float_type context *)
+  and float_t = L.float_type context
   and void_t  = L.void_type  context in
 
   let ltype_of_typ = function
@@ -61,7 +62,7 @@ let translate ((globals, functions, _) : Ast.program) =
       and formal_types =
         Array.of_list (List.map (fun (t,_) -> ltype_of_typ t) fdecl.A.formals)
       in let ftype = L.function_type (ltype_of_typ fdecl.A.typ) formal_types in
-      StringMap.add name (L.define_function name ftype the_module, fdecl) m in
+      StringMap.add name (L.define_function ("f_" ^ name) ftype the_module, fdecl) m in
     List.fold_left function_decl StringMap.empty functions in
 
   (* Fill in the body of the given function *)
@@ -138,8 +139,9 @@ let translate ((globals, functions, _) : Ast.program) =
       | A.Call (f, act) ->
         let (fdef, fdecl) = StringMap.find f function_decls in
         let actuals = List.rev (List.map (expr builder) (List.rev act)) in
-        let result = (match fdecl.A.typ with A.Void -> ""
-                                           | _ -> f ^ "_result") in
+        let result =
+          match fdecl.A.typ with A.Void -> "" | _ -> f ^ "_result"
+        in
         L.build_call fdef (Array.of_list actuals) result builder
     in
 
@@ -156,7 +158,7 @@ let translate ((globals, functions, _) : Ast.program) =
         A.Block sl -> List.fold_left stmt builder sl
       | A.Expr e -> ignore (expr builder e); builder
       | A.Return e -> ignore (match fdecl.A.typ with
-            A.Void -> L.build_ret_void builder
+          | A.Void -> L.build_ret_void builder
           | _ -> L.build_ret (expr builder e) builder); builder
       | A.If (predicate, then_stmt, else_stmt) ->
         let bool_val = expr builder predicate in
@@ -188,8 +190,8 @@ let translate ((globals, functions, _) : Ast.program) =
         ignore (L.build_cond_br bool_val body_bb merge_bb pred_builder);
         L.builder_at_end context merge_bb
 
-      | A.For (e1, e2, e3, body) -> stmt builder
-                                      ( A.Block [A.Expr e1 ; A.While (e2, A.Block [body ; A.Expr e3]) ] )
+      | A.For (e1, e2, e3, body) ->
+        stmt builder (A.Block [A.Expr e1; A.While (e2, A.Block [body; A.Expr e3])])
       | A.Foreach _ -> failwith "not implemented"
     in
 
@@ -203,4 +205,36 @@ let translate ((globals, functions, _) : Ast.program) =
   in
 
   List.iter build_function_body functions;
+
+  (* define the main game loop *)
+  (* this is a while loop. maybe find a way to just add a while loop *)
+  let entry_type = L.function_type i32_t [||] in
+  let entry = L.define_function ("game_main") entry_type the_module in
+  let builder = L.builder_at_end context (L.entry_block entry) in
+
+  let char_ptr_t = L.pointer_type i8_t in
+  let sf_sprite_ptr_t = L.pointer_type (L.named_struct_type context "sfSprite") in
+  let create_sprite_fn =
+    L.declare_function "load_image"
+      (L.function_type sf_sprite_ptr_t [|char_ptr_t|]) the_module
+  in
+  let set_sprite_position_fn =
+    L.declare_function "set_sprite_position"
+      (L.function_type void_t [|sf_sprite_ptr_t; float_t; float_t|]) the_module
+  in
+  let draw_sprite_fn =
+    L.declare_function "draw_sprite" (L.function_type void_t [|sf_sprite_ptr_t|]) the_module
+  in
+  let texture_name_var = L.build_global_stringptr "cute_image.png" "texture_name" builder in
+  let my_sprite = L.build_call create_sprite_fn [|texture_name_var|] "sprite" builder in
+
+  let (main_fn, _) = StringMap.find "main" function_decls in
+  let _ = L.build_call main_fn [||] "main_call" builder in
+  let _ =
+    L.build_call
+      set_sprite_position_fn
+      [|my_sprite; L.const_float float_t 30.; L.const_float float_t 50. |] "" builder
+  in
+  let _ = L.build_call draw_sprite_fn [|my_sprite|] "" builder in
+  let _ = L.build_ret (L.const_int i32_t 0) builder in
   the_module
