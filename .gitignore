@@ -5,5 +5,7 @@ _build
 *.o
 *.native
 *.ll
-*.mc
+/*.mc
+*.s
+a.out
 vgcore.*
