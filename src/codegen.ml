@@ -127,7 +127,7 @@ let translate ((globals, functions, _) : Ast.program) =
            A.Neg     -> L.build_neg
          | A.Not     -> L.build_not) e' "tmp" builder
       | A.Assign (s, e) -> let e' = expr builder e in
-	      ignore (L.build_store e' (lookup s) builder); e'
+        ignore (L.build_store e' (lookup s) builder); e'
       | A.Call ("printstr", [e]) ->
         L.build_call printf_func [| str_format_str; (expr builder e) |] "printf" builder
       | A.Call ("print", [e]) | A.Call ("printb", [e]) ->
