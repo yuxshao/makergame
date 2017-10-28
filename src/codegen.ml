@@ -211,22 +211,10 @@ let translate ((globals, functions, _) : Ast.program) =
   let builder = L.builder_at_end context (L.entry_block entry) in
 
   let char_ptr_t = L.pointer_type i8_t in
-  let sf_window_create = L.function_type sf_window_ptr_t [|i64_t; i32_t; char_ptr_t; i32_t; context_ptr_t |] in
-  let sf_window_create_fn = L.declare_function "sfWindow_create" sf_window_create the_module in
-  (* let sf_mode_t = L.struct_type context [|i32_t; i32_t; i32_t |] in *)
-  let sf_mode_val = L.const_struct context [|L.const_int i32_t 800; L.const_int i32_t 600; L.const_int i32_t 32|] in
-  let sf_mode_global = L.define_global "video_mode" sf_mode_val the_module in
-  let sf_mode_wh_ptr = L.build_bitcast sf_mode_global (L.pointer_type i64_t) "vm_wh_ptr" builder in
-  let sf_mode_wh = L.build_load sf_mode_wh_ptr "vm_wh" builder in
-  let sf_mode_bpp_ptr = L.build_gep sf_mode_global [|L.const_int i32_t 0; L.const_int i32_t 2|] "vm_bpp_ptr" builder in
-  let sf_mode_bpp = L.build_load sf_mode_bpp_ptr "vm_bpp" builder in
-  let window_style_val = L.const_int i32_t 6 in
-  let sf_window_val =
-    L.build_call
-      sf_window_create_fn
-      [| sf_mode_wh; sf_mode_bpp; window_title_str; window_style_val; L.const_null context_ptr_t |]
-      "sfwindow"
-      builder
+  let sf_sprite_ptr_t = L.pointer_type (L.named_struct_type context "sfSprite") in
+  let create_sprite_fn =
+    L.declare_function "load_image"
+      (L.function_type sf_sprite_ptr_t [|char_ptr_t|]) the_module
   in
   let set_sprite_position_fn =
     L.declare_function "set_sprite_position"
@@ -238,10 +226,6 @@ let translate ((globals, functions, _) : Ast.program) =
   let texture_name_var = L.build_global_stringptr "cute_image.png" "texture_name" builder in
   let my_sprite = L.build_call create_sprite_fn [|texture_name_var|] "sprite" builder in
 
-  let merge_bb = L.append_block context "loop_end" entry in
-
-  let loop_bb = L.append_block context "loop_body" entry in
-  let _ = L.build_br loop_bb (L.builder_at_end context pred_bb) in
   let (main_fn, _) = StringMap.find "main" function_decls in
   let _ = L.build_call main_fn [||] "main_call" builder in
   let _ =
