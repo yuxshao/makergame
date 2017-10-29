@@ -23,7 +23,7 @@ let translate ((globals, functions, _) : Ast.program) =
   and i32_t   = L.i32_type    context
   and i8_t    = L.i8_type     context
   and i1_t    = L.i1_type     context
-  and float_t = L.double_type context
+  and float_t = L.double_type context (* TODO: fix LRM to say double precision *)
   and void_t  = L.void_type   context in
 
   let ltype_of_typ = function
@@ -73,8 +73,9 @@ let translate ((globals, functions, _) : Ast.program) =
       | None -> assert false  (* this function should never try to build the body of a fn just declared *)
     in
 
-    let int_format_str = L.build_global_stringptr "%d\n" "fmt" builder in
-    let str_format_str = L.build_global_stringptr "%s\n" "fmt" builder in
+    let int_format_str   = L.build_global_stringptr "%d\n" "fmt" builder in
+    let float_format_str = L.build_global_stringptr "%f\n" "fmt" builder in
+    let str_format_str   = L.build_global_stringptr "%s\n" "fmt" builder in
 
     (* Construct the function's "locals": formal arguments and locally
        declared variables.  Allocate each on the stack, initialize their
@@ -136,8 +137,10 @@ let translate ((globals, functions, _) : Ast.program) =
       | A.Call ("printstr", [e]) ->
         L.build_call printf_func [| str_format_str; (expr builder e) |] "printf" builder
       | A.Call ("print", [e]) | A.Call ("printb", [e]) ->
-        L.build_call printf_func [| int_format_str ; (expr builder e) |]
-          "printf" builder
+        L.build_call printf_func [| int_format_str ; (expr builder e) |] "printf" builder
+      | A.Call ("print_float", [e]) ->
+        L.build_call printf_func [| float_format_str ; L.const_float float_t 3. |] "printf" builder
+      (* TODO: unify print names and their tests *)
       | A.Call (f, act) ->
         let (fdef, fdecl) = StringMap.find f function_decls in
         let actuals = List.rev (List.map (expr builder) (List.rev act)) in

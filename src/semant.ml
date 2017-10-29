@@ -50,9 +50,10 @@ let check ((globals, functions, game_objs) : Ast.program) =
       List.cons { typ = Void; fname; formals = [(arg_type, "x")]; block = None }
     in
     functions
-    |> add ~fname:"print"    ~arg_type:Int
-    |> add ~fname:"printb"   ~arg_type:Bool
-    |> add ~fname:"printstr" ~arg_type:String
+    |> add ~fname:"print"       ~arg_type:Int
+    |> add ~fname:"printb"      ~arg_type:Bool
+    |> add ~fname:"print_float" ~arg_type:Float
+    |> add ~fname:"printstr"    ~arg_type:String
   in
 
   report_duplicate (fun n -> "duplicate function " ^ n)
