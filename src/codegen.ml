@@ -20,11 +20,14 @@ module StringMap = Map.Make(String)
 let translate ((globals, functions, _) : Ast.program) =
   let context = L.global_context () in
   let the_module = L.create_module context "MicroC"
-  and i32_t   = L.i32_type    context
-  and i8_t    = L.i8_type     context
-  and i1_t    = L.i1_type     context
-  and float_t = L.double_type context (* TODO: fix LRM to say double precision *)
-  and void_t  = L.void_type   context in
+  and i32_t    = L.i32_type    context
+  and i8_t     = L.i8_type     context
+  and i1_t     = L.i1_type     context
+  (* TODO: tests for floating point parsing/scanning, printing *)
+  and float_t  = L.double_type context (* TODO: fix LRM to say double precision *)
+  and sprite_t = L.pointer_type (L.named_struct_type context "sfSprite")
+  and sound_t  = L.pointer_type (L.named_struct_type context "sfSound")
+  and void_t   = L.void_type   context in
 
   let ltype_of_typ = function
     | A.Int -> i32_t
@@ -33,8 +36,8 @@ let translate ((globals, functions, _) : Ast.program) =
     | A.Arr _ -> failwith "not implemented"
     | A.String -> L.pointer_type i8_t
     (* | A.Arr (typ, len) -> L.array_type (ltype_of_typ typ) len *)
-    | A.Sprite -> failwith "not implemented"
-    | A.Sound -> failwith "not implemented"
+    | A.Sprite -> sprite_t
+    | A.Sound -> sound_t
     | A.Object _ -> failwith "not implemented"
     | A.Void -> void_t in
 
@@ -224,17 +227,16 @@ let translate ((globals, functions, _) : Ast.program) =
   let builder = L.builder_at_end context (L.entry_block entry) in
 
   let char_ptr_t = L.pointer_type i8_t in
-  let sf_sprite_ptr_t = L.pointer_type (L.named_struct_type context "sfSprite") in
   let create_sprite_fn =
     L.declare_function "load_image"
-      (L.function_type sf_sprite_ptr_t [|char_ptr_t|]) the_module
+      (L.function_type (ltype_of_typ A.Sprite) [|char_ptr_t|]) the_module
   in
   let set_sprite_position_fn =
     L.declare_function "set_sprite_position"
-      (L.function_type void_t [|sf_sprite_ptr_t; float_t; float_t|]) the_module
+      (L.function_type void_t [|ltype_of_typ A.Sprite; float_t; float_t|]) the_module
   in
   let draw_sprite_fn =
-    L.declare_function "draw_sprite" (L.function_type void_t [|sf_sprite_ptr_t|]) the_module
+    L.declare_function "draw_sprite" (L.function_type void_t [|ltype_of_typ A.Sprite|]) the_module
   in
   let texture_name_var = L.build_global_stringptr "cute_image.png" "texture_name" builder in
   let my_sprite = L.build_call create_sprite_fn [|texture_name_var|] "sprite" builder in
