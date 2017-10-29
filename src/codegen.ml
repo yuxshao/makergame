@@ -220,25 +220,12 @@ let translate ((globals, functions, _) : Ast.program) =
 
   List.iter build_function functions;
 
-  (* define the main game loop *)
-  (* this is a while loop. maybe find a way to just add a while loop *)
+  (* Entry point definition *)
   let entry_type = L.function_type i32_t [||] in
   let entry = L.define_function ("game_main") entry_type the_module in
   let builder = L.builder_at_end context (L.entry_block entry) in
 
-  let (create_sprite_fn, _) = StringMap.find "load_image" function_decls in
-  let (set_sprite_position_fn, _) = StringMap.find "set_sprite_position" function_decls in
-  let (draw_sprite_fn, _) = StringMap.find "draw_sprite" function_decls in
-  let texture_name_var = L.build_global_stringptr "cute_image.png" "texture_name" builder in
-  let my_sprite = L.build_call create_sprite_fn [|texture_name_var|] "sprite" builder in
-
   let (main_fn, _) = StringMap.find "main" function_decls in
-  let _ = L.build_call main_fn [||] "main_call" builder in
-  let _ =
-    L.build_call
-      set_sprite_position_fn
-      [|my_sprite; L.const_float float_t 30.; L.const_float float_t 50. |] "" builder
-  in
-  let _ = L.build_call draw_sprite_fn [|my_sprite|] "" builder in
-  let _ = L.build_ret (L.const_int i32_t 0) builder in
+  let main_call = L.build_call main_fn [||] "main_call" builder in
+  let _ = L.build_ret main_call builder in
   the_module
