@@ -59,6 +59,11 @@ rule token = parse
   | "true"   { TRUE }
   | "false"  { FALSE }
   | ['0'-'9']+ as lxm { LITERAL(int_of_string lxm) }
+  | ['0'-'9']+'.'['0'-'9']* as lxm { FLOATLIT(float_of_string lxm) }
+  | '.'['0'-'9']+ as lxm { FLOATLIT(float_of_string lxm) }
+  (* | ['0'-'9']+'e'['+''-']['0'-'9']+ as lxm { LITERAL(float_of_string lxm) } *)
+  (* | ['0'-'9']+'.'['0'-'9']*('e'['+''-']['0'-'9']+)? as lxm { LITERAL(float_of_string lxm) } *)
+  (* | '.'['0'-'9']+('e'['+''-']['0'-'9']+)? as lxm { LITERAL(float_of_string lxm) } *)
   | ['a'-'z' 'A'-'Z']['a'-'z' 'A'-'Z' '0'-'9' '_']* as lxm { ID(lxm) }
   | '"' { string_literal "" lexbuf }
   | eof { EOF }

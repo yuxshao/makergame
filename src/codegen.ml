@@ -20,18 +20,17 @@ module StringMap = Map.Make(String)
 let translate ((globals, functions, _) : Ast.program) =
   let context = L.global_context () in
   let the_module = L.create_module context "MicroC"
-  and i32_t   = L.i32_type   context
-  and i8_t    = L.i8_type    context
-  and i1_t    = L.i1_type    context
-  and float_t = L.float_type context
-  and void_t  = L.void_type  context in
+  and i32_t   = L.i32_type    context
+  and i8_t    = L.i8_type     context
+  and i1_t    = L.i1_type     context
+  and float_t = L.double_type context
+  and void_t  = L.void_type   context in
 
   let ltype_of_typ = function
     | A.Int -> i32_t
     | A.Bool -> i1_t
-    | A.Float -> failwith "not implemented"
+    | A.Float -> float_t
     | A.Arr _ -> failwith "not implemented"
-    (* | A.Float -> float_t *)
     | A.String -> L.pointer_type i8_t
     (* | A.Arr (typ, len) -> L.array_type (ltype_of_typ typ) len *)
     | A.Sprite -> failwith "not implemented"
@@ -105,7 +104,7 @@ let translate ((globals, functions, _) : Ast.program) =
       | A.Literal i -> L.const_int i32_t i
       | A.BoolLit b -> L.const_int i1_t (if b then 1 else 0)
       | A.StringLit l -> L.build_global_stringptr l "literal" builder
-      | A.FloatLit _ -> failwith "not implemented"
+      | A.FloatLit f -> L.const_float float_t f
       | A.Noexpr -> L.const_int i32_t 0
       | A.Id s -> L.build_load (lookup s) s builder
       | A.Binop (e1, op, e2) ->

@@ -14,6 +14,7 @@ open Ast
 %token <int> LITERAL
 %token <string> ID
 %token <string> STRLIT
+%token <float> FLOATLIT
 %token EOF
 
 %nonassoc NOELSE
@@ -121,6 +122,7 @@ expr_opt:
 expr:
   | LITERAL          { Literal($1) }
   | STRLIT           { StringLit($1) }
+  | FLOATLIT         { FloatLit($1) }
   | TRUE             { BoolLit(true) }
   | FALSE            { BoolLit(false) }
   | ID               { Id($1) }
