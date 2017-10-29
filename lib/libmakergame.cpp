@@ -19,7 +19,7 @@ sf::Sprite *load_image(const char *filename) {
   return new sf::Sprite(name_and_image->second);
 }
 
-void set_sprite_position(sf::Sprite *sprite, float x, float y) {
+void set_sprite_position(sf::Sprite *sprite, double x, double y) {
   sprite->setPosition(x, y);
 }
 

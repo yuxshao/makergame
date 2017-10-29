@@ -226,18 +226,9 @@ let translate ((globals, functions, _) : Ast.program) =
   let entry = L.define_function ("game_main") entry_type the_module in
   let builder = L.builder_at_end context (L.entry_block entry) in
 
-  let char_ptr_t = L.pointer_type i8_t in
-  let create_sprite_fn =
-    L.declare_function "load_image"
-      (L.function_type (ltype_of_typ A.Sprite) [|char_ptr_t|]) the_module
-  in
-  let set_sprite_position_fn =
-    L.declare_function "set_sprite_position"
-      (L.function_type void_t [|ltype_of_typ A.Sprite; float_t; float_t|]) the_module
-  in
-  let draw_sprite_fn =
-    L.declare_function "draw_sprite" (L.function_type void_t [|ltype_of_typ A.Sprite|]) the_module
-  in
+  let (create_sprite_fn, _) = StringMap.find "load_image" function_decls in
+  let (set_sprite_position_fn, _) = StringMap.find "set_sprite_position" function_decls in
+  let (draw_sprite_fn, _) = StringMap.find "draw_sprite" function_decls in
   let texture_name_var = L.build_global_stringptr "cute_image.png" "texture_name" builder in
   let my_sprite = L.build_call create_sprite_fn [|texture_name_var|] "sprite" builder in
 
