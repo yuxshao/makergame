@@ -31,21 +31,29 @@ void draw_sprite(sf::Sprite *sprite) { window.draw(*sprite); }
 
 void end_game() { close_window(&window); }
 
-void game_main();
+void main_create();
+void main_step();
+void main_destroy();
+void main_draw();
 }
 
 int main() {
   window.create(sf::VideoMode(800, 600), "Hello World");
   window.setFramerateLimit(60);
 
+  main_create();
   while (window.isOpen()) {
     sf::Event event;
     while (window.pollEvent(event)) {
       if (event.type == sf::Event::Closed)
         window.close();
     }
-    game_main();
+    main_step();
+    window.clear();
+    main_draw();
     window.display();
   }
+
+  main_destroy();
   return 0;
 }
