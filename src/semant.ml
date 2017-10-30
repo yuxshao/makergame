@@ -59,6 +59,9 @@ let check ((globals, functions, gameobjs) : Ast.program) =
   report_duplicate (fun n -> "duplicate function " ^ n)
     (List.map (fun fd -> fd.fname) functions);
 
+  report_duplicate (fun n -> "duplicate gameobj " ^ n)
+    (List.map (fun fd -> fd.name) gameobjs);
+
   let function_decls =
     List.fold_left (fun m fd -> StringMap.add fd.fname fd m) StringMap.empty functions
   in
@@ -79,13 +82,13 @@ let check ((globals, functions, gameobjs) : Ast.program) =
 
   let _ = function_decl "main" in (* Ensure "main" is defined *)
 
-  let check_block ~symbols ~func block =
+  let check_block ~symbols ~name ~return block =
     List.iter
-      (check_not_void (fun n -> "illegal void local " ^ n ^ " in " ^ func.fname))
+      (check_not_void (fun n -> "illegal void local " ^ n ^ " in " ^ name))
       block.locals;
 
     report_duplicate
-      (fun n -> "duplicate local " ^ n ^ " in " ^ func.fname)
+      (fun n -> "duplicate local " ^ n ^ " in " ^ name)
       (List.map snd block.locals);
 
     let symbols =
@@ -156,9 +159,9 @@ let check ((globals, functions, gameobjs) : Ast.program) =
           | [] -> ()
         in check_block sl
       | Expr e -> ignore (expr e)
-      | Return e -> let t = expr e in if t = func.typ then () else
+      | Return e -> let t = expr e in if t = return then () else
           failwith ("return gives " ^ string_of_typ t ^ " expected " ^
-                    string_of_typ func.typ ^ " in " ^ string_of_expr e)
+                    string_of_typ return ^ " in " ^ string_of_expr e)
 
       | If(p, b1, b2) -> check_bool_expr p; stmt b1; stmt b2
       | For(e1, e2, e3, st) -> ignore (expr e1); check_bool_expr e2;
@@ -184,8 +187,21 @@ let check ((globals, functions, gameobjs) : Ast.program) =
       (List.map snd func.formals);
 
     match func.block with
-    | Some block -> check_block ~symbols ~func block
+    | Some block -> check_block ~symbols ~name:func.fname ~return:func.typ block
     | None -> ()
   in
+  let check_gameobj ~symbols obj =
+    let obj_fn_list obj =
+      [("create", obj.create);
+       ("step", obj.step);
+       ("draw", obj.draw);
+       ("destroy", obj.destroy)]
+    in
+    let check_obj_fn (name, block) =
+      check_block ~symbols ~name:(obj.name ^ "::" ^ name) ~return:Void block
+    in
+    List.iter check_obj_fn (obj_fn_list obj) (* TODO: CHECK OTHER THINGS!!! *)
+  in
   let symbols = List.fold_left (fun m (t, n) -> StringMap.add n t m) StringMap.empty globals in
-  List.iter (check_function ~symbols) functions
+  List.iter (check_function ~symbols) functions;
+  List.iter (check_gameobj ~symbols) gameobjs
