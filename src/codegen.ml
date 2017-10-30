@@ -67,14 +67,17 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
       StringMap.add name (d_function name ftype the_module, fdecl) m in
     List.fold_left function_decl StringMap.empty functions in
 
+  let _gameobj_decls =          (* TODO: test. currently structs aren't added yet maybe b/c no one uses them *)
+    let gameobj_decl m gdecl =
+      let name = gdecl.A.name in
+      let members = gdecl.A.members in
+      let ll_members = List.map (fun (typ, _) -> ltype_of_typ typ) members in
+      StringMap.add name (L.struct_type context (Array.of_list ll_members), gdecl) m in
+    List.fold_left gameobj_decl StringMap.empty gameobjs in
+
   (* Fill in the body of the given function *)
-  let build_function_body fdecl =
-    let (the_function, _) = StringMap.find fdecl.A.fname function_decls in
+  let build_function_body the_function formals block return_type =
     let builder = L.builder_at_end context (L.entry_block the_function) in
-    let block = match fdecl.A.block with
-      | Some block -> block
-      | None -> assert false  (* this function should never try to build the body of a fn just declared *)
-    in
 
     let int_format_str   = L.build_global_stringptr "%d\n" "fmt" builder in
     let float_format_str = L.build_global_stringptr "%f\n" "fmt" builder in
@@ -93,7 +96,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
         let local_var = L.build_alloca (ltype_of_typ t) n builder
         in StringMap.add n local_var m in
 
-      let formals = List.fold_left2 add_formal StringMap.empty fdecl.A.formals
+      let formals = List.fold_left2 add_formal StringMap.empty formals
           (Array.to_list (L.params the_function)) in
       List.fold_left add_local formals block.A.locals
     in
@@ -165,7 +168,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     let rec stmt builder = function
         A.Block sl -> List.fold_left stmt builder sl
       | A.Expr e -> ignore (expr builder e); builder
-      | A.Return e -> ignore (match fdecl.A.typ with
+      | A.Return e -> ignore (match return_type with
           | A.Void -> L.build_ret_void builder
           | _ -> L.build_ret (expr builder e) builder); builder
       | A.If (predicate, then_stmt, else_stmt) ->
@@ -207,25 +210,30 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     let builder = stmt builder (A.Block block.A.body) in
 
     (* Add a return if the last block falls off the end *)
-    add_terminal builder (match fdecl.A.typ with
-          A.Void -> L.build_ret_void
+    add_terminal builder (match return_type with
+        | A.Void -> L.build_ret_void
         | t -> L.build_ret (L.const_int (ltype_of_typ t) 0))
   in
 
   let build_function f =
     match f.A.block with
-    | Some _ -> build_function_body f
+    | Some block ->
+      let (the_function, _) = StringMap.find f.A.fname function_decls in
+      let formals = f.A.formals in
+      let return_type = f.A.typ in
+      build_function_body the_function formals block return_type
     | None -> ()
   in
 
+  let build_gameobj_fns g =     (* TODO: test *)
+    let build_fn (f_name, block) =
+      let llfn_t = L.function_type void_t [||] in
+      let llfn = L.define_function (g.A.name ^ "_" ^ f_name) llfn_t the_module in
+      build_function_body llfn [] block A.Void
+    in
+    List.iter build_fn [("create", g.A.create); ("step", g.A.step); ("destroy", g.A.destroy); ("draw", g.A.draw)]
+  in
+
   List.iter build_function functions;
-
-  (* Entry point definition *)
-  let entry_type = L.function_type i32_t [||] in
-  let entry = L.define_function ("game_main") entry_type the_module in
-  let builder = L.builder_at_end context (L.entry_block entry) in
-
-  let (main_fn, _) = StringMap.find "main" function_decls in
-  let main_call = L.build_call main_fn [||] "main_call" builder in
-  let _ = L.build_ret main_call builder in
+  List.iter build_gameobj_fns gameobjs;
   the_module
