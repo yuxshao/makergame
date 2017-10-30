@@ -5,12 +5,16 @@
 static std::map<std::string, sf::Texture> image_map;
 static sf::RenderWindow window;
 
-extern "C" {
-void display_window(sf::RenderWindow *window) { window->display(); }
+static void display_window(sf::RenderWindow *window) { window->display(); }
 
-sf::RenderWindow *create_window(int width, int height, const char *wname) {
+static sf::RenderWindow *create_window(int width, int height,
+                                       const char *wname) {
   return new sf::RenderWindow(sf::VideoMode(width, height), wname);
 }
+
+static void close_window(sf::RenderWindow *window) { window->close(); }
+
+extern "C" {
 
 sf::Sprite *load_image(const char *filename) {
   auto[name_and_image, inserted] = image_map.try_emplace(filename);
@@ -24,6 +28,8 @@ void set_sprite_position(sf::Sprite *sprite, double x, double y) {
 }
 
 void draw_sprite(sf::Sprite *sprite) { window.draw(*sprite); }
+
+void end_game() { close_window(&window); }
 
 void game_main();
 }
