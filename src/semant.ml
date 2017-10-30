@@ -9,7 +9,7 @@ module StringMap = Map.Make(String)
 
    Check each global variable, then check each function *)
 
-let check ((globals, functions, game_objs) : Ast.program) =
+let check ((globals, functions, gameobjs) : Ast.program) =
 
   (* TODO: replace raise (Failure (...)) with failwith *)
   (* Raise an exception if the given list has a duplicate *)
@@ -63,8 +63,8 @@ let check ((globals, functions, game_objs) : Ast.program) =
     List.fold_left (fun m fd -> StringMap.add fd.fname fd m) StringMap.empty functions
   in
 
-  let game_obj_decls =
-    List.fold_left (fun m obj -> StringMap.add obj.name obj m) StringMap.empty game_objs
+  let gameobj_decls =
+    List.fold_left (fun m obj -> StringMap.add obj.name obj m) StringMap.empty gameobjs
   in
 
   let function_decl s =
@@ -72,8 +72,8 @@ let check ((globals, functions, game_objs) : Ast.program) =
     with Not_found -> failwith ("unrecognized function " ^ s)
   in
 
-  let game_obj_decl s =
-    try StringMap.find s game_obj_decls
+  let gameobj_decl s =
+    try StringMap.find s gameobj_decls
     with Not_found -> failwith ("unrecognized game object " ^ s)
   in
 
@@ -164,7 +164,7 @@ let check ((globals, functions, game_objs) : Ast.program) =
       | For(e1, e2, e3, st) -> ignore (expr e1); check_bool_expr e2;
         ignore (expr e3); stmt st
       | While(p, s) -> check_bool_expr p; stmt s
-      | Foreach(obj_t, _id, s) -> ignore(game_obj_decl obj_t); stmt s
+      | Foreach(obj_t, _id, s) -> ignore(gameobj_decl obj_t); stmt s
     in
 
     stmt (Block block.body)

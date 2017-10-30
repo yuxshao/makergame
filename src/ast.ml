@@ -55,7 +55,7 @@ type event_type = Create | Destroy | Step | Draw
 type event = event_type * block
 
 (* consider using this for the AST post-semant *)
-type game_obj = {
+type gameobj = {
   name : string;
   members : bind list;
   create : block;
@@ -64,7 +64,7 @@ type game_obj = {
   draw : block;
 }
 
-let make_game_obj name members events =
+let make_gameobj name members events =
   let empty = { locals = []; body = [] } in
   let initial_obj =
     { name = name
@@ -103,7 +103,7 @@ let add_fdecl (vdecls, fdecls, odecls) fdecl =
 let add_odecl (vdecls, fdecls, odecls) odecl =
   (vdecls, fdecls, odecl :: odecls)
 
-type program = bind list * func_decl list * game_obj list
+type program = bind list * func_decl list * gameobj list
 
 
 
@@ -187,7 +187,7 @@ let string_of_fdecl fdecl =
   prefix ^ string_of_typ fdecl.typ ^ " " ^ fdecl.fname ^ "(" ^
   String.concat ", " (List.map snd fdecl.formals) ^ ")\n" ^ suffix
 
-let string_of_game_obj obj =
+let string_of_gameobj obj =
   obj.name ^ " {\n" ^
   String.concat "" (List.map string_of_vdecl obj.members) ^ "\n" ^
   "CREATE " ^ (string_of_block obj.create) ^ "\n" ^
@@ -199,4 +199,4 @@ let string_of_game_obj obj =
 let string_of_program (vars, funcs, objs) =
   String.concat "" (List.map string_of_vdecl vars) ^ "\n" ^
   String.concat "\n" (List.map string_of_fdecl funcs) ^
-  String.concat "\n" (List.map string_of_game_obj objs)
+  String.concat "\n" (List.map string_of_gameobj objs)

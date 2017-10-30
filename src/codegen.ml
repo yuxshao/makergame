@@ -17,7 +17,7 @@ module A = Ast
 
 module StringMap = Map.Make(String)
 
-let translate ((globals, functions, _) : Ast.program) =
+let translate ((globals, functions, gameobjs) : Ast.program) =
   let context = L.global_context () in
   let the_module = L.create_module context "MicroC"
   and i32_t    = L.i32_type    context

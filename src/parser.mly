@@ -72,7 +72,7 @@ event_list:
 
 odecl:
    ID LCURLY vdecl_list event_list RCURLY
-     { make_game_obj $1 (List.rev $3) $4 }
+     { make_gameobj $1 (List.rev $3) $4 }
 
 formals_opt:
     /* nothing */ { [] }
