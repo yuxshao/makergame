@@ -32,7 +32,7 @@ let translate ((globals, functions, _) : Ast.program) =
   let ltype_of_typ = function
     | A.Int -> i32_t
     | A.Bool -> i1_t
-    | A.Float -> float_t
+    | A.Float -> float_t        (* FIXME: FLOAT OPERATIONS DISALLOWED & UNSUPPORTED. *)
     | A.Arr _ -> failwith "not implemented"
     | A.String -> L.pointer_type i8_t
     (* | A.Arr (typ, len) -> L.array_type (ltype_of_typ typ) len *)
@@ -44,7 +44,7 @@ let translate ((globals, functions, _) : Ast.program) =
   (* Declare each global variable; remember its value in a map *)
   let global_vars =
     let global_var m (t, n) =
-      let init = L.const_int (ltype_of_typ t) 0
+      let init = L.const_null (ltype_of_typ t)
       in StringMap.add n (L.define_global n init the_module) m in
     List.fold_left global_var StringMap.empty globals in
 
@@ -142,7 +142,7 @@ let translate ((globals, functions, _) : Ast.program) =
       | A.Call ("print", [e]) | A.Call ("printb", [e]) ->
         L.build_call printf_func [| int_format_str ; (expr builder e) |] "printf" builder
       | A.Call ("print_float", [e]) -> (* TODO: test this fn *)
-        L.build_call printf_func [| float_format_str ; (expr builder e) |] "printf" builder
+        L.build_call printf_func [| float_format_str ; expr builder e |] "printf" builder
       (* TODO: unify print names and their tests *)
       | A.Call (f, act) ->
         let (fdef, fdecl) = StringMap.find f function_decls in

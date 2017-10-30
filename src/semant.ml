@@ -46,8 +46,8 @@ let check ((globals, functions, game_objs) : Ast.program) =
 
   (* Add built-in function declarations *)
   let functions =
-    let add ~fname ~arg_type =
-      List.cons { typ = Void; fname; formals = [(arg_type, "x")]; block = None }
+    let add ~fname ~arg_type list =
+      { typ = Void; fname; formals = [(arg_type, "x")]; block = None } :: list
     in
     functions
     |> add ~fname:"print"       ~arg_type:Int
