@@ -1,12 +1,13 @@
+extern void end_game();
 int a;
 int b;
 
-void printa()
+void printA()
 {
   print(a);
 }
 
-void printb()
+void printB()
 {
   print(b);
 }
@@ -21,10 +22,11 @@ int main()
 {
   a = 42;
   b = 21;
-  printa();
-  printb();
+  printA();
+  printB();
   incab();
-  printa();
-  printb();
+  printA();
+  printB();
+  end_game();
   return 0;
 }

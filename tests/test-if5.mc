@@ -1,3 +1,4 @@
+extern void end_game();
 int cond(bool b)
 {
   int x;
@@ -12,5 +13,6 @@ int main()
 {
  print(cond(true));
  print(cond(false));
+ end_game();
  return 0;
 }

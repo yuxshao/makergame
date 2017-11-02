@@ -1,3 +1,4 @@
+extern void end_game();
 bool i;
 
 int main()
@@ -6,5 +7,6 @@ int main()
 
   i = 42;
   print(i + i);
+  end_game();
   return 0;
 }

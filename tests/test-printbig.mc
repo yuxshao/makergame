@@ -1,3 +1,4 @@
+extern void end_game();
 /*
  * Test for linking external C functions to LLVM-generated code
  *
@@ -7,6 +8,7 @@
  * The C compiler assembles the .s file and links the .o file to generate
  * an executable
  */
+extern void printbig(int x);
 
 int main()
 {
@@ -21,5 +23,7 @@ int main()
   printbig(82); /* R */
   printbig(76); /* L */
   printbig(68); /* D */
+
+  end_game();
   return 0;
 }

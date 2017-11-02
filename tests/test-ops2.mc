@@ -1,3 +1,4 @@
+extern void end_game();
 int main()
 {
   printb(true);
@@ -14,4 +15,5 @@ int main()
   printb(!true);
   print(-10);
   print(--42);
+  end_game();
 }

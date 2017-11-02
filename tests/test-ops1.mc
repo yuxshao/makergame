@@ -1,3 +1,4 @@
+extern void end_game();
 int main()
 {
   print(1 + 2);
@@ -24,5 +25,6 @@ int main()
   printb(1 >= 2);
   printb(1 >= 1);
   printb(2 >= 1); 
+  end_game();
   return 0;
 }

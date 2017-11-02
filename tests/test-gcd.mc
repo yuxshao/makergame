@@ -1,3 +1,4 @@
+extern void end_game();
 int gcd(int a, int b) {
   while (a != b) {
     if (a > b) a = a - b;
@@ -11,5 +12,6 @@ int main()
   print(gcd(2,14));
   print(gcd(3,15));
   print(gcd(99,121));
+  end_game();
   return 0;
 }

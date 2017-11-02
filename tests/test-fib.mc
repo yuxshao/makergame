@@ -1,3 +1,4 @@
+extern void end_game();
 int fib(int x)
 {
   if (x < 2) return 1;
@@ -12,5 +13,6 @@ int main()
   print(fib(3));
   print(fib(4));
   print(fib(5));
+  end_game();
   return 0;
 }

@@ -1,3 +1,4 @@
+extern void end_game();
 void foo(int a)
 {
   print(a + 3);
@@ -6,5 +7,6 @@ void foo(int a)
 int main()
 {
   foo(40);
+  end_game();
   return 0;
 }

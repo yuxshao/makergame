@@ -1,3 +1,4 @@
+extern void end_game();
 int foo(int a, bool b)
 {
   int c;
@@ -10,5 +11,6 @@ int foo(int a, bool b)
 
 int main() {
  print(foo(37, false));
+ end_game();
  return 0;
 }
