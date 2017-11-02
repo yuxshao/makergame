@@ -141,8 +141,8 @@ let translate ((globals, functions, _) : Ast.program) =
         L.build_call printf_func [| str_format_str; (expr builder e) |] "printf" builder
       | A.Call ("print", [e]) | A.Call ("printb", [e]) ->
         L.build_call printf_func [| int_format_str ; (expr builder e) |] "printf" builder
-      | A.Call ("print_float", [e]) ->
-        L.build_call printf_func [| float_format_str ; L.const_float float_t 3. |] "printf" builder
+      | A.Call ("print_float", [e]) -> (* TODO: test this fn *)
+        L.build_call printf_func [| float_format_str ; (expr builder e) |] "printf" builder
       (* TODO: unify print names and their tests *)
       | A.Call (f, act) ->
         let (fdef, fdecl) = StringMap.find f function_decls in
