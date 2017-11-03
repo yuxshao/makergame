@@ -98,7 +98,7 @@ let check ((globals, functions, gameobjs) : Ast.program) =
     let rec type_of_identifier ~symbols (name, chain) =
       let typ =
         try StringMap.find name symbols
-        with Not_found -> failwith ("undeclared identifier" ^ name)
+        with Not_found -> failwith ("undeclared identifier " ^ name)
       in
       match chain with
       | [] -> typ

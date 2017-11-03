@@ -12,7 +12,11 @@ static sf::RenderWindow *create_window(int width, int height,
   return new sf::RenderWindow(sf::VideoMode(width, height), wname);
 }
 
-static void close_window(sf::RenderWindow *window) { window->close(); }
+static void close_window(sf::RenderWindow *window) {
+  if (window->isOpen()) window->close();
+}
+
+static bool game_ended = false;
 
 extern "C" {
 
@@ -29,7 +33,7 @@ void set_sprite_position(sf::Sprite *sprite, double x, double y) {
 
 void draw_sprite(sf::Sprite *sprite) { window.draw(*sprite); }
 
-void end_game() { close_window(&window); }
+void end_game() { close_window(&window); game_ended = true; }
 
 void main_create();
 void main_step();
@@ -38,10 +42,12 @@ void main_draw();
 }
 
 int main() {
+  main_create();
+  if (game_ended) return 0;
+
   window.create(sf::VideoMode(800, 600), "Hello World");
   window.setFramerateLimit(60);
 
-  main_create();
   while (window.isOpen()) {
     sf::Event event;
     while (window.pollEvent(event)) {
