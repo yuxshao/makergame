@@ -17,10 +17,10 @@ static void close_window(sf::RenderWindow *window) { window->close(); }
 extern "C" {
 
 sf::Sprite *load_image(const char *filename) {
-  auto[name_and_image, inserted] = image_map.try_emplace(filename);
-  if (!inserted)
-    name_and_image->second.loadFromFile(filename);
-  return new sf::Sprite(name_and_image->second);
+  auto result = image_map.emplace(std::make_pair(filename, sf::Texture()));
+  if (!result.second)
+    result.first->second.loadFromFile(filename);
+  return new sf::Sprite(result.first->second);
 }
 
 void set_sprite_position(sf::Sprite *sprite, double x, double y) {

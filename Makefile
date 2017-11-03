@@ -7,7 +7,7 @@
 all : microc.native lib/libmakergame.o printbig.o
 
 lib/libmakergame.o:
-	gcc -c lib/libmakergame.cpp -o lib/libmakergame.o -std=c++1z
+	gcc -c lib/libmakergame.cpp -o lib/libmakergame.o -std=c++11
 
 microc.native :
 	ocamlbuild -use-ocamlfind -pkgs llvm,llvm.analysis -cflags -w,+a-4 \
