@@ -121,7 +121,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
       | A.StringLit l -> L.build_global_stringptr l "literal" builder
       | A.FloatLit f -> L.const_float float_t f
       | A.Noexpr -> L.const_int i32_t 0
-      | A.Id s -> L.build_load (lookup s) s builder
+      | A.Id (s, _) -> L.build_load (lookup s) s builder
       | A.Binop (e1, op, e2) ->
         let e1' = expr builder e1
         and e2' = expr builder e2 in
@@ -146,7 +146,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
         (match op with
            A.Neg     -> L.build_neg
          | A.Not     -> L.build_not) e' "tmp" builder
-      | A.Assign (s, e) -> let e' = expr builder e in
+      | A.Assign ((s, _), e) -> let e' = expr builder e in
         ignore (L.build_store e' (lookup s) builder); e'
       | A.Call ("printstr", [e]) ->
         L.build_call printf_func [| str_format_str; (expr builder e) |] "printf" builder

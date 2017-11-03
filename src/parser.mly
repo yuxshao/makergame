@@ -4,7 +4,7 @@
 open Ast
 %}
 
-%token SEMI LPAREN RPAREN LBRACK RBRACK LCURLY RCURLY COMMA
+%token SEMI LPAREN RPAREN LBRACK RBRACK LCURLY RCURLY COMMA PERIOD
 %token PLUS MINUS TIMES DIVIDE EXPONENT MODULO ASSIGN NOT
 %token EQ NEQ LT LEQ GT GEQ TRUE FALSE AND OR
 %token RETURN IF ELSE FOR WHILE FOREACH
@@ -45,8 +45,7 @@ decls:
 
 code_block:
    LCURLY vdecl_list stmt_list RCURLY
-   { { locals = List.rev $2
-     ; body = List.rev $3} }
+   { { locals = List.rev $2 ; body = $3 } }
 
 fdecl:
  | EXTERN typ ID LPAREN formals_opt RPAREN SEMI
@@ -90,6 +89,7 @@ typ:
   | VOID { Void }
   | FLOAT { Float }
   | STRING { String }
+  | ID { Object($1) }
   | typ LBRACK LITERAL RBRACK { Arr($1, $3) }
 
 vdecl_list:
@@ -97,17 +97,17 @@ vdecl_list:
   | vdecl_list vdecl { $2 :: $1 }
 
 vdecl:
-   typ ID SEMI { ($1, $2) }
+  | typ ID SEMI { ($1, $2) }
 
 stmt_list:
     /* nothing */  { [] }
-  | stmt_list stmt { $2 :: $1 }
+  | stmt stmt_list { $1 :: $2 }
 
 stmt:
     expr SEMI { Expr $1 }
   | RETURN SEMI { Return Noexpr }
   | RETURN expr SEMI { Return $2 }
-  | LCURLY stmt_list RCURLY { Block(List.rev $2) }
+  | LCURLY stmt_list RCURLY { Block($2) }
   | IF LPAREN expr RPAREN stmt %prec NOELSE { If($3, $5, Block([])) }
   | IF LPAREN expr RPAREN stmt ELSE stmt    { If($3, $5, $7) }
   | FOR LPAREN expr_opt SEMI expr SEMI expr_opt RPAREN stmt
@@ -125,7 +125,7 @@ expr:
   | FLOATLIT         { FloatLit($1) }
   | TRUE             { BoolLit(true) }
   | FALSE            { BoolLit(false) }
-  | ID               { Id($1) }
+  | id_chain         { Id(fst $1, snd $1) }
   | expr PLUS   expr { Binop($1, Add,   $3) }
   | expr MINUS  expr { Binop($1, Sub,   $3) }
   | expr TIMES  expr { Binop($1, Mult,  $3) }
@@ -142,9 +142,13 @@ expr:
   | expr OR     expr { Binop($1, Or,    $3) }
   | MINUS expr %prec NEG { Unop(Neg, $2) }
   | NOT expr         { Unop(Not, $2) }
-  | ID ASSIGN expr   { Assign($1, $3) }
+  | id_chain ASSIGN expr   { Assign($1, $3) }
   | ID LPAREN actuals_opt RPAREN { Call($1, $3) }
   | LPAREN expr RPAREN { $2 }
+
+id_chain:
+  | ID { $1, [] }
+  | ID PERIOD id_chain { let (h, t) = $3 in $1, h :: t }
 
 actuals_opt:
     /* nothing */ { [] }

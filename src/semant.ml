@@ -107,7 +107,7 @@ let check ((globals, functions, gameobjs) : Ast.program) =
       | BoolLit _ -> Bool
       | FloatLit _ -> Float
       | StringLit _ -> String
-      | Id s -> type_of_identifier s
+      | Id (s, _) -> type_of_identifier s
       | Binop(e1, op, e2) as e -> let t1 = expr e1 and t2 = expr e2 in
         (match op with
            Add | Sub | Mult | Div when t1 = Int && t2 = Int -> Int
@@ -125,7 +125,7 @@ let check ((globals, functions, gameobjs) : Ast.program) =
          | _ -> failwith ("illegal unary operator " ^ string_of_uop op ^
                           string_of_typ t ^ " in " ^ string_of_expr ex))
       | Noexpr -> Void
-      | Assign(var, e) as ex -> let lt = type_of_identifier var
+      | Assign((var, _), e) as ex -> let lt = type_of_identifier var
         and rt = expr e in
         check_assign lt rt ("illegal assignment " ^ string_of_typ lt ^
                             " = " ^ string_of_typ rt ^ " in " ^ 

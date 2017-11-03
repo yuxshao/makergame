@@ -16,6 +16,7 @@ rule token = parse
   (* separators *)
   | ';'      { SEMI }
   | ','      { COMMA }
+  | '.'      { PERIOD }
   (* arithmetic and logical *)
   | '+'      { PLUS }
   | '-'      { MINUS }
