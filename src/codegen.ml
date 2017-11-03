@@ -289,5 +289,37 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
   in
 
   List.iter build_function functions;
-  ignore (List.map gameobj_fns gameobjs);
+
+  let gameobj_fns =
+    List.concat (List.map gameobj_fns gameobjs)
+    |> List.fold_left (fun map (k, v) -> StringMap.add k v map) StringMap.empty
+  in
+  let gameobj_fn o f =
+    let str =
+      let open A.Gameobj in
+      match f with Create -> "create" | Destroy -> "destroy" | Step -> "step" | Draw -> "draw"
+    in
+    StringMap.find (o ^ "_" ^ str) gameobj_fns
+  in
+
+  let random_fn = L.define_function "random" (L.function_type void_t [||]) the_module in
+  let builder = L.builder_at_end context (L.entry_block random_fn) in
+  let (main_t, _) = StringMap.find "main" gameobj_types in
+  let main_o =
+    L.define_global "main_o" (L.const_null main_t) the_module
+  in
+  let gfn = gameobj_fn "main" in
+  let main_obj =
+    let open A.Gameobj in
+    L.define_global "main_obj"
+      (L.const_struct context [|main_o; gfn Create; gfn Step; gfn Destroy; gfn Draw; L.const_null (L.pointer_type node_t); L.const_null (L.pointer_type node_t)|])
+      the_module
+  in
+  (* think about just having a single flat struct in case of inheritance *)
+  let ex = L.build_alloca node_t "ex_main" builder in
+  let ez = L.build_bitcast main_obj (L.pointer_type node_t) "ez" builder in
+  let ey = L.build_load ez "ey" builder in
+  ignore (L.build_store ey ex builder);
+  ignore (L.build_ret_void builder);
+
   the_module
