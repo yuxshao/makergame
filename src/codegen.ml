@@ -29,6 +29,14 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
   and sound_t  = L.pointer_type (L.named_struct_type context "sfSound")
   and void_t   = L.void_type   context in
 
+  let gameobj_types =          (* TODO: test. *)
+    let lltype_of m gdecl =
+      let name = gdecl.A.name in
+      StringMap.add name (L.named_struct_type context name, gdecl) m
+    in
+    List.fold_left lltype_of StringMap.empty gameobjs
+  in
+
   let ltype_of_typ = function
     | A.Int -> i32_t
     | A.Bool -> i1_t
@@ -38,8 +46,16 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     (* | A.Arr (typ, len) -> L.array_type (ltype_of_typ typ) len *)
     | A.Sprite -> sprite_t
     | A.Sound -> sound_t
-    | A.Object _ -> failwith "not implemented"
-    | A.Void -> void_t in
+    | A.Object o -> let (t, _) = StringMap.find o gameobj_types in L.pointer_type t
+    | A.Void -> void_t
+  in
+
+  StringMap.iter
+    (fun _ (t, gdecl) ->
+       let members = gdecl.A.members in
+       let ll_members = List.map (fun (typ, _) -> ltype_of_typ typ) members in
+       L.struct_set_body t (Array.of_list ll_members) false)
+    gameobj_types;
 
   (* Declare each global variable; remember its value in a map *)
   let global_vars =
@@ -66,14 +82,6 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
       in
       StringMap.add name (d_function name ftype the_module, fdecl) m in
     List.fold_left function_decl StringMap.empty functions in
-
-  let _gameobj_decls =          (* TODO: test. currently structs aren't added yet maybe b/c no one uses them *)
-    let gameobj_decl m gdecl =
-      let name = gdecl.A.name in
-      let members = gdecl.A.members in
-      let ll_members = List.map (fun (typ, _) -> ltype_of_typ typ) members in
-      StringMap.add name (L.struct_type context (Array.of_list ll_members), gdecl) m in
-    List.fold_left gameobj_decl StringMap.empty gameobjs in
 
   (* Fill in the body of the given function *)
   let build_function_body the_function formals block return_type =
@@ -124,7 +132,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
          | A.Div     -> L.build_sdiv
          | A.Expo    -> failwith "not implemented"
          | A.Modulo  -> failwith "not implemented"
-         | A.And     -> L.build_and
+         | A.And     -> L.build_and (* TODO: SHOULD WE SHORT CIRCUIT? *)
          | A.Or      -> L.build_or
          | A.Equal   -> L.build_icmp L.Icmp.Eq
          | A.Neq     -> L.build_icmp L.Icmp.Ne
@@ -149,6 +157,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
       (* TODO: unify print names and their tests *)
       | A.Call (f, act) ->
         let (fdef, fdecl) = StringMap.find f function_decls in
+        (* TODO: can arguments have side effects? what's the order-currently RtL *)
         let actuals = List.rev (List.map (expr builder) (List.rev act)) in
         let result =
           match fdecl.A.typ with A.Void -> "" | _ -> f ^ "_result"

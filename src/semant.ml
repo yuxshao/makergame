@@ -153,7 +153,7 @@ let check ((globals, functions, gameobjs) : Ast.program) =
     let rec stmt = function
       | Block sl -> let rec check_block = function
             [Return _ as s] -> stmt s
-          | Return _ :: _ -> failwith "nothing may follow a return"
+          | Return _ :: _ -> failwith "nothing may follow a return" (* TODO: change this? *)
           | Block sl :: ss -> check_block (sl @ ss)
           | s :: ss -> stmt s ; check_block ss
           | [] -> ()
