@@ -8,7 +8,7 @@ void foo(int c, bool d)
   b + a; /* Error: bool + int */
 }
 
-int main()
+void main()
 {
-  return 0;
+  return;
 }

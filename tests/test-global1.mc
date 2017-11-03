@@ -18,7 +18,7 @@ void incab()
   b = b + 1;
 }
 
-int main()
+void main()
 {
   a = 42;
   b = 21;
@@ -28,5 +28,5 @@ int main()
   printA();
   printB();
   end_game();
-  return 0;
+  return;
 }

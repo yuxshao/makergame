@@ -1,5 +1,5 @@
 extern void end_game();
-int main () {
+void main () {
   string c;
   c = "hello world";
   printstr(c);
@@ -8,5 +8,5 @@ int main () {
   printstr("Either\\or is okay");
   printstr("multiple\nlines");
   end_game();
-  return 0;
+  return;
 }

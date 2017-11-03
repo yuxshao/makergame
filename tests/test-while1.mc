@@ -1,5 +1,5 @@
 extern void end_game();
-int main()
+void main()
 {
   int i;
   i = 5;
@@ -9,5 +9,5 @@ int main()
   }
   print(42);
   end_game();
-  return 0;
+  return;
 }

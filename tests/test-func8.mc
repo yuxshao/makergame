@@ -4,9 +4,9 @@ void foo(int a)
   print(a + 3);
 }
 
-int main()
+void main()
 {
   foo(40);
   end_game();
-  return 0;
+  return;
 }

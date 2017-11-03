@@ -9,10 +9,10 @@ int cond(bool b)
   return x;
 }
 
-int main()
+void main()
 {
  print(cond(true));
  print(cond(false));
  end_game();
- return 0;
+ return;
 }

@@ -3,7 +3,7 @@ bool b;
 void a; /* global variables should not be void */
 
 
-int main()
+void main()
 {
-  return 0;
+  return;
 }

@@ -1,5 +1,5 @@
 extern void end_game();
-int main()
+void main()
 {
   print(1 + 2);
   print(1 - 2);
@@ -26,5 +26,5 @@ int main()
   printb(1 >= 1);
   printb(2 >= 1); 
   end_game();
-  return 0;
+  return;
 }

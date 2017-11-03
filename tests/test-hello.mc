@@ -1,9 +1,9 @@
 extern void end_game();
-int main()
+void main()
 {
   print(42);
   print(71);
   print(1);
   end_game();
-  return 0;
+  return;
 }

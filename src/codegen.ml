@@ -185,8 +185,8 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
       (* TODO: unify print names and their tests *)
       | A.Call (f, act) ->
         let (fdef, fdecl) = StringMap.find f function_decls in
-        (* TODO: can arguments have side effects? what's the order-currently RtL *)
-        let actuals = List.rev (List.map (expr builder) (List.rev act)) in
+        (* TODO: can arguments have side effects? what's the order-currently LtR *)
+        let actuals = List.map (expr builder) act in
         let result =
           match fdecl.A.typ with A.Void -> "" | _ -> f ^ "_result"
         in

@@ -1,4 +1,4 @@
-int main () {
+void main () {
   printstr("is "this" wrong?");
-  return 0;
+  return;
 }

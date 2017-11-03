@@ -9,8 +9,8 @@ int foo(int a, bool b)
   return c + 10;
 }
 
-int main() {
+void main() {
  print(foo(37, false));
  end_game();
- return 0;
+ return;
 }

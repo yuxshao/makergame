@@ -6,7 +6,7 @@ int fun(int x, int y)
   return 0;
 }
 
-int main()
+void main()
 {
   int i;
   i = 1;
@@ -15,6 +15,6 @@ int main()
 
   print(i);
   end_game();
-  return 0;
+  return;
 }
 

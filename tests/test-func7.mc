@@ -6,10 +6,10 @@ void foo(int c)
   a = c + 42;
 }
 
-int main()
+void main()
 {
   foo(73);
   print(a);
   end_game();
-  return 0;
+  return;
 }

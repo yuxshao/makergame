@@ -7,9 +7,9 @@ void foo(bool i)
   print(i + i);
 }
 
-int main()
+void main()
 {
   foo(true);
   end_game();
-  return 0;
+  return;
 }

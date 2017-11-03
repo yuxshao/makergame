@@ -3,11 +3,11 @@ int i;
 bool b;
 int j;
 
-int main()
+void main()
 {
   i = 42;
   j = 10;
   print(i + j);
   end_game();
-  return 0;
+  return;
 }

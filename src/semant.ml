@@ -79,7 +79,23 @@ let check ((globals, functions, gameobjs) : Ast.program) =
     with Not_found -> failwith ("unrecognized game object " ^ s)
   in
 
-  let _ = gameobj_decl "main" in (* Ensure "main" is defined *)
+  let new_gameobjs =
+    match StringMap.find_opt "main" gameobj_decls with
+    | Some _ -> gameobjs
+    | None ->
+      let undef_err = "either main game object or function must be defined" in
+      let not_void_err = "main function must return void" in
+      let arg_err = "main function must take no arguments" in
+      let fn =
+        try StringMap.find "main" function_decls
+        with Not_found -> failwith undef_err in
+      let block =
+        match fn.block with Some b -> b | None -> failwith undef_err
+      in
+      (match fn.typ with Void -> () | _ -> failwith not_void_err);
+      (match fn.formals with [] -> () | _ -> failwith arg_err);
+      (make_gameobj "main" [] [Create, block]) :: gameobjs
+  in
 
   let check_block ~symbols ~name ~return block =
     List.iter
@@ -218,4 +234,5 @@ let check ((globals, functions, gameobjs) : Ast.program) =
 
   let symbols = List.fold_left (fun m (t, n) -> StringMap.add n t m) StringMap.empty globals in
   List.iter (check_function ~symbols) functions;
-  List.iter (check_gameobj ~symbols) gameobjs
+  List.iter (check_gameobj ~symbols) gameobjs;
+  (globals, functions, new_gameobjs)

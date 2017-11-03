@@ -1,4 +1,4 @@
-int main () {
+void main () {
   printstr("hello\world");
-  return 0;
+  return;
 }

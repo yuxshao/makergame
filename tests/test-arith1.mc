@@ -1,8 +1,8 @@
 extern void end_game();
 
-int main()
+void main()
 {
   print(39 + 3);
   end_game();
-  return 0;
+  return;
 }

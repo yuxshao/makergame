@@ -6,11 +6,11 @@ int gcd(int a, int b) {
   return a;
 }
 
-int main()
+void main()
 {
   print(gcd(14,21));
   print(gcd(8,36));
   print(gcd(99,121));
   end_game();
-  return 0;
+  return;
 }

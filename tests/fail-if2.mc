@@ -1,4 +1,4 @@
-int main()
+void main()
 {
   if (true) {
     foo; /* Error: undeclared variable */

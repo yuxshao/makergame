@@ -1,5 +1,5 @@
 extern void end_game();
-int main()
+void main()
 {
   printb(true);
   printb(false);

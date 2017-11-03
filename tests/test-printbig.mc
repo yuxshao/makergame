@@ -10,7 +10,7 @@ extern void end_game();
  */
 extern void printbig(int x);
 
-int main()
+void main()
 {
   printbig(72); /* H */
   printbig(69); /* E */
@@ -25,5 +25,5 @@ int main()
   printbig(68); /* D */
 
   end_game();
-  return 0;
+  return;
 }

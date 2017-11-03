@@ -5,7 +5,7 @@ int fib(int x)
   return fib(x-1) + fib(x-2);
 }
 
-int main()
+void main()
 {
   print(fib(0));
   print(fib(1));
@@ -14,5 +14,5 @@ int main()
   print(fib(4));
   print(fib(5));
   end_game();
-  return 0;
+  return;
 }

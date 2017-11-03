@@ -1,4 +1,4 @@
-int main()
+void main()
 {
   int i;
 
@@ -6,5 +6,5 @@ int main()
     foo(); /* Error: no function foo */
   }
 
-  return 0;
+  return;
 }

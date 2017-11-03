@@ -1,5 +1,5 @@
-int main () {
+void main () {
   int c;
   c = "hello";
-  return 0;
+  return;
 }

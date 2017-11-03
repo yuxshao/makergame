@@ -4,7 +4,7 @@ void foo()
   else return;
 }
 
-int main()
+void main()
 {
   return 42;
 }

@@ -7,11 +7,11 @@ int gcd(int a, int b) {
   return a;
 }
 
-int main()
+void main()
 {
   print(gcd(2,14));
   print(gcd(3,15));
   print(gcd(99,121));
   end_game();
-  return 0;
+  return;
 }

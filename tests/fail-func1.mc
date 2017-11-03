@@ -6,7 +6,7 @@ int baz() {}
 
 void bar() {} /* Error: duplicate function bar */
 
-int main()
+void main()
 {
-  return 0;
+  return;
 }

@@ -5,10 +5,10 @@ int bar() {
   void b; /* Error: illegal void local b */
   bool c;
 
-  return 0;
+  return;
 }
 
-int main()
+void main()
 {
-  return 0;
+  return;
 }

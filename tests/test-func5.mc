@@ -4,8 +4,8 @@ int foo(int a)
   return a;
 }
 
-int main()
+void main()
 {
   end_game();
-  return 0;
+  return;
 }

@@ -10,9 +10,9 @@ int foo(int a)
   return j;
 }
 
-int main()
+void main()
 {
   print(foo(7));
   end_game();
-  return 0;
+  return;
 }
