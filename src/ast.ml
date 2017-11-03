@@ -146,6 +146,8 @@ let rec string_of_expr = function
   | Assign((v, c), e) -> (String.concat "." (v :: c)) ^ " = " ^ string_of_expr e
   | Call(f, el) ->
       f ^ "(" ^ String.concat ", " (List.map string_of_expr el) ^ ")"
+  | Create o -> "create " ^ o   (* TODO: precedence? parentheses? *)
+  | Destroy o -> "destroy " ^ (string_of_expr o) (* TODO: ibid *)
   | Noexpr -> ""
 
 let rec string_of_stmt = function

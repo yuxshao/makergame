@@ -36,6 +36,13 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     in
     List.fold_left lltype_of StringMap.empty gameobjs
   in
+  let gameobj_t = L.pointer_type (L.named_struct_type context "gameobj") in
+  let node_t =
+    let t = L.named_struct_type context "node" in
+    let eventptr_t = L.pointer_type (L.function_type void_t [|gameobj_t|]) in
+    L.struct_set_body t [|gameobj_t; eventptr_t; eventptr_t; eventptr_t; eventptr_t; L.pointer_type t; L.pointer_type t|] false;
+    t
+  in
 
   let ltype_of_typ = function
     | A.Int -> i32_t
@@ -46,7 +53,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     (* | A.Arr (typ, len) -> L.array_type (ltype_of_typ typ) len *)
     | A.Sprite -> sprite_t
     | A.Sound -> sound_t
-    | A.Object o -> let (t, _) = StringMap.find o gameobj_types in L.pointer_type t
+    | A.Object o -> L.pointer_type node_t (* let (t, _) = StringMap.find o gameobj_types in L.pointer_type t *)
     | A.Void -> void_t
   in
 
@@ -139,7 +146,11 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
       | hd :: tl ->
         match top_type with
         | A.Object objname ->
-          let lltop = L.build_load top n builder in
+          let lltop = L.build_load top (n ^ "_node") builder in
+          let lltop = L.build_struct_gep lltop 0 n builder in
+          let lltop = L.build_load lltop n builder in
+          let (obj_type, _) = StringMap.find objname gameobj_types in
+          let lltop = L.build_bitcast lltop (L.pointer_type obj_type) n builder in
           lookup builder (gameobj_members lltop objname builder) hd tl
         | _ -> assert false (* failwith "cannot get member of non-object type" *)
     in
@@ -193,6 +204,8 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
           match fdecl.A.typ with A.Void -> "" | _ -> f ^ "_result"
         in
         L.build_call fdef (Array.of_list actuals) result builder
+      | A.Create _ -> failwith "not implemented"
+      | A.Destroy _ -> failwith "not implemented"
     in
 
     (* Invoke "f builder" if the current block doesn't already
@@ -264,16 +277,17 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     | None -> ()
   in
 
-  let build_gameobj_fns g =     (* TODO: test *)
+  let gameobj_fns g =     (* TODO: test *)
     let open A.Gameobj in
     let build_fn (f_name, block) =
+      let name = g.name ^ "_" ^ f_name in
       let llfn_t = L.function_type void_t [|ltype_of_typ (A.Object(g.name))|] in
-      let llfn = L.define_function (g.name ^ "_" ^ f_name) llfn_t the_module in
-      build_function_body llfn [A.Object(g.name), "this"] block A.Void
+      let llfn = L.define_function name llfn_t the_module in
+      build_function_body llfn [A.Object(g.name), "this"] block A.Void; name, llfn
     in
-    List.iter build_fn [("create", g.create); ("step", g.step); ("destroy", g.destroy); ("draw", g.draw)]
+    List.map build_fn [("create", g.create); ("step", g.step); ("destroy", g.destroy); ("draw", g.draw)]
   in
 
   List.iter build_function functions;
-  List.iter build_gameobj_fns gameobjs;
+  ignore (List.map gameobj_fns gameobjs);
   the_module
