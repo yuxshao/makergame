@@ -11,7 +11,6 @@ module StringMap = Map.Make(String)
 
 let check ((globals, functions, gameobjs) : Ast.program) =
 
-  (* TODO: replace raise (Failure (...)) with failwith *)
   (* Raise an exception if the given list has a duplicate *)
   let report_duplicate exceptf list =
     let rec helper = function
@@ -91,14 +90,25 @@ let check ((globals, functions, gameobjs) : Ast.program) =
       (fun n -> "duplicate local " ^ n ^ " in " ^ name)
       (List.map snd block.locals);
 
-    let symbols =
-      List.fold_left (fun m (t, n) -> StringMap.add n t m) symbols block.locals
-    in
+    let with_binds = List.fold_left (fun m (t, n) -> StringMap.add n t m) in
 
-    (* Type of each variable (global, formal, or local *)
-    let type_of_identifier s =
-      try StringMap.find s symbols
-      with Not_found -> failwith ("undeclared identifier " ^ s)
+    let symbols = with_binds symbols block.locals in
+
+    (* Type of each variable (global, formal, local), maybe with member chain *)
+    let rec type_of_identifier ~symbols (name, chain) =
+      let typ =
+        try StringMap.find name symbols
+        with Not_found -> failwith ("undeclared identifier" ^ name)
+      in
+      match chain with
+      | [] -> typ
+      | hd :: tl ->
+        match typ with
+        | Object s ->
+          let o = gameobj_decl s in
+          let symbols = with_binds StringMap.empty o.members in
+          type_of_identifier (hd, tl) ~symbols
+        | _ -> failwith ("cannot get member of non-object " ^ name)
     in
 
     (* Return the type of an expression or throw an exception *)
@@ -107,7 +117,7 @@ let check ((globals, functions, gameobjs) : Ast.program) =
       | BoolLit _ -> Bool
       | FloatLit _ -> Float
       | StringLit _ -> String
-      | Id (s, _) -> type_of_identifier s
+      | Id(hd, tl) -> type_of_identifier ~symbols (hd, tl)
       | Binop(e1, op, e2) as e -> let t1 = expr e1 and t2 = expr e2 in
         (match op with
            Add | Sub | Mult | Div when t1 = Int && t2 = Int -> Int
@@ -125,10 +135,10 @@ let check ((globals, functions, gameobjs) : Ast.program) =
          | _ -> failwith ("illegal unary operator " ^ string_of_uop op ^
                           string_of_typ t ^ " in " ^ string_of_expr ex))
       | Noexpr -> Void
-      | Assign((var, _), e) as ex -> let lt = type_of_identifier var
+      | Assign(var, e) as ex -> let lt = type_of_identifier ~symbols var
         and rt = expr e in
         check_assign lt rt ("illegal assignment " ^ string_of_typ lt ^
-                            " = " ^ string_of_typ rt ^ " in " ^ 
+                            " = " ^ string_of_typ rt ^ " in " ^
                             string_of_expr ex)
       | Call(fname, actuals) as call -> let fd = function_decl fname in
         if List.length actuals != List.length fd.formals then
@@ -169,10 +179,9 @@ let check ((globals, functions, gameobjs) : Ast.program) =
       | While(p, s) -> check_bool_expr p; stmt s
       | Foreach(obj_t, _id, s) -> ignore(gameobj_decl obj_t); stmt s
     in
-
     stmt (Block block.body)
-
   in
+
   let check_function ~symbols func =
     List.iter
       (check_not_void (fun n -> "illegal void formal " ^ n ^ " in " ^ func.fname))
@@ -190,6 +199,7 @@ let check ((globals, functions, gameobjs) : Ast.program) =
     | Some block -> check_block ~symbols ~name:func.fname ~return:func.typ block
     | None -> ()
   in
+
   let check_gameobj ~symbols obj =
     let obj_fn_list obj =
       [("create", obj.create);
@@ -197,11 +207,15 @@ let check ((globals, functions, gameobjs) : Ast.program) =
        ("draw", obj.draw);
        ("destroy", obj.destroy)]
     in
+    report_duplicate
+      (fun n -> "duplicate members " ^ n ^ " in " ^ obj.name)
+      (List.map snd obj.members);
     let check_obj_fn (name, block) =
       check_block ~symbols ~name:(obj.name ^ "::" ^ name) ~return:Void block
     in
-    List.iter check_obj_fn (obj_fn_list obj) (* TODO: CHECK OTHER THINGS!!! *)
+    List.iter check_obj_fn (obj_fn_list obj)
   in
+
   let symbols = List.fold_left (fun m (t, n) -> StringMap.add n t m) StringMap.empty globals in
   List.iter (check_function ~symbols) functions;
   List.iter (check_gameobj ~symbols) gameobjs

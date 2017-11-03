@@ -61,8 +61,20 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
   let global_vars =
     let global_var m (t, n) =
       let init = L.const_null (ltype_of_typ t)
-      in StringMap.add n (L.define_global n init the_module) m in
+      in StringMap.add n (L.define_global n init the_module, t) m in
     List.fold_left global_var StringMap.empty globals in
+
+  let gameobj_members ll objname builder = (* TODO: test member access; try accessing nonexistent *)
+    let (_, objtype) = StringMap.find objname gameobj_types in
+    let add_member (map, ind) (typ, name) =
+      let member_var = L.build_struct_gep ll ind name builder in
+      (StringMap.add name (member_var, typ) map, ind + 1)
+    in
+    let (members, _) =
+      List.fold_left add_member (StringMap.empty, 0) objtype.A.members
+    in
+    members
+  in
 
   (* Declare printf(), which the print built-in function will call *)
   let printf_t = L.var_arg_function_type i32_t [| L.pointer_type i8_t |] in
@@ -94,24 +106,40 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     (* Construct the function's "locals": formal arguments and locally
        declared variables.  Allocate each on the stack, initialize their
        value, if appropriate, and remember their values in the "locals" map *)
-    let local_vars =
-      let add_formal m (t, n) p = L.set_value_name n p;
-        let local = L.build_alloca (ltype_of_typ t) n builder in
-        ignore (L.build_store p local builder);
-        StringMap.add n local m in
+    let scope =
+      let formals =
+        let add_formal m (t, n) p =
+          L.set_value_name n p;
+          let local = L.build_alloca (ltype_of_typ t) n builder in
+          ignore (L.build_store p local builder);
+          StringMap.add n (local, t) m in
+        List.fold_left2
+          add_formal StringMap.empty formals
+          (Array.to_list (L.params the_function))
+      in
 
-      let add_local m (t, n) =
-        let local_var = L.build_alloca (ltype_of_typ t) n builder
-        in StringMap.add n local_var m in
+      let locals =
+        let add_local m (t, n) =
+          let local_var = L.build_alloca (ltype_of_typ t) n builder
+          in StringMap.add n (local_var, t) m in
+        List.fold_left add_local StringMap.empty block.A.locals
+      in
 
-      let formals = List.fold_left2 add_formal StringMap.empty formals
-          (Array.to_list (L.params the_function)) in
-      List.fold_left add_local formals block.A.locals
+      let add = StringMap.union (fun _ f _ -> Some f) in
+      global_vars |> add formals |> add locals
     in
 
     (* Return the value for a variable or formal argument *)
-    let lookup n = try StringMap.find n local_vars
-      with Not_found -> StringMap.find n global_vars
+    let rec lookup builder scope n chain =
+      let (top, top_type) = StringMap.find n scope in
+      match chain with
+      | [] -> top
+      | hd :: tl ->
+        match top_type with
+        | A.Object objname ->
+          let lltop = L.build_load top n builder in
+          lookup builder (gameobj_members lltop objname builder) hd tl
+        | _ -> assert false (* failwith "cannot get member of non-object type" *)
     in
 
     (* Construct code for an expression; return its value *)
@@ -121,7 +149,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
       | A.StringLit l -> L.build_global_stringptr l "literal" builder
       | A.FloatLit f -> L.const_float float_t f
       | A.Noexpr -> L.const_int i32_t 0
-      | A.Id (s, _) -> L.build_load (lookup s) s builder
+      | A.Id (hd, tl) -> L.build_load (lookup builder scope hd tl) hd builder
       | A.Binop (e1, op, e2) ->
         let e1' = expr builder e1
         and e2' = expr builder e2 in
@@ -146,8 +174,8 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
         (match op with
            A.Neg     -> L.build_neg
          | A.Not     -> L.build_not) e' "tmp" builder
-      | A.Assign ((s, _), e) -> let e' = expr builder e in
-        ignore (L.build_store e' (lookup s) builder); e'
+      | A.Assign ((hd, tl), e) -> let e' = expr builder e in
+        ignore (L.build_store e' (lookup builder scope hd tl) builder); e'
       | A.Call ("printstr", [e]) ->
         L.build_call printf_func [| str_format_str; (expr builder e) |] "printf" builder
       | A.Call ("print", [e]) | A.Call ("printb", [e]) ->
@@ -236,9 +264,9 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
 
   let build_gameobj_fns g =     (* TODO: test *)
     let build_fn (f_name, block) =
-      let llfn_t = L.function_type void_t [||] in
+      let llfn_t = L.function_type void_t [|ltype_of_typ (A.Object(g.A.name))|] in
       let llfn = L.define_function (g.A.name ^ "_" ^ f_name) llfn_t the_module in
-      build_function_body llfn [] block A.Void
+      build_function_body llfn [A.Object(g.A.name), "this"] block A.Void
     in
     List.iter build_fn [("create", g.A.create); ("step", g.A.step); ("destroy", g.A.destroy); ("draw", g.A.draw)]
   in

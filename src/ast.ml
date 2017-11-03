@@ -13,7 +13,7 @@ type typ =
   | String
   | Sprite
   | Sound
-  | Object of string (* TODO: forbid making objects called void, int, etc. *)
+  | Object of string (* lexer prevents object names from overlapping with type names *)
   | Arr of typ * int
 
 type bind = typ * string
