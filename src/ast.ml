@@ -51,48 +51,50 @@ type func_decl = {
   block : block option;
 }
 
-type event_type = Create | Destroy | Step | Draw
-type event = event_type * block
+module Gameobj = struct
+  type event_t = Create | Destroy | Step | Draw
+  type event = event_t * block
 
-(* consider using this for the AST post-semant *)
-type gameobj = {
-  name : string;
-  members : bind list;
-  create : block;
-  step : block;
-  destroy : block;
-  draw : block;
-}
+  (* consider using this for the AST post-semant *)
+  type t = {
+    name : string;
+    members : bind list;
+    create : block;
+    step : block;
+    destroy : block;
+    draw : block;
+  }
 
-let make_gameobj name members events =
-  let empty = { locals = []; body = [] } in
-  let initial_obj =
-    { name = name
-    ; members = members
-    ; create = empty
-    ; step = empty
-    ; destroy = empty
-    ; draw = empty }
-  in
-  let add_event obj event = match event with
-    | (Create, block) ->
-      if obj.create != empty
-      then failwith ("CREATE already defined in " ^ obj.name)
-      else { obj with create = block }
-    | (Step, block) ->
-      if obj.step != empty
-      then failwith ("STEP already defined in " ^ obj.name)
-      else { obj with step = block }
-    | (Destroy, block) ->
-      if obj.destroy != empty
-      then failwith ("DESTROY already defined in " ^ obj.name)
-      else { obj with destroy = block }
-    | (Draw, block) ->
-      if obj.draw != empty
-      then failwith ("DRAW already defined in " ^ obj.name)
-      else { obj with draw = block }
-  in
-  List.fold_left add_event initial_obj events
+  let make name members events =
+    let empty = { locals = []; body = [] } in
+    let initial_obj =
+      { name = name
+      ; members = members
+      ; create = empty
+      ; step = empty
+      ; destroy = empty
+      ; draw = empty }
+    in
+    let add_event obj event = match (event : event_t * block) with
+      | (Create, block) ->
+        if obj.create != empty
+        then failwith ("CREATE already defined in " ^ obj.name)
+        else { obj with create = block }
+      | (Step, block) ->
+        if obj.step != empty
+        then failwith ("STEP already defined in " ^ obj.name)
+        else { obj with step = block }
+      | (Destroy, block) ->
+        if obj.destroy != empty
+        then failwith ("DESTROY already defined in " ^ obj.name)
+        else { obj with destroy = block }
+      | (Draw, block) ->
+        if obj.draw != empty
+        then failwith ("DRAW already defined in " ^ obj.name)
+        else { obj with draw = block }
+    in
+    List.fold_left add_event initial_obj events
+end
 
 let add_vdecl (vdecls, fdecls, odecls) vdecl =
   (vdecl :: vdecls, fdecls, odecls)
@@ -103,7 +105,7 @@ let add_fdecl (vdecls, fdecls, odecls) fdecl =
 let add_odecl (vdecls, fdecls, odecls) odecl =
   (vdecls, fdecls, odecl :: odecls)
 
-type program = bind list * func_decl list * gameobj list
+type program = bind list * func_decl list * Gameobj.t list
 
 
 
@@ -188,6 +190,7 @@ let string_of_fdecl fdecl =
   String.concat ", " (List.map snd fdecl.formals) ^ ")\n" ^ suffix
 
 let string_of_gameobj obj =
+  let open Gameobj in
   obj.name ^ " {\n" ^
   String.concat "" (List.map string_of_vdecl obj.members) ^ "\n" ^
   "CREATE " ^ (string_of_block obj.create) ^ "\n" ^

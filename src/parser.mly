@@ -60,10 +60,10 @@ fdecl:
        ; block = Some $6 } }
 
 event:
-  | CREATE code_block { (Create, $2) }
-  | DESTROY code_block { (Destroy, $2) }
-  | STEP code_block { (Step, $2) }
-  | DRAW code_block { (Draw, $2) }
+  | CREATE code_block { (Gameobj.Create, $2) }
+  | DESTROY code_block { (Gameobj.Destroy, $2) }
+  | STEP code_block { (Gameobj.Step, $2) }
+  | DRAW code_block { (Gameobj.Draw, $2) }
 
 event_list:
     /* nothing */    { [] }
@@ -71,7 +71,7 @@ event_list:
 
 odecl:
    ID LCURLY vdecl_list event_list RCURLY
-     { make_gameobj $1 (List.rev $3) $4 }
+     { Gameobj.make $1 (List.rev $3) $4 }
 
 formals_opt:
     /* nothing */ { [] }

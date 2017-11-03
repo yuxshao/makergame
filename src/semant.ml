@@ -59,14 +59,14 @@ let check ((globals, functions, gameobjs) : Ast.program) =
     (List.map (fun fd -> fd.fname) functions);
 
   report_duplicate (fun n -> "duplicate gameobj " ^ n)
-    (List.map (fun fd -> fd.name) gameobjs);
+    (List.map (fun fd -> fd.Gameobj.name) gameobjs);
 
   let function_decls =
     List.fold_left (fun m fd -> StringMap.add fd.fname fd m) StringMap.empty functions
   in
 
   let gameobj_decls =
-    List.fold_left (fun m obj -> StringMap.add obj.name obj m) StringMap.empty gameobjs
+    List.fold_left (fun m obj -> StringMap.add obj.Gameobj.name obj m) StringMap.empty gameobjs
   in
 
   let function_decl s =
@@ -94,7 +94,7 @@ let check ((globals, functions, gameobjs) : Ast.program) =
       in
       (match fn.typ with Void -> () | _ -> failwith not_void_err);
       (match fn.formals with [] -> () | _ -> failwith arg_err);
-      (make_gameobj "main" [] [Create, block]) :: gameobjs
+      (Gameobj.make "main" [] [Gameobj.Create, block]) :: gameobjs
   in
 
   let check_block ~symbols ~name ~return block =
@@ -122,7 +122,7 @@ let check ((globals, functions, gameobjs) : Ast.program) =
         match typ with
         | Object s ->
           let o = gameobj_decl s in
-          let symbols = with_binds StringMap.empty o.members in
+          let symbols = with_binds StringMap.empty o.Gameobj.members in
           type_of_identifier (hd, tl) ~symbols
         | _ -> failwith ("cannot get member of non-object " ^ name)
     in
@@ -217,6 +217,7 @@ let check ((globals, functions, gameobjs) : Ast.program) =
   in
 
   let check_gameobj ~symbols obj =
+    let open Gameobj in
     let obj_fn_list obj =
       [("create", obj.create);
        ("step", obj.step);

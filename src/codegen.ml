@@ -31,7 +31,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
 
   let gameobj_types =          (* TODO: test. *)
     let lltype_of m gdecl =
-      let name = gdecl.A.name in
+      let name = gdecl.A.Gameobj.name in
       StringMap.add name (L.named_struct_type context name, gdecl) m
     in
     List.fold_left lltype_of StringMap.empty gameobjs
@@ -52,7 +52,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
 
   StringMap.iter
     (fun _ (t, gdecl) ->
-       let members = gdecl.A.members in
+       let members = gdecl.A.Gameobj.members in
        let ll_members = List.map (fun (typ, _) -> ltype_of_typ typ) members in
        L.struct_set_body t (Array.of_list ll_members) false)
     gameobj_types;
@@ -71,7 +71,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
       (StringMap.add name (member_var, typ) map, ind + 1)
     in
     let (members, _) =
-      List.fold_left add_member (StringMap.empty, 0) objtype.A.members
+      List.fold_left add_member (StringMap.empty, 0) objtype.A.Gameobj.members
     in
     members
   in
@@ -263,12 +263,13 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
   in
 
   let build_gameobj_fns g =     (* TODO: test *)
+    let open A.Gameobj in
     let build_fn (f_name, block) =
-      let llfn_t = L.function_type void_t [|ltype_of_typ (A.Object(g.A.name))|] in
-      let llfn = L.define_function (g.A.name ^ "_" ^ f_name) llfn_t the_module in
-      build_function_body llfn [A.Object(g.A.name), "this"] block A.Void
+      let llfn_t = L.function_type void_t [|ltype_of_typ (A.Object(g.name))|] in
+      let llfn = L.define_function (g.name ^ "_" ^ f_name) llfn_t the_module in
+      build_function_body llfn [A.Object(g.name), "this"] block A.Void
     in
-    List.iter build_fn [("create", g.A.create); ("step", g.A.step); ("destroy", g.A.destroy); ("draw", g.A.draw)]
+    List.iter build_fn [("create", g.create); ("step", g.step); ("destroy", g.destroy); ("draw", g.draw)]
   in
 
   List.iter build_function functions;
