@@ -50,10 +50,10 @@ rule token = parse
   | "sprite" { SPRITE }
   | "sound"  { SOUND }
   (* game keywords *)
-  | "CREATE" { CREATE }
-  | "DESTROY" { DESTROY }
-  | "DRAW" { DRAW }
-  | "STEP" { STEP }
+  | "create" { CREATE }
+  | "destroy" { DESTROY }
+  | "draw" { DRAW }
+  | "step" { STEP }
   (* misc keywords *)
   | "extern" { EXTERN }
   (* literals *)

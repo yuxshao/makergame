@@ -28,6 +28,8 @@ type expr =
   | Unop of uop * typ * expr
   | Assign of (string * string list) * expr
   | Call of string * expr list
+  | Create of string
+  | Destroy of expr
   | Noexpr
 
 type stmt =

@@ -172,6 +172,11 @@ let check ((globals, functions, gameobjs) : Ast.program) =
                          " expected " ^ string_of_typ ft ^ " in " ^ string_of_expr ex)); ex')
             fd.formals actuals in
         fd.typ, Call(fname, actuals')
+      | Create(obj_type) -> Object((gameobj_decl obj_type).Gameobj.name), e
+      | Destroy(e) ->
+        match expr e with
+        | Object _, e' -> Void, Destroy(e')
+        | _ -> failwith ("cannot destroy non-object")
     in
 
     let check_bool_expr e = let (t, e') = expr e in if t != Bool

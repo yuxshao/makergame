@@ -24,6 +24,7 @@ open Ast
 %left AND
 %left EQ NEQ
 %left LT GT LEQ GEQ
+%right CREATE DESTROY
 %left PLUS MINUS
 %left TIMES DIVIDE
 %left EXPONENT MODULO
@@ -144,6 +145,8 @@ expr:
   | NOT expr         { Unop(Not, Void, $2) }
   | id_chain ASSIGN expr   { Assign($1, $3) }
   | ID LPAREN actuals_opt RPAREN { Call($1, $3) }
+  | CREATE ID { Create($2) }
+  | DESTROY expr { Destroy($2) }
   | LPAREN expr RPAREN { $2 }
 
 id_chain:
