@@ -67,7 +67,7 @@ event:
 
 event_list:
     /* nothing */    { [] }
-  | event_list event { $2 :: $1 }
+  | event event_list { $1 :: $2 }
 
 odecl:
    ID LCURLY vdecl_list event_list RCURLY
@@ -75,11 +75,11 @@ odecl:
 
 formals_opt:
     /* nothing */ { [] }
-  | formal_list   { List.rev $1 }
+  | formal_list   { $1 }
 
 formal_list:
     typ ID                   { [($1,$2)] }
-  | formal_list COMMA typ ID { ($3,$4) :: $1 }
+  | typ ID COMMA formal_list { ($1,$2) :: $4 }
 
 typ:
     INT { Int }
