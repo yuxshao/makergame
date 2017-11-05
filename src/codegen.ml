@@ -54,6 +54,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
                            L.const_int i64_t 0; n; n|]) n;
     n
   in
+  let global_objid = L.define_global "last_objid" (L.const_int i64_t 0) the_module in
 
   let ltype_of_typ = function
     | A.Int -> i32_t
@@ -290,6 +291,9 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
           let o = L.build_malloc objtype objname builder in
           L.build_bitcast o gameobj_t objname builder
         in
+        let llid = L.build_load global_objid "old_id" builder in
+        let llid = L.build_add llid (L.const_int i64_t 1) "new_id" builder in
+        let _ = L.build_store llid global_objid builder in
         let events =
           ["create"; "step"; "destroy"; "draw"]
           |> List.map (fun x ->
@@ -300,7 +304,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
                 builder)
         in
         L.build_call create_func
-          (Array.of_list (List.append (llobj :: events) [L.const_int i64_t 0]))
+          (Array.of_list (List.append (llobj :: events) [llid]))
           obj.A.Gameobj.name builder
       | A.Destroy e -> L.build_call destroy_func [|expr builder e|] "" builder
     in
