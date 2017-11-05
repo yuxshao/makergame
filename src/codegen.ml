@@ -20,6 +20,7 @@ module StringMap = Map.Make(String)
 let translate ((globals, functions, gameobjs) : Ast.program) =
   let context = L.global_context () in
   let the_module = L.create_module context "MicroC"
+  and i64_t    = L.i64_type    context
   and i32_t    = L.i32_type    context
   and i8_t     = L.i8_type     context
   and i1_t     = L.i1_type     context
@@ -41,18 +42,16 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
   let node_t = L.named_struct_type context "node" in
   let eventptr_t = L.pointer_type (L.function_type void_t [|L.pointer_type node_t|]) in
   L.struct_set_body node_t
-    [|gameobj_t; eventptr_t; eventptr_t; eventptr_t; eventptr_t;
+    [|gameobj_t; eventptr_t; eventptr_t; eventptr_t; eventptr_t; i64_t;
       L.pointer_type node_t; L.pointer_type node_t|] false;
 
   let node_head =
     let n = L.declare_global node_t "node_head" the_module in
     L.set_initializer (L.const_named_struct node_t
                          [|L.const_null gameobj_t;
-                           L.const_null eventptr_t;
-                           L.const_null eventptr_t;
-                           L.const_null eventptr_t;
-                           L.const_null eventptr_t;
-                           n; n|]) n;
+                           L.const_null eventptr_t; L.const_null eventptr_t;
+                           L.const_null eventptr_t; L.const_null eventptr_t;
+                           L.const_int i64_t 0; n; n|]) n;
     n
   in
 
@@ -103,15 +102,15 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     let f =
       let t =
         L.function_type (L.pointer_type node_t)
-          [|gameobj_t; eventptr_t; eventptr_t; eventptr_t; eventptr_t|]
+          [|gameobj_t; eventptr_t; eventptr_t; eventptr_t; eventptr_t; i64_t|]
       in
       L.define_function "create" t the_module
     in
     let builder = L.builder_at_end context (L.entry_block f) in
     let node = L.build_malloc node_t "node" builder in
-    let following_prev_ptr = L.build_struct_gep node_head 5 "prev_ptr" builder in
+    let following_prev_ptr = L.build_struct_gep node_head 6 "prev_ptr" builder in
     let fprev = L.build_load following_prev_ptr "prev" builder in
-    let preceding_next_ptr = L.build_struct_gep fprev 6 "next_ptr" builder in
+    let preceding_next_ptr = L.build_struct_gep fprev 7 "next_ptr" builder in
     let pnext = L.build_load preceding_next_ptr "next" builder in
     let _ = L.build_store node following_prev_ptr builder in
     let _ = L.build_store node preceding_next_ptr builder in
@@ -141,13 +140,13 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     in
     let gameobj = L.build_load (L.build_struct_gep node 0 "" builder) "obj" builder in
     let _ = L.build_free gameobj builder in
-    let prev_ptr = L.build_struct_gep node 5 "prev_ptr" builder in
+    let prev_ptr = L.build_struct_gep node 6 "prev_ptr" builder in
     let prev = L.build_load prev_ptr "prev" builder in
-    let next_ptr = L.build_struct_gep node 6 "next_ptr" builder in
+    let next_ptr = L.build_struct_gep node 7 "next_ptr" builder in
     let next = L.build_load next_ptr "next" builder in
-    let next_prev = L.build_struct_gep next 5 "next_prev" builder in
+    let next_prev = L.build_struct_gep next 6 "next_prev" builder in
     let _ = L.build_store prev next_prev builder in
-    let prev_next = L.build_struct_gep prev 6 "prev_next" builder in
+    let prev_next = L.build_struct_gep prev 7 "prev_next" builder in
     let _ = L.build_store next prev_next builder in
     let _ = L.build_free node builder in
     ignore (L.build_ret_void builder); f
@@ -300,7 +299,9 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
                 (objname ^ "_" ^ x)
                 builder)
         in
-        L.build_call create_func (Array.of_list (llobj :: events)) obj.A.Gameobj.name builder
+        L.build_call create_func
+          (Array.of_list (List.append (llobj :: events) [L.const_int i64_t 0]))
+          obj.A.Gameobj.name builder
       | A.Destroy e -> L.build_call destroy_func [|expr builder e|] "" builder
     in
 
@@ -400,7 +401,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
 
     let pred_builder = L.builder_at_end context pred_bb in
     let curr = L.build_load node_ptr "cur_node" pred_builder in
-    let next = L.build_load (L.build_struct_gep curr 6 "" pred_builder) "next_ptr" pred_builder in
+    let next = L.build_load (L.build_struct_gep curr 7 "" pred_builder) "next_ptr" pred_builder in
     let _ = L.build_store next node_ptr pred_builder in
     let diff = L.build_ptrdiff next node_head "diff" pred_builder in
     let bool_val = L.build_icmp L.Icmp.Eq diff (L.const_null (L.i64_type context)) "cont" pred_builder in
@@ -418,3 +419,5 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
   List.iter global_event ["step", 2; "draw", 4];
 
   the_module
+
+(* think about how to check if destroyed. extra id field? then separate linked lists for diff obj types? *)
