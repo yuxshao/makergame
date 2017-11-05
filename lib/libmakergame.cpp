@@ -1,6 +1,7 @@
 #include <SFML/Graphics.hpp>
 #include <map>
 #include <string>
+#include <iostream>
 
 static std::map<std::string, sf::Texture> image_map;
 static sf::RenderWindow window;
@@ -21,10 +22,9 @@ static bool game_ended = false;
 extern "C" {
 
 sf::Sprite *load_image(const char *filename) {
-  auto result = image_map.emplace(std::make_pair(filename, sf::Texture()));
-  if (!result.second)
-    result.first->second.loadFromFile(filename);
-  return new sf::Sprite(result.first->second);
+  if (!image_map.count(filename) && !image_map[filename].loadFromFile(filename))
+    std::cerr << "unable to load image " << filename << "\n";
+  return new sf::Sprite(image_map[filename]);
 }
 
 void set_sprite_position(sf::Sprite *sprite, double x, double y) {

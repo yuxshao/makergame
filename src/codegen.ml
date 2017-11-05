@@ -53,7 +53,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     (* | A.Arr (typ, len) -> L.array_type (ltype_of_typ typ) len *)
     | A.Sprite -> sprite_t
     | A.Sound -> sound_t
-    | A.Object o -> L.pointer_type node_t (* let (t, _) = StringMap.find o gameobj_types in L.pointer_type t *)
+    | A.Object _ -> L.pointer_type node_t
     | A.Void -> void_t
   in
 
