@@ -135,7 +135,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     let builder = L.builder_at_end context (L.entry_block f) in
     let node = L.param f 0 in
     let _ =
-      let destroy_event = L.build_load (L.build_struct_gep node 2 "" builder) "event" builder in
+      let destroy_event = L.build_load (L.build_struct_gep node 3 "" builder) "event" builder in
       L.build_call destroy_event [|node|] "" builder
     in
     let gameobj = L.build_load (L.build_struct_gep node 0 "" builder) "obj" builder in
