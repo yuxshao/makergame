@@ -29,7 +29,7 @@ let check ((globals, functions, gameobjs) : Ast.program) =
   (* Raise an exception of the given rvalue type cannot be assigned to
      the given lvalue type *)
   let check_assign lvaluet rvaluet err =
-    if lvaluet == rvaluet then lvaluet else failwith err
+    if lvaluet = rvaluet then lvaluet else failwith err
   in
 
   (**** Checking Global Variables ****)
@@ -233,15 +233,15 @@ let check ((globals, functions, gameobjs) : Ast.program) =
   let check_gameobj ~symbols obj =
     let open Gameobj in
     let obj_fn_list obj =
-      [("create", Create, obj.create);
-       ("step", Step, obj.step);
-       ("draw", Draw, obj.draw);
-       ("destroy", Destroy, obj.destroy)]
+      [("create", Gameobj.Create, obj.create);
+       ("step", Gameobj.Step, obj.step);
+       ("draw", Gameobj.Draw, obj.draw);
+       ("destroy", Gameobj.Destroy, obj.destroy)]
     in
     report_duplicate
       (fun n -> "duplicate members " ^ n ^ " in " ^ obj.name)
       (List.map snd obj.members);
-    
+    let symbols = StringMap.add "this" (Object(obj.name)) symbols in
     let check_obj_fn (name, eventtype, block) =
       eventtype, check_block ~symbols ~name:(obj.name ^ "::" ^ name) ~return:Void block
     in

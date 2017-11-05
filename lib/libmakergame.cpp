@@ -35,14 +35,13 @@ void draw_sprite(sf::Sprite *sprite) { window.draw(*sprite); }
 
 void end_game() { close_window(&window); game_ended = true; }
 
-void main_create();
-void main_step();
-void main_destroy();
-void main_draw();
+void global_create();
+void global_step();
+void global_draw();
 }
 
 int main() {
-  main_create();
+  global_create();
   if (game_ended) return 0;
 
   window.create(sf::VideoMode(800, 600), "Hello World");
@@ -54,12 +53,10 @@ int main() {
       if (event.type == sf::Event::Closed)
         window.close();
     }
-    main_step();
+    global_step();
     window.clear();
-    main_draw();
+    global_draw();
     window.display();
   }
-
-  main_destroy();
   return 0;
 }
