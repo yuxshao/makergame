@@ -30,6 +30,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
   and sound_t  = L.pointer_type (L.named_struct_type context "sfSound")
   and void_t   = L.void_type   context in
 
+  (* Declare types for each object type *)
   let gameobj_types =          (* TODO: test. *)
     let lltype_of m gdecl =
       let name = gdecl.A.Gameobj.name in
@@ -38,6 +39,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     List.fold_left lltype_of StringMap.empty gameobjs
   in
 
+  (* Define generic types for linked lists and game objects *)
   let node_t = L.named_struct_type context "node" in
   let nodeptr_t = L.pointer_type node_t in
   L.struct_set_body node_t [|nodeptr_t; nodeptr_t|] false;
@@ -50,9 +52,15 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
   let eventptr_t = L.pointer_type (L.function_type void_t [|objref_t|]) in
   L.struct_set_body gameobj_t [|node_t; i64_t; eventptr_t; eventptr_t; eventptr_t; eventptr_t|] false;
 
-  let node_head =
-    let n = L.declare_global node_t "node_head" the_module in
-    L.set_initializer (L.const_named_struct node_t [|n; n|]) n; n
+  (* Define linked list heads *)
+  let (gameobj_head, obj_heads) =
+    let make_head name =
+      let n = L.declare_global node_t (name ^ "_head") the_module in
+      L.set_initializer (L.const_named_struct node_t [|n; n|]) n; n
+    in
+    let add_head map name = StringMap.add name (make_head name) map in
+    let names = List.map (fun x -> x.A.Gameobj.name) gameobjs in
+    (make_head "gameobj", List.fold_left add_head StringMap.empty names)
   in
   let global_objid = L.define_global "last_objid" (L.const_int i64_t 0) the_module in
 
@@ -69,11 +77,12 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     | A.Void -> void_t
   in
 
+  (* Define object type structs *)
   StringMap.iter
     (fun _ (t, gdecl) ->
        let members = gdecl.A.Gameobj.members in
        let ll_members = List.map (fun (typ, _) -> ltype_of_typ typ) members in
-       L.struct_set_body t (Array.append [|gameobj_t|] (Array.of_list ll_members)) false)
+       L.struct_set_body t (Array.of_list (gameobj_t :: node_t :: ll_members)) false)
     gameobj_types;
 
   (* Declare each global variable; remember its value in a map *)
@@ -83,6 +92,8 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
       in StringMap.add n (L.define_global n init the_module, t) m in
     List.fold_left global_var StringMap.empty globals in
 
+  (* Given value ll for an object of type objname, builds and returns scope of
+     that object in StringMap. *)
   let gameobj_members ll objname builder =
     let (_, objtype) = StringMap.find objname gameobj_types in
     let add_member (map, ind) (typ, name) =
@@ -90,7 +101,8 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
       (StringMap.add name (member_var, typ) map, ind + 1)
     in
     let (members, _) =
-      List.fold_left add_member (StringMap.empty, 1) objtype.A.Gameobj.members
+      (* object type struct: gameobj_t :: node_t :: members *)
+      List.fold_left add_member (StringMap.empty, 2) objtype.A.Gameobj.members
     in
     members
   in
@@ -99,6 +111,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
   let printf_t = L.var_arg_function_type i32_t [| L.pointer_type i8_t |] in
   let printf_func = L.declare_function "printf" printf_t the_module in
 
+  (* Helper function for assigning struct values. *)
   let build_struct_assign str values builder =
     let assign (llv, ind) value =
       match value with
@@ -108,6 +121,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     let (ret, _) = Array.fold_left assign (str, 0) values in ret
   in
 
+  (* Helper function for assigning struct values given a pointer. *)
   let build_struct_ptr_assign ptr values builder =
     let assign ind value =
       match value with
@@ -312,8 +326,8 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
           let o = L.build_malloc objtype objname builder in
           L.build_bitcast o objptr_t (objname ^ "_obj") builder
         in
-        let llnode = L.build_bitcast llobj nodeptr_t (objname ^ "_nodeasdf") builder in
-        ignore (L.build_call list_add_func [|llnode; node_head|] "" builder);
+        let llnode = L.build_bitcast llobj nodeptr_t (objname ^ "_node") builder in
+        ignore (L.build_call list_add_func [|llnode; gameobj_head|] "" builder);
         let llid = L.build_load global_objid "old_id" builder in
         let llid = L.build_add llid (L.const_int i64_t 1) "new_id" builder in
         ignore (L.build_store llid global_objid builder);
@@ -327,6 +341,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
         build_struct_ptr_assign llobj (Array.of_list (None :: Some llid :: events)) builder;
         let objref = build_struct_assign (L.undef objref_t) [|Some llid; Some llnode|] builder in
         let create_event = match List.hd events with | Some ev -> ev | None -> assert false in
+        (* TODO: include something in LRM about non-initialized values *)
         ignore (L.build_call create_event [|objref|] "" builder);
         objref
       | A.Destroy e ->
@@ -423,7 +438,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     let builder = L.builder_at_end context (L.entry_block step_gb) in
     let node_ptr = L.build_alloca nodeptr_t "node" builder in
     (* ignore (L.build_call printf_func [|L.build_global_stringptr ("%s\n") "strfmt" builder; L.build_global_stringptr name name builder|] "" builder); *)
-    ignore (L.build_store node_head node_ptr builder);
+    ignore (L.build_store gameobj_head node_ptr builder);
     let pred_bb = L.append_block context "check" step_gb in
     ignore (L.build_br pred_bb builder);
 
@@ -431,10 +446,10 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     let curr = L.build_load node_ptr "cur_node" pred_builder in
     let next = L.build_load (L.build_struct_gep curr 0 "" pred_builder) "next_ptr" pred_builder in
     (* let next_int = L.build_ptrtoint next i64_t "" pred_builder in *)
-    (* let head_int = L.build_ptrtoint node_head i64_t "" pred_builder in *)
+    (* let head_int = L.build_ptrtoint gameobj_head i64_t "" pred_builder in *)
     (* ignore (L.build_call printf_func [|L.build_global_stringptr "%d %d\n" "ptrfmt" pred_builder; next_int; head_int|] "" pred_builder); *)
     ignore (L.build_store next node_ptr pred_builder);
-    let diff = L.build_ptrdiff next node_head "diff" pred_builder in
+    let diff = L.build_ptrdiff next gameobj_head "diff" pred_builder in
     let bool_val = L.build_icmp L.Icmp.Eq diff (L.const_null (L.i64_type context)) "cont" pred_builder in
 
     let body_bb = L.append_block context "body" step_gb in
