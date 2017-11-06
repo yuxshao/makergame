@@ -125,7 +125,9 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
         List.fold_left add_local StringMap.empty block.A.locals
       in
 
-      let add = StringMap.union (fun _ f _ -> Some f) in
+      let add =
+        StringMap.merge (fun _ a b -> match a, b with Some a, _ -> Some a | _ -> b)
+      in
       global_vars |> add formals |> add locals
     in
 
