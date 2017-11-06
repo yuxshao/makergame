@@ -222,6 +222,17 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     |> List.fold_left (fun map (k, v) -> StringMap.add k v map) StringMap.empty
   in
 
+  let fmt_str name contents =
+    L.define_global (name ^ "_fmt") (L.const_stringz context contents) the_module
+  in
+  let int_fmt_str   = fmt_str "int"   "%d\n" in
+  let float_fmt_str = fmt_str "float" "%f\n" in
+  let str_fmt_str   = fmt_str "str"   "%s\n" in
+  let fmt_str global builder =
+    L.build_gep global
+      [|L.const_int i32_t 0; L.const_int i32_t 0|] "" builder
+  in
+
   (* Invoke "f builder" if the current block doesn't already
      have a terminal (e.g., a branch). *)
   let add_terminal builder f =
@@ -232,10 +243,6 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
   (* Fill in the body of the given function *)
   let build_function_body the_function formals block return_type =
     let builder = L.builder_at_end context (L.entry_block the_function) in
-
-    let int_format_str   = L.build_global_stringptr "%d\n" "fmt" builder in
-    let float_format_str = L.build_global_stringptr "%f\n" "fmt" builder in
-    let str_format_str   = L.build_global_stringptr "%s\n" "fmt" builder in
 
     (* Construct the function's "locals": formal arguments and locally
        declared variables.  Allocate each on the stack, initialize their
@@ -316,11 +323,14 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
       | A.Assign ((hd, tl), e) -> let e' = expr builder e in
         ignore (L.build_store e' (lookup builder scope hd tl) builder); e'
       | A.Call ("printstr", [e]) ->
-        L.build_call printf_func [| str_format_str; (expr builder e) |] "printf" builder
+        L.build_call printf_func
+          [| fmt_str str_fmt_str builder; (expr builder e) |] "printf" builder
       | A.Call ("print", [e]) | A.Call ("printb", [e]) ->
-        L.build_call printf_func [| int_format_str ; (expr builder e) |] "printf" builder
+        L.build_call printf_func
+          [| fmt_str int_fmt_str builder; (expr builder e) |] "printf" builder
       | A.Call ("print_float", [e]) -> (* TODO: test this fn *)
-        L.build_call printf_func [| float_format_str ; expr builder e |] "printf" builder
+        L.build_call printf_func
+          [| fmt_str float_fmt_str builder; (expr builder e) |] "printf" builder
       (* TODO: unify print names and their tests *)
       | A.Call (f, act) ->
         let (fdef, fdecl) = StringMap.find f function_decls in
