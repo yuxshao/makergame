@@ -38,23 +38,21 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     List.fold_left lltype_of StringMap.empty gameobjs
   in
 
-  let gameobj_t = L.pointer_type (L.named_struct_type context "gameobj") in
   let node_t = L.named_struct_type context "node" in
+  let nodeptr_t = L.pointer_type node_t in
+  L.struct_set_body node_t [|nodeptr_t; nodeptr_t|] false;
+
   let objref_t = L.named_struct_type context "objref" in
+  L.struct_set_body objref_t [|i64_t; nodeptr_t|] false;
+
+  let gameobj_t = L.named_struct_type context "gameobj" in
+  let objptr_t = L.pointer_type gameobj_t in
   let eventptr_t = L.pointer_type (L.function_type void_t [|objref_t|]) in
-  L.struct_set_body node_t
-    [|gameobj_t; eventptr_t; eventptr_t; eventptr_t; eventptr_t; i64_t;
-      L.pointer_type node_t; L.pointer_type node_t|] false;
-  L.struct_set_body objref_t [|i64_t; L.pointer_type node_t|] false;
+  L.struct_set_body gameobj_t [|node_t; i64_t; eventptr_t; eventptr_t; eventptr_t; eventptr_t|] false;
 
   let node_head =
     let n = L.declare_global node_t "node_head" the_module in
-    L.set_initializer (L.const_named_struct node_t
-                         [|L.const_null gameobj_t;
-                           L.const_null eventptr_t; L.const_null eventptr_t;
-                           L.const_null eventptr_t; L.const_null eventptr_t;
-                           L.const_int i64_t 0; n; n|]) n;
-    n
+    L.set_initializer (L.const_named_struct node_t [|n; n|]) n; n
   in
   let global_objid = L.define_global "last_objid" (L.const_int i64_t 0) the_module in
 
@@ -75,7 +73,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     (fun _ (t, gdecl) ->
        let members = gdecl.A.Gameobj.members in
        let ll_members = List.map (fun (typ, _) -> ltype_of_typ typ) members in
-       L.struct_set_body t (Array.of_list ll_members) false)
+       L.struct_set_body t (Array.append [|gameobj_t|] (Array.of_list ll_members)) false)
     gameobj_types;
 
   (* Declare each global variable; remember its value in a map *)
@@ -85,14 +83,14 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
       in StringMap.add n (L.define_global n init the_module, t) m in
     List.fold_left global_var StringMap.empty globals in
 
-  let gameobj_members ll objname builder = (* TODO: test member access; try accessing nonexistent *)
+  let gameobj_members ll objname builder =
     let (_, objtype) = StringMap.find objname gameobj_types in
     let add_member (map, ind) (typ, name) =
       let member_var = L.build_struct_gep ll ind name builder in
       (StringMap.add name (member_var, typ) map, ind + 1)
     in
     let (members, _) =
-      List.fold_left add_member (StringMap.empty, 0) objtype.A.Gameobj.members
+      List.fold_left add_member (StringMap.empty, 1) objtype.A.Gameobj.members
     in
     members
   in
@@ -101,36 +99,62 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
   let printf_t = L.var_arg_function_type i32_t [| L.pointer_type i8_t |] in
   let printf_func = L.declare_function "printf" printf_t the_module in
 
-  let create_func =
+  let build_struct_assign str values builder =
+    let assign (llv, ind) value =
+      match value with
+      | Some v -> (L.build_insertvalue llv v ind "" builder, ind+1)
+      | None -> (llv, ind+1)
+    in
+    let (ret, _) = Array.fold_left assign (str, 0) values in ret
+  in
+
+  let build_struct_ptr_assign ptr values builder =
+    let assign ind value =
+      match value with
+      | Some v ->
+        ignore (L.build_store v (L.build_struct_gep ptr ind "" builder) builder)
+      | None -> ()
+    in Array.iteri assign values
+  in
+
+  (* Define list_add(new, head), which puts new to the end of the list
+     marked by head. *)
+  let list_add_func =
     let f =
-      let t =
-        L.function_type objref_t
-          [|gameobj_t; eventptr_t; eventptr_t; eventptr_t; eventptr_t; i64_t|]
-      in
-      L.define_function "create" t the_module
+      let t = L.function_type void_t [|nodeptr_t; nodeptr_t|] in
+      L.define_function "list_add" t the_module
     in
     let builder = L.builder_at_end context (L.entry_block f) in
-    let id = L.param f 5 in
-    let node = L.build_malloc node_t "node" builder in
-    let following_prev_ptr = L.build_struct_gep node_head 6 "prev_ptr" builder in
+    let node, head = L.param f 0, L.param f 1 in
+    let following_prev_ptr = L.build_struct_gep head 0 "prev_ptr" builder in
     let fprev = L.build_load following_prev_ptr "prev" builder in
-    let preceding_next_ptr = L.build_struct_gep fprev 7 "next_ptr" builder in
-    let pnext = L.build_load preceding_next_ptr "next" builder in
-    let _ = L.build_store node following_prev_ptr builder in
-    let _ = L.build_store node preceding_next_ptr builder in
-    let assign ind param =
-      let elem = L.build_struct_gep node ind "" builder in
-      L.build_store param elem builder
-    in
-    ignore (Array.mapi assign (Array.append (L.params f) [|fprev; pnext|]));
-    let objref = L.build_insertvalue (L.undef objref_t) id 0 "objref" builder in
-    let objref = L.build_insertvalue objref node 1 "objref" builder in
-    let _ =
-      let create_event = L.param f 1 in
-      L.build_call create_event [|objref|] "" builder
-    in
-    ignore (L.build_ret objref builder);
+    let preceding_next_ptr = L.build_struct_gep fprev 1 "next_ptr" builder in
+    (* let pnext = L.build_load preceding_next_ptr "next" builder in *)
+    let pnext = head in
+    ignore (L.build_store node following_prev_ptr builder);
+    ignore (L.build_store node preceding_next_ptr builder);
+    build_struct_ptr_assign node [|Some fprev; Some pnext|] builder;
+    ignore (L.build_ret_void builder);
     f
+  in
+
+  (* Removes a node from a linked list. Does not free. *)
+  let list_rem_func =
+    let f =
+      let t = L.function_type void_t [|nodeptr_t|] in
+      L.define_function "list_rem" t the_module
+    in
+    let builder = L.builder_at_end context (L.entry_block f) in
+    let node = L.param f 0 in
+    let prev_ptr = L.build_struct_gep node 0 "prev_ptr" builder in
+    let prev = L.build_load prev_ptr "prev" builder in
+    let next_ptr = L.build_struct_gep node 1 "next_ptr" builder in
+    let next = L.build_load next_ptr "next" builder in
+    let next_prev = L.build_struct_gep next 0 "next_prev" builder in
+    ignore (L.build_store prev next_prev builder);
+    let prev_next = L.build_struct_gep prev 1 "prev_next" builder in
+    ignore (L.build_store next prev_next builder);
+    ignore (L.build_ret_void builder); f
   in
 
   let destroy_func =
@@ -142,20 +166,12 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     let objref = L.param f 0 in
     let node = L.build_extractvalue objref 1 "node" builder in
     let _ =
-      let destroy_event = L.build_load (L.build_struct_gep node 3 "" builder) "event" builder in
+      let objptr = L.build_bitcast node objptr_t "objptr" builder in
+      let destroy_event = L.build_load (L.build_struct_gep objptr 4 "" builder) "event" builder in
       L.build_call destroy_event [|objref|] "" builder
     in
-    let gameobj = L.build_load (L.build_struct_gep node 0 "" builder) "obj" builder in
-    let _ = L.build_free gameobj builder in
-    let prev_ptr = L.build_struct_gep node 6 "prev_ptr" builder in
-    let prev = L.build_load prev_ptr "prev" builder in
-    let next_ptr = L.build_struct_gep node 7 "next_ptr" builder in
-    let next = L.build_load next_ptr "next" builder in
-    let next_prev = L.build_struct_gep next 6 "next_prev" builder in
-    let _ = L.build_store prev next_prev builder in
-    let prev_next = L.build_struct_gep prev 7 "prev_next" builder in
-    let _ = L.build_store next prev_next builder in
-    let _ = L.build_free node builder in
+    ignore (L.build_call list_rem_func [|node|] "" builder);
+    ignore (L.build_free node builder);
     ignore (L.build_ret_void builder); f
   in
 
@@ -233,12 +249,10 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
       | hd :: tl ->
         match top_type with
         | A.Object objname ->
-          let lltop = L.build_struct_gep top 1 (n ^ "_nodeptr") builder in
-          let lltop = L.build_load lltop (n ^ "_node") builder in
-          let lltop = L.build_struct_gep lltop 0 n builder in
-          let lltop = L.build_load lltop n builder in
+          let nodeptr = L.build_struct_gep top 1 (n ^ "_nodeptr") builder in
+          let node = L.build_load nodeptr (n ^ "_node") builder in
           let (obj_type, _) = StringMap.find objname gameobj_types in
-          let lltop = L.build_bitcast lltop (L.pointer_type obj_type) n builder in
+          let lltop = L.build_bitcast node (L.pointer_type obj_type) n builder in
           lookup builder (gameobj_members lltop objname builder) hd tl
         | _ -> assert false (* failwith "cannot get member of non-object type" *)
     in
@@ -293,27 +307,30 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
         in
         L.build_call fdef (Array.of_list actuals) result builder
       | A.Create objname ->
-        let (objtype, obj) = StringMap.find objname gameobj_types in
+        let (objtype, _) = StringMap.find objname gameobj_types in
         let llobj =
           let o = L.build_malloc objtype objname builder in
-          L.build_bitcast o gameobj_t objname builder
+          L.build_bitcast o objptr_t (objname ^ "_obj") builder
         in
+        let llnode = L.build_bitcast llobj nodeptr_t (objname ^ "_nodeasdf") builder in
+        ignore (L.build_call list_add_func [|llnode; node_head|] "" builder);
         let llid = L.build_load global_objid "old_id" builder in
         let llid = L.build_add llid (L.const_int i64_t 1) "new_id" builder in
-        let _ = L.build_store llid global_objid builder in
+        ignore (L.build_store llid global_objid builder);
         let events =
           ["create"; "step"; "destroy"; "draw"]
           |> List.map (fun x ->
-              L.build_bitcast
-                (StringMap.find (objname ^ "_" ^ x) gameobj_func_decls)
-                eventptr_t
-                (objname ^ "_" ^ x)
-                builder)
+              Some (L.build_bitcast
+                      (StringMap.find (objname ^ "_" ^ x) gameobj_func_decls)
+                      eventptr_t (objname ^ "_" ^ x) builder))
         in
-        L.build_call create_func
-          (Array.of_list (List.append (llobj :: events) [llid]))
-          obj.A.Gameobj.name builder
-      | A.Destroy e -> L.build_call destroy_func [|expr builder e|] "" builder
+        build_struct_ptr_assign llobj (Array.of_list (None :: Some llid :: events)) builder;
+        let objref = build_struct_assign (L.undef objref_t) [|Some llid; Some llnode|] builder in
+        let create_event = match List.hd events with | Some ev -> ev | None -> assert false in
+        ignore (L.build_call create_event [|objref|] "" builder);
+        objref
+      | A.Destroy e ->
+        L.build_call destroy_func [|expr builder e|] "" builder
     in
 
     (* Invoke "f builder" if the current block doesn't already
@@ -392,7 +409,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     let build_fn (f_name, block) =
       let name = g.name ^ "_" ^ f_name in
       let llfn = StringMap.find name gameobj_func_decls in
-      build_function_body llfn [A.Object(g.name), "this"] block A.Void
+      build_function_body llfn [A.Object(g.name), "this"] block A.Void (* TODO: make sure you can't reassign this *)
     in
     List.iter build_fn [("create", g.create); ("step", g.step); ("destroy", g.destroy); ("draw", g.draw)]
   in
@@ -404,33 +421,36 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
   let global_event (name, offset) =
     let step_gb = L.define_function ("global_" ^ name) (L.function_type void_t [||]) the_module in
     let builder = L.builder_at_end context (L.entry_block step_gb) in
-    let node_ptr = L.build_alloca (L.pointer_type node_t) "node" builder in
-    let _ = L.build_store node_head node_ptr builder in
-    (* let _ = L.build_ret_void builder in *)
+    let node_ptr = L.build_alloca nodeptr_t "node" builder in
+    (* ignore (L.build_call printf_func [|L.build_global_stringptr ("%s\n") "strfmt" builder; L.build_global_stringptr name name builder|] "" builder); *)
+    ignore (L.build_store node_head node_ptr builder);
     let pred_bb = L.append_block context "check" step_gb in
     ignore (L.build_br pred_bb builder);
 
     let pred_builder = L.builder_at_end context pred_bb in
     let curr = L.build_load node_ptr "cur_node" pred_builder in
-    let next = L.build_load (L.build_struct_gep curr 7 "" pred_builder) "next_ptr" pred_builder in
-    let _ = L.build_store next node_ptr pred_builder in
+    let next = L.build_load (L.build_struct_gep curr 0 "" pred_builder) "next_ptr" pred_builder in
+    (* let next_int = L.build_ptrtoint next i64_t "" pred_builder in *)
+    (* let head_int = L.build_ptrtoint node_head i64_t "" pred_builder in *)
+    (* ignore (L.build_call printf_func [|L.build_global_stringptr "%d %d\n" "ptrfmt" pred_builder; next_int; head_int|] "" pred_builder); *)
+    ignore (L.build_store next node_ptr pred_builder);
     let diff = L.build_ptrdiff next node_head "diff" pred_builder in
     let bool_val = L.build_icmp L.Icmp.Eq diff (L.const_null (L.i64_type context)) "cont" pred_builder in
 
     let body_bb = L.append_block context "body" step_gb in
     let body_builder = L.builder_at_end context body_bb in
-    let sf = L.build_load (L.build_struct_gep next offset "" body_builder) ("this_" ^ name) body_builder in
-    let id = L.build_load (L.build_struct_gep next 5 "id_ptr" body_builder) "id" body_builder in
-    let next_ref = L.build_insertvalue (L.undef objref_t) id 0 "next_ref" body_builder in
-    let next_ref = L.build_insertvalue next_ref next 1 "next_ref" body_builder in
-    let _ = L.build_call sf [|next_ref|] "" body_builder in
+    let objptr = L.build_bitcast next objptr_t "objptr" body_builder in
+    let sf = L.build_load (L.build_struct_gep objptr offset "" body_builder) ("this_" ^ name) body_builder in
+    let id = L.build_load (L.build_struct_gep objptr 1 "id_ptr" body_builder) "id" body_builder in
+    let next_ref = build_struct_assign (L.undef objref_t) [|Some id; Some next|] body_builder in
+    ignore (L.build_call sf [|next_ref|] "" body_builder);
     ignore (L.build_br pred_bb body_builder);
 
     let merge_bb = L.append_block context "merge" step_gb in
     ignore (L.build_cond_br bool_val merge_bb body_bb pred_builder);
     ignore (L.build_ret_void (L.builder_at_end context merge_bb))
   in
-  List.iter global_event ["step", 2; "draw", 4];
+  List.iter global_event ["step", 3; "draw", 5];
 
   the_module
 
