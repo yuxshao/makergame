@@ -112,8 +112,8 @@ stmt:
     expr SEMI { Expr $1 }
   | RETURN SEMI { Return Noexpr }
   | RETURN expr SEMI { Return $2 }
-  | LCURLY stmt_list RCURLY { Block($2) }
-  | IF LPAREN expr RPAREN stmt %prec NOELSE { If($3, $5, Block([])) }
+  | code_block { Block($1) }
+  | IF LPAREN expr RPAREN stmt %prec NOELSE { If($3, $5, Block({locals = []; body = []})) }
   | IF LPAREN expr RPAREN stmt ELSE stmt    { If($3, $5, $7) }
   | FOR LPAREN expr_opt SEMI expr SEMI expr_opt RPAREN stmt
      { For($3, $5, $7, $9) }

@@ -97,7 +97,7 @@ let check ((globals, functions, gameobjs) : Ast.program) =
       (Gameobj.make "main" [] [Gameobj.Create, block]) :: gameobjs
   in
 
-  let check_block ~symbols ~name ~return block =
+  let rec check_block ~symbols ~name ~return block : Ast.block =
     List.iter
       (check_not_void (fun n -> "illegal void local " ^ n ^ " in " ^ name))
       block.locals;
@@ -183,30 +183,29 @@ let check ((globals, functions, gameobjs) : Ast.program) =
       then failwith ("expected Boolean expression in " ^ string_of_expr e)
       else e' in
 
-    (* Verify a statement and return the new statement or throw an exception *)
+    (* Verify a statement or throw an exception *)
     let rec stmt = function
-      | Block sl ->
-        let rec check_block = function
-          | [Return _ as s] -> [stmt s]
-          | Return _ :: _ -> failwith "nothing may follow a return" (* TODO: change this? *)
-          | Block sl :: ss -> check_block (sl @ ss)
-          | s :: ss -> (stmt s) :: (check_block ss)
-          | [] -> []
-        in Block (check_block sl)
-      | Expr e -> let (_, e') = expr e in Expr(e')
-      | Return e -> let (t, e') = expr e in if t = return then Return(e') else
-          failwith ("return gives " ^ string_of_typ t ^ " expected " ^
-                    string_of_typ return ^ " in " ^ string_of_expr e)
-
-      | If(p, b1, b2) -> let p' = check_bool_expr p in let b1' = stmt b1 in let b2' = stmt b2 in If(p', b1', b2') 
+      | Block b -> Block (check_block b ~symbols ~name ~return)
+      | Expr e -> let (_, e') = expr e in Expr e'
+      | Return e ->
+        let t, e' = expr e in
+        if t = return then Return e'
+        else failwith ("return gives " ^ string_of_typ t ^ " expected " ^
+                       string_of_typ return ^ " in " ^ string_of_expr e)
+      | If(p, b1, b2) -> If (check_bool_expr p, stmt b1, stmt b2)
       | For(e1, e2, e3, st) -> let (_, e1') = expr e1 in let e2' = check_bool_expr e2 in
         let (_, e3') = expr e3 in let st' = stmt st in For (e1', e2', e3', st')
       | While(p, s) -> let p' = check_bool_expr p in let s' = stmt s in While(p', s')
-      | Foreach(obj_t, _id, s) -> ignore(gameobj_decl obj_t); let s' = stmt s in Foreach(obj_t, _id, s')
+      | Foreach(obj_t, id, s) -> ignore(gameobj_decl obj_t); let s' = stmt s in Foreach(obj_t, id, s')
     in
-    match stmt (Block block.body) with
-    | Block b -> { locals = block.locals; body = b }
-    | _ -> assert false
+
+    let rec stmts = function
+      | [Return _ as s] -> [stmt s]
+      | Return _ :: _ -> failwith "nothing may follow a return" (* TODO: change this? *)
+      | s :: ss -> (stmt s) :: (stmts ss)
+      | [] -> []
+    in
+    { block with body = stmts block.body }
   in
 
   let check_function ~symbols func =
@@ -221,7 +220,7 @@ let check ((globals, functions, gameobjs) : Ast.program) =
     report_duplicate
       (fun n -> "duplicate formal " ^ n ^ " in " ^ func.fname)
       (List.map snd func.formals);
-    
+
     let block =
       match func.block with
       | Some block -> Some (check_block ~symbols ~name:func.fname ~return:func.typ block)

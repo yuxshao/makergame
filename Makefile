@@ -18,6 +18,7 @@ microc.native :
 .PHONY : clean
 clean :
 	ocamlbuild -clean
+	rm -rf vgcore.*
 	rm -rf testall.log *.diff microc scanner.ml parser.ml parser.mli
 	rm -rf printbig
 	rm -rf lib/libmakergame.o

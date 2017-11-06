@@ -33,18 +33,19 @@ type expr =
   | Noexpr
 
 type stmt =
-  | Block of stmt list
+  | Block of block
   | Expr of expr
   | Return of expr
   | If of expr * stmt * stmt
   | For of expr * expr * expr * stmt
   | Foreach of string * string * stmt (* TODO: use an object bind type maybe *)
   | While of expr * stmt
-
-type block = {
+and block = {
   locals : bind list;
   body : stmt list;
 }
+
+let make_block locals body = { locals; body }
 
 type func_decl = {
   typ : typ;
@@ -164,11 +165,11 @@ let rec string_of_typ = function
 let string_of_vdecl (t, id) = string_of_typ t ^ " " ^ id ^ ";\n"
 
 let rec string_of_stmt = function
-    Block(stmts) ->
-      "{\n" ^ String.concat "" (List.map string_of_stmt stmts) ^ "}\n"
+  | Block(blk) -> string_of_block blk;
   | Expr(expr) -> string_of_expr expr ^ ";\n";
   | Return(expr) -> "return " ^ string_of_expr expr ^ ";\n";
-  | If(e, s, Block([])) -> "if (" ^ string_of_expr e ^ ")\n" ^ string_of_stmt s
+  | If(e, s, Block({locals = []; body = []})) ->
+    "if (" ^ string_of_expr e ^ ")\n" ^ string_of_stmt s
   | If(e, s1, s2) ->  "if (" ^ string_of_expr e ^ ")\n" ^
       string_of_stmt s1 ^ "else\n" ^ string_of_stmt s2
   | For(e1, e2, e3, s) ->
@@ -177,8 +178,7 @@ let rec string_of_stmt = function
   | While(e, s) -> "while (" ^ string_of_expr e ^ ") " ^ string_of_stmt s
   | Foreach(obj_t, id, s) ->
       "foreach (" ^ obj_t  ^ " " ^ id ^ ") " ^ string_of_stmt s
-
-let string_of_block block =
+and string_of_block block =
   "{\n" ^
   String.concat "" (List.map string_of_vdecl block.locals) ^
   String.concat "" (List.map string_of_stmt block.body) ^
