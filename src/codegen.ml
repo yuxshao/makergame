@@ -40,10 +40,12 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
 
   let gameobj_t = L.pointer_type (L.named_struct_type context "gameobj") in
   let node_t = L.named_struct_type context "node" in
-  let eventptr_t = L.pointer_type (L.function_type void_t [|L.pointer_type node_t|]) in
+  let objref_t = L.named_struct_type context "objref" in
+  let eventptr_t = L.pointer_type (L.function_type void_t [|objref_t|]) in
   L.struct_set_body node_t
     [|gameobj_t; eventptr_t; eventptr_t; eventptr_t; eventptr_t; i64_t;
       L.pointer_type node_t; L.pointer_type node_t|] false;
+  L.struct_set_body objref_t [|i64_t; L.pointer_type node_t|] false;
 
   let node_head =
     let n = L.declare_global node_t "node_head" the_module in
@@ -65,7 +67,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     (* | A.Arr (typ, len) -> L.array_type (ltype_of_typ typ) len *)
     | A.Sprite -> sprite_t
     | A.Sound -> sound_t
-    | A.Object _ -> L.pointer_type node_t
+    | A.Object _ -> objref_t
     | A.Void -> void_t
   in
 
@@ -102,12 +104,13 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
   let create_func =
     let f =
       let t =
-        L.function_type (L.pointer_type node_t)
+        L.function_type objref_t
           [|gameobj_t; eventptr_t; eventptr_t; eventptr_t; eventptr_t; i64_t|]
       in
       L.define_function "create" t the_module
     in
     let builder = L.builder_at_end context (L.entry_block f) in
+    let id = L.param f 5 in
     let node = L.build_malloc node_t "node" builder in
     let following_prev_ptr = L.build_struct_gep node_head 6 "prev_ptr" builder in
     let fprev = L.build_load following_prev_ptr "prev" builder in
@@ -120,24 +123,27 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
       L.build_store param elem builder
     in
     ignore (Array.mapi assign (Array.append (L.params f) [|fprev; pnext|]));
+    let objref = L.build_insertvalue (L.undef objref_t) id 0 "objref" builder in
+    let objref = L.build_insertvalue objref node 1 "objref" builder in
     let _ =
       let create_event = L.param f 1 in
-      L.build_call create_event [|node|] "" builder
+      L.build_call create_event [|objref|] "" builder
     in
-    ignore (L.build_ret node builder);
+    ignore (L.build_ret objref builder);
     f
   in
 
   let destroy_func =
     let f =
-      let t = L.function_type void_t [|L.pointer_type node_t|] in
+      let t = L.function_type void_t [|objref_t|] in
       L.define_function "destroy" t the_module
     in
     let builder = L.builder_at_end context (L.entry_block f) in
-    let node = L.param f 0 in
+    let objref = L.param f 0 in
+    let node = L.build_extractvalue objref 1 "node" builder in
     let _ =
       let destroy_event = L.build_load (L.build_struct_gep node 3 "" builder) "event" builder in
-      L.build_call destroy_event [|node|] "" builder
+      L.build_call destroy_event [|objref|] "" builder
     in
     let gameobj = L.build_load (L.build_struct_gep node 0 "" builder) "obj" builder in
     let _ = L.build_free gameobj builder in
@@ -227,7 +233,8 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
       | hd :: tl ->
         match top_type with
         | A.Object objname ->
-          let lltop = L.build_load top (n ^ "_node") builder in
+          let lltop = L.build_struct_gep top 1 (n ^ "_nodeptr") builder in
+          let lltop = L.build_load lltop (n ^ "_node") builder in
           let lltop = L.build_struct_gep lltop 0 n builder in
           let lltop = L.build_load lltop n builder in
           let (obj_type, _) = StringMap.find objname gameobj_types in
@@ -413,7 +420,10 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     let body_bb = L.append_block context "body" step_gb in
     let body_builder = L.builder_at_end context body_bb in
     let sf = L.build_load (L.build_struct_gep next offset "" body_builder) ("this_" ^ name) body_builder in
-    let _ = L.build_call sf [|next|] "" body_builder in
+    let id = L.build_load (L.build_struct_gep next 5 "id_ptr" body_builder) "id" body_builder in
+    let next_ref = L.build_insertvalue (L.undef objref_t) id 0 "next_ref" body_builder in
+    let next_ref = L.build_insertvalue next_ref next 1 "next_ref" body_builder in
+    let _ = L.build_call sf [|next_ref|] "" body_builder in
     ignore (L.build_br pred_bb body_builder);
 
     let merge_bb = L.append_block context "merge" step_gb in
