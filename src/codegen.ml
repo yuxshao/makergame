@@ -62,6 +62,8 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     let names = List.map (fun x -> x.A.Gameobj.name) gameobjs in
     (make_head "gameobj", List.fold_left add_head StringMap.empty names)
   in
+  let obj_head n = StringMap.find n obj_heads in
+
   let global_objid = L.define_global "last_objid" (L.const_int i64_t 0) the_module in
 
   let ltype_of_typ = function
@@ -322,11 +324,13 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
         L.build_call fdef (Array.of_list actuals) result builder
       | A.Create objname ->
         let (objtype, _) = StringMap.find objname gameobj_types in
-        let llobj =
-          let o = L.build_malloc objtype objname builder in
-          L.build_bitcast o objptr_t (objname ^ "_obj") builder
-        in
+        let llobj = L.build_malloc objtype objname builder in
         let llnode = L.build_bitcast llobj nodeptr_t (objname ^ "_node") builder in
+        let llobjnode =
+          L.build_bitcast (L.build_struct_gep llobj 1 "" builder)
+            nodeptr_t (objname ^ "_objnode") builder
+        in
+        ignore (L.build_call list_add_func [|llobjnode; obj_head objname|] "" builder);
         ignore (L.build_call list_add_func [|llnode; gameobj_head|] "" builder);
         let llid = L.build_load global_objid "old_id" builder in
         let llid = L.build_add llid (L.const_int i64_t 1) "new_id" builder in
@@ -338,7 +342,8 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
                       (StringMap.find (objname ^ "_" ^ x) gameobj_func_decls)
                       eventptr_t (objname ^ "_" ^ x) builder))
         in
-        build_struct_ptr_assign llobj (Array.of_list (None :: Some llid :: events)) builder;
+        let llobj_gen = L.build_bitcast llobj objptr_t (objname ^ "_gen") builder in
+        build_struct_ptr_assign llobj_gen (Array.of_list (None :: Some llid :: events)) builder;
         let objref = build_struct_assign (L.undef objref_t) [|Some llid; Some llnode|] builder in
         let create_event = match List.hd events with | Some ev -> ev | None -> assert false in
         (* TODO: include something in LRM about non-initialized values *)
