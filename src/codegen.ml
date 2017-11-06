@@ -152,7 +152,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
       | A.FloatLit f -> L.const_float float_t f
       | A.Noexpr -> L.const_int i32_t 0
       | A.Id (hd, tl) -> L.build_load (lookup builder scope hd tl) hd builder
-      | A.Binop (e1, op, e2) ->
+      | A.Binop (e1, op, _, e2) ->
         let e1' = expr builder e1
         and e2' = expr builder e2 in
         (match op with
@@ -171,7 +171,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
          | A.Greater -> L.build_icmp L.Icmp.Sgt
          | A.Geq     -> L.build_icmp L.Icmp.Sge
         ) e1' e2' "tmp" builder
-      | A.Unop(op, e) ->
+      | A.Unop(op, _, e) ->
         let e' = expr builder e in
         (match op with
            A.Neg     -> L.build_neg

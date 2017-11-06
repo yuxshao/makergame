@@ -127,75 +127,81 @@ let check ((globals, functions, gameobjs) : Ast.program) =
         | _ -> failwith ("cannot get member of non-object " ^ name)
     in
 
-    (* Return the type of an expression or throw an exception *)
-    let rec expr = function
-      | Literal _ -> Int
-      | BoolLit _ -> Bool
-      | FloatLit _ -> Float
-      | StringLit _ -> String
-      | Id(hd, tl) -> type_of_identifier ~symbols (hd, tl)
-      | Binop(e1, op, e2) as e -> let t1 = expr e1 and t2 = expr e2 in
+    (* Return the type of an expression and the new expression or throw an exception *)
+    let rec expr e = match e with 
+      | Literal _ -> Int, e 
+      | BoolLit _ -> Bool, e
+      | FloatLit _ -> Float, e
+      | StringLit _ -> String, e
+      | Id(hd, tl) -> type_of_identifier ~symbols (hd, tl), e
+      | Binop(e1, op, _, e2) -> let (t1, e1') = expr e1 and (t2, e2') = expr e2 in
         (match op with
-           Add | Sub | Mult | Div when t1 = Int && t2 = Int -> Int
-         | Equal | Neq when t1 = t2 -> Bool
-         | Less | Leq | Greater | Geq when t1 = Int && t2 = Int -> Bool
-         | And | Or when t1 = Bool && t2 = Bool -> Bool
+           Add | Sub | Mult | Div when t1 = Int && t2 = Int -> Int, Binop(e1', op, Int, e2')
+         | Add | Sub | Mult | Div when t1 = Float && t2 = Float -> Int, Binop(e1', op, Float, e2')
+         | Equal | Neq when t1 = t2  -> Bool, Binop(e1', op, t1, e2')
+         | Less | Leq | Greater | Geq when t1 = Int && t2 = Int -> Bool, Binop(e1', op, Int, e2')
+         | Less | Leq | Greater | Geq when t1 = Float && t2 = Float -> Bool, Binop(e1', op, Float, e2')         
+         | And | Or when t1 = Bool && t2 = Bool -> Bool, Binop(e1', op, Bool, e2')
          | _ -> failwith ("illegal binary operator " ^
                           string_of_typ t1 ^ " " ^ string_of_op op ^ " " ^
                           string_of_typ t2 ^ " in " ^ string_of_expr e)
         )
-      | Unop(op, e) as ex -> let t = expr e in
+      | Unop(op, _, ex) -> let (t, ex') = expr ex in
         (match op with
-           Neg when t = Int -> Int
-         | Not when t = Bool -> Bool
+           Neg when t = Int -> Int, Unop(op, Int, ex')
+         | Neg when t = Int -> Float, Unop(op, Float, ex')
+         | Not when t = Bool -> Bool, Unop(op, Bool, ex')
          | _ -> failwith ("illegal unary operator " ^ string_of_uop op ^
-                          string_of_typ t ^ " in " ^ string_of_expr ex))
-      | Noexpr -> Void
-      | Assign(var, e) as ex -> let lt = type_of_identifier ~symbols var
-        and rt = expr e in
+                          string_of_typ t ^ " in " ^ string_of_expr e))
+      | Noexpr -> Void, e
+      | Assign(var, ex) -> let lt = type_of_identifier ~symbols var
+        and (rt, e') = expr ex in
         check_assign lt rt ("illegal assignment " ^ string_of_typ lt ^
                             " = " ^ string_of_typ rt ^ " in " ^
-                            string_of_expr ex)
+                            string_of_expr e), Assign(var, e')
       | Call(fname, actuals) as call -> let fd = function_decl fname in
         if List.length actuals != List.length fd.formals then
           failwith ("expecting " ^
                     string_of_int (List.length fd.formals) ^
                     " arguments in " ^ string_of_expr call)
         else
-          List.iter2
-            (fun (ft, _) e -> let et = expr e in
+          let actuals' = List.map2
+            (fun (ft, _) ex -> let (et, ex') = expr ex in
               ignore (check_assign ft et
                         ("illegal actual argument found " ^ string_of_typ et ^
-                         " expected " ^ string_of_typ ft ^ " in " ^ string_of_expr e)))
-            fd.formals actuals;
-        fd.typ
+                         " expected " ^ string_of_typ ft ^ " in " ^ string_of_expr ex)); ex')
+            fd.formals actuals in
+        fd.typ, Call(fname, actuals')
     in
 
-    let check_bool_expr e = if expr e != Bool
+    let check_bool_expr e = let (t, e') = expr e in if t != Bool
       then failwith ("expected Boolean expression in " ^ string_of_expr e)
-      else () in
+      else e' in
 
-    (* Verify a statement or throw an exception *)
+    (* Verify a statement and return the new statement or throw an exception *)
     let rec stmt = function
-      | Block sl -> let rec check_block = function
-            [Return _ as s] -> stmt s
+      | Block sl ->
+        let rec check_block = function
+          | [Return _ as s] -> [stmt s]
           | Return _ :: _ -> failwith "nothing may follow a return" (* TODO: change this? *)
           | Block sl :: ss -> check_block (sl @ ss)
-          | s :: ss -> stmt s ; check_block ss
-          | [] -> ()
-        in check_block sl
-      | Expr e -> ignore (expr e)
-      | Return e -> let t = expr e in if t = return then () else
+          | s :: ss -> (stmt s) :: (check_block ss)
+          | [] -> []
+        in Block (check_block sl)
+      | Expr e -> let (_, e') = expr e in Expr(e')
+      | Return e -> let (t, e') = expr e in if t = return then Return(e') else
           failwith ("return gives " ^ string_of_typ t ^ " expected " ^
                     string_of_typ return ^ " in " ^ string_of_expr e)
 
-      | If(p, b1, b2) -> check_bool_expr p; stmt b1; stmt b2
-      | For(e1, e2, e3, st) -> ignore (expr e1); check_bool_expr e2;
-        ignore (expr e3); stmt st
-      | While(p, s) -> check_bool_expr p; stmt s
-      | Foreach(obj_t, _id, s) -> ignore(gameobj_decl obj_t); stmt s
+      | If(p, b1, b2) -> let p' = check_bool_expr p in let b1' = stmt b1 in let b2' = stmt b2 in If(p', b1', b2') 
+      | For(e1, e2, e3, st) -> let (_, e1') = expr e1 in let e2' = check_bool_expr e2 in
+        let (_, e3') = expr e3 in let st' = stmt st in For (e1', e2', e3', st')
+      | While(p, s) -> let p' = check_bool_expr p in let s' = stmt s in While(p', s')
+      | Foreach(obj_t, _id, s) -> ignore(gameobj_decl obj_t); let s' = stmt s in Foreach(obj_t, _id, s')
     in
-    stmt (Block block.body)
+    match stmt (Block block.body) with
+    | Block b -> { locals = block.locals; body = b }
+    | _ -> assert false
   in
 
   let check_function ~symbols func =
@@ -210,30 +216,35 @@ let check ((globals, functions, gameobjs) : Ast.program) =
     report_duplicate
       (fun n -> "duplicate formal " ^ n ^ " in " ^ func.fname)
       (List.map snd func.formals);
-
-    match func.block with
-    | Some block -> check_block ~symbols ~name:func.fname ~return:func.typ block
-    | None -> ()
+    
+    let block =
+      match func.block with
+      | Some block -> Some (check_block ~symbols ~name:func.fname ~return:func.typ block)
+      | None -> None
+    in
+    { func with block = block }
   in
 
   let check_gameobj ~symbols obj =
     let open Gameobj in
     let obj_fn_list obj =
-      [("create", obj.create);
-       ("step", obj.step);
-       ("draw", obj.draw);
-       ("destroy", obj.destroy)]
+      [("create", Create, obj.create);
+       ("step", Step, obj.step);
+       ("draw", Draw, obj.draw);
+       ("destroy", Destroy, obj.destroy)]
     in
     report_duplicate
       (fun n -> "duplicate members " ^ n ^ " in " ^ obj.name)
       (List.map snd obj.members);
-    let check_obj_fn (name, block) =
-      check_block ~symbols ~name:(obj.name ^ "::" ^ name) ~return:Void block
+    
+    let check_obj_fn (name, eventtype, block) =
+      eventtype, check_block ~symbols ~name:(obj.name ^ "::" ^ name) ~return:Void block
     in
-    List.iter check_obj_fn (obj_fn_list obj)
+    let blocks' = List.map check_obj_fn (obj_fn_list obj) in
+    make obj.name obj.members blocks'
   in
 
   let symbols = List.fold_left (fun m (t, n) -> StringMap.add n t m) StringMap.empty globals in
-  List.iter (check_function ~symbols) functions;
-  List.iter (check_gameobj ~symbols) gameobjs;
-  (globals, functions, new_gameobjs)
+  let functions' = List.map (check_function ~symbols) functions in
+  let gameobjs' = List.map (check_gameobj ~symbols) new_gameobjs in
+  (globals, functions', gameobjs')
