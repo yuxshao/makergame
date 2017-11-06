@@ -80,9 +80,9 @@ let check ((globals, functions, gameobjs) : Ast.program) =
   in
 
   let new_gameobjs =
-    match StringMap.find_opt "main" gameobj_decls with
-    | Some _ -> gameobjs
-    | None ->
+    if StringMap.mem "main" gameobj_decls
+    then gameobjs
+    else
       let undef_err = "either main game object or function must be defined" in
       let not_void_err = "main function must return void" in
       let arg_err = "main function must take no arguments" in
