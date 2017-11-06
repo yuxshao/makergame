@@ -150,6 +150,19 @@ let rec string_of_expr = function
   | Destroy o -> "destroy " ^ (string_of_expr o) (* TODO: ibid *)
   | Noexpr -> ""
 
+let rec string_of_typ = function
+    Int -> "int"
+  | Bool -> "bool"
+  | Void -> "void"
+  | Float -> "float"
+  | Sprite -> "sprite"
+  | Sound -> "sound"
+  | Object obj_t -> "object(" ^ obj_t ^ ")"
+  | Arr(typ, len) -> (string_of_typ typ) ^ "[" ^ (string_of_int len) ^ "]"
+  | String -> "string"
+
+let string_of_vdecl (t, id) = string_of_typ t ^ " " ^ id ^ ";\n"
+
 let rec string_of_stmt = function
     Block(stmts) ->
       "{\n" ^ String.concat "" (List.map string_of_stmt stmts) ^ "}\n"
@@ -164,19 +177,6 @@ let rec string_of_stmt = function
   | While(e, s) -> "while (" ^ string_of_expr e ^ ") " ^ string_of_stmt s
   | Foreach(obj_t, id, s) ->
       "foreach (" ^ obj_t  ^ " " ^ id ^ ") " ^ string_of_stmt s
-
-let rec string_of_typ = function
-    Int -> "int"
-  | Bool -> "bool"
-  | Void -> "void"
-  | Float -> "float"
-  | Sprite -> "sprite"
-  | Sound -> "sound"
-  | Object obj_t -> "object(" ^ obj_t ^ ")"
-  | Arr(typ, len) -> (string_of_typ typ) ^ "[" ^ (string_of_int len) ^ "]"
-  | String -> "string"
-
-let string_of_vdecl (t, id) = string_of_typ t ^ " " ^ id ^ ";\n"
 
 let string_of_block block =
   "{\n" ^

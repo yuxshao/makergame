@@ -222,6 +222,13 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     |> List.fold_left (fun map (k, v) -> StringMap.add k v map) StringMap.empty
   in
 
+  (* Invoke "f builder" if the current block doesn't already
+     have a terminal (e.g., a branch). *)
+  let add_terminal builder f =
+    match L.block_terminator (L.insertion_block builder) with
+      Some _ -> ()
+    | None -> ignore (f builder) in
+
   (* Fill in the body of the given function *)
   let build_function_body the_function formals block return_type =
     let builder = L.builder_at_end context (L.entry_block the_function) in
@@ -353,13 +360,6 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
       | A.Destroy e ->
         L.build_call destroy_func [|expr builder e|] "" builder
     in
-
-    (* Invoke "f builder" if the current block doesn't already
-       have a terminal (e.g., a branch). *)
-    let add_terminal builder f =
-      match L.block_terminator (L.insertion_block builder) with
-        Some _ -> ()
-      | None -> ignore (f builder) in
 
     (* Build the code for the given statement; return the builder for
        the statement's successor *)
