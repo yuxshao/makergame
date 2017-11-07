@@ -97,10 +97,10 @@ vdecl_list:
     /* nothing */    { [] }
   | vdecl_list vdecl { $2 :: $1 }
 
-(* TODO: allow typ ID EQ EXPR (vdecldef) for function-local variables.
+/* TODO: allow typ ID EQ EXPR (vdecldef) for function-local variables.
    also think about what can go in if/while conditions, as well as for
    initializer.I think vdecl, vdecldef, expr_opt can go in for
-   initializer, while only vdecldef and exprs can go in conditions. *)
+   initializer, while only vdecldef and exprs can go in conditions. */
 vdecl:
   | typ ID SEMI { ($1, $2) }
 
