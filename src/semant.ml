@@ -98,9 +98,9 @@ let check ((globals, functions, gameobjs) : Ast.program) =
   in
 
   (* Type of each variable (global, formal, local), maybe with member chain *)
-  let rec type_of_identifier ~symbols (name, chain) =
+  let rec type_of_identifier ~scope (name, chain) =
     let typ =
-      try StringMap.find name symbols
+      try StringMap.find name scope
       with Not_found -> failwith ("undeclared identifier " ^ name)
     in
     match chain with
@@ -109,22 +109,22 @@ let check ((globals, functions, gameobjs) : Ast.program) =
       match typ with
       | Object s ->
         let o = gameobj_decl s in
-        let symbols =
+        let scope =
           List.fold_left (fun m (t, n) -> StringMap.add n t m)
             StringMap.empty o.Gameobj.members
         in
-        type_of_identifier (hd, tl) ~symbols
+        type_of_identifier (hd, tl) ~scope
       | _ -> failwith ("cannot get member of non-object " ^ name)
   in
 
   (* Return the type of an expression and the new expression or throw an exception *)
-  let rec expr symbols e = match e with
+  let rec expr scope e = match e with
     | Literal _ -> Int, e
     | BoolLit _ -> Bool, e
     | FloatLit _ -> Float, e
     | StringLit _ -> String, e
-    | Id(hd, tl) -> type_of_identifier ~symbols (hd, tl), e
-    | Binop(e1, op, _, e2) -> let (t1, e1') = expr symbols e1 and (t2, e2') = expr symbols e2 in
+    | Id(hd, tl) -> type_of_identifier ~scope (hd, tl), e
+    | Binop(e1, op, _, e2) -> let (t1, e1') = expr scope e1 and (t2, e2') = expr scope e2 in
       (match op with
          Add | Sub | Mult | Div when t1 = Int && t2 = Int -> Int, Binop(e1', op, Int, e2')
        | Add | Sub | Mult | Div when t1 = Float && t2 = Float -> Int, Binop(e1', op, Float, e2')
@@ -136,7 +136,7 @@ let check ((globals, functions, gameobjs) : Ast.program) =
                         string_of_typ t1 ^ " " ^ string_of_op op ^ " " ^
                         string_of_typ t2 ^ " in " ^ string_of_expr e)
       )
-    | Unop(op, _, ex) -> let (t, ex') = expr symbols ex in
+    | Unop(op, _, ex) -> let (t, ex') = expr scope ex in
       (match op with
          Neg when t = Int -> Int, Unop(op, Int, ex')
        | Neg when t = Int -> Float, Unop(op, Float, ex')
@@ -144,8 +144,8 @@ let check ((globals, functions, gameobjs) : Ast.program) =
        | _ -> failwith ("illegal unary operator " ^ string_of_uop op ^
                         string_of_typ t ^ " in " ^ string_of_expr e))
     | Noexpr -> Void, e
-    | Assign(var, ex) -> let lt = type_of_identifier ~symbols var
-      and (rt, e') = expr symbols ex in
+    | Assign(var, ex) -> let lt = type_of_identifier ~scope var
+      and (rt, e') = expr scope ex in
       check_assign lt rt ("illegal assignment " ^ string_of_typ lt ^
                           " = " ^ string_of_typ rt ^ " in " ^
                           string_of_expr e), Assign(var, e')
@@ -156,7 +156,7 @@ let check ((globals, functions, gameobjs) : Ast.program) =
                   " arguments in " ^ string_of_expr call)
       else
         let actuals' = List.map2
-            (fun (ft, _) ex -> let (et, ex') = expr symbols ex in
+            (fun (ft, _) ex -> let (et, ex') = expr scope ex in
               ignore (check_assign ft et
                         ("illegal actual argument found " ^ string_of_typ et ^
                          " expected " ^ string_of_typ ft ^ " in " ^ string_of_expr ex)); ex')
@@ -164,59 +164,58 @@ let check ((globals, functions, gameobjs) : Ast.program) =
         fd.typ, Call(fname, actuals')
     | Create(obj_type) -> Object((gameobj_decl obj_type).Gameobj.name), e
     | Destroy(e) ->
-      match expr symbols e with
+      match expr scope e with
       | Object _, e' -> Void, Destroy(e')
       | _ -> failwith ("cannot destroy non-object")
   in
 
-  let check_bool_expr symbols e = let (t, e') = expr symbols e in if t != Bool
+  let check_bool_expr scope e = let (t, e') = expr scope e in if t != Bool
     then failwith ("expected Boolean expression in " ^ string_of_expr e)
     else e' in
 
-  (* TODO: rename symbols to scope *)
-  let rec check_block ~symbols ~name ~return block =
+  let rec check_block ~scope ~name ~return block =
     (* TODO: say in LRM it's okay to duplicate locals/formals now *)
 
     (* Verify a statement or throw an exception *)
-    let rec stmt symbols = function
+    let rec stmt scope = function
       | Decl (t, n) as s ->
         check_not_void (fun n -> "illegal void local " ^ n ^ " in " ^ name) (t, n);
-        s, StringMap.add n t symbols
-      | Block b -> Block (check_block b ~symbols ~name ~return), symbols
-      | Expr e -> let (_, e') = expr symbols e in Expr e', symbols
+        s, StringMap.add n t scope
+      | Block b -> Block (check_block b ~scope ~name ~return), scope
+      | Expr e -> let (_, e') = expr scope e in Expr e', scope
       | Return e ->             (* TODO in LRM say stuff can follow returns *)
-        let t, e' = expr symbols e in
-        if t = return then Return e', symbols
+        let t, e' = expr scope e in
+        if t = return then Return e', scope
         else failwith ("return gives " ^ string_of_typ t ^ " expected " ^
                        string_of_typ return ^ " in " ^ string_of_expr e)
       | If(p, b1, b2) ->
-        let (b1', _), (b2', _) = stmt symbols b1, stmt symbols b2 in
-        If (check_bool_expr symbols p, b1', b2'), symbols
+        let (b1', _), (b2', _) = stmt scope b1, stmt scope b2 in
+        If (check_bool_expr scope p, b1', b2'), scope
       | For(e1, e2, e3, st) ->
-        let (_, e1') = expr symbols e1 in let e2' = check_bool_expr symbols e2 in
-        let (_, e3') = expr symbols e3 in let st', _ = stmt symbols st in
-        For (e1', e2', e3', st'), symbols
+        let (_, e1') = expr scope e1 in let e2' = check_bool_expr scope e2 in
+        let (_, e3') = expr scope e3 in let st', _ = stmt scope st in
+        For (e1', e2', e3', st'), scope
       | While(p, s) ->
-        let p' = check_bool_expr symbols p in let s', _ = stmt symbols s in
-        While(p', s'), symbols
+        let p' = check_bool_expr scope p in let s', _ = stmt scope s in
+        While(p', s'), scope
       | Foreach(obj_t, id, s) -> ignore(gameobj_decl obj_t);
-        let s', _ = stmt symbols s in Foreach(obj_t, id, s'), symbols
+        let s', _ = stmt scope s in Foreach(obj_t, id, s'), scope
     in
 
     let _, block' =
       List.fold_left
         (fun (sym, accum) s -> let s', sym' = stmt sym s in (sym', s' :: accum))
-        (symbols, []) block
+        (scope, []) block
     in
     List.rev block'
   in
 
-  let check_function ~symbols func =
+  let check_function ~scope func =
     List.iter
       (check_not_void (fun n -> "illegal void formal " ^ n ^ " in " ^ func.fname))
       func.formals;
 
-    let symbols = List.fold_left (fun m (t, n) -> StringMap.add n t m) symbols func.formals in
+    let scope = List.fold_left (fun m (t, n) -> StringMap.add n t m) scope func.formals in
 
     (* formals can have the same name as locals. is this okay? think about these
        edge cases *)
@@ -226,13 +225,13 @@ let check ((globals, functions, gameobjs) : Ast.program) =
 
     let block =
       match func.block with
-      | Some block -> Some (check_block ~symbols ~name:func.fname ~return:func.typ block)
+      | Some block -> Some (check_block ~scope ~name:func.fname ~return:func.typ block)
       | None -> None
     in
     { func with block = block }
   in
 
-  let check_gameobj ~symbols obj =
+  let check_gameobj ~scope obj =
     let open Gameobj in
     let obj_fn_list obj =
       [("create", Gameobj.Create, obj.create);
@@ -243,15 +242,15 @@ let check ((globals, functions, gameobjs) : Ast.program) =
     report_duplicate
       (fun n -> "duplicate members " ^ n ^ " in " ^ obj.name)
       (List.map snd obj.members);
-    let symbols = StringMap.add "this" (Object(obj.name)) symbols in
+    let scope = StringMap.add "this" (Object(obj.name)) scope in
     let check_obj_fn (name, eventtype, block) =
-      eventtype, check_block ~symbols ~name:(obj.name ^ "::" ^ name) ~return:Void block
+      eventtype, check_block ~scope ~name:(obj.name ^ "::" ^ name) ~return:Void block
     in
     let blocks' = List.map check_obj_fn (obj_fn_list obj) in
     make obj.name obj.members blocks'
   in
 
-  let symbols = List.fold_left (fun m (t, n) -> StringMap.add n t m) StringMap.empty globals in
-  let functions' = List.map (check_function ~symbols) functions in
-  let gameobjs' = List.map (check_gameobj ~symbols) new_gameobjs in
+  let scope = List.fold_left (fun m (t, n) -> StringMap.add n t m) StringMap.empty globals in
+  let functions' = List.map (check_function ~scope) functions in
+  let gameobjs' = List.map (check_gameobj ~scope) new_gameobjs in
   (globals, functions', gameobjs')
