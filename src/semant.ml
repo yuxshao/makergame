@@ -128,6 +128,7 @@ let check ((globals, functions, gameobjs) : Ast.program) =
       (match op with
          Add | Sub | Mult | Div when t1 = Int && t2 = Int -> Int, Binop(e1', op, Int, e2')
        | Add | Sub | Mult | Div when t1 = Float && t2 = Float -> Int, Binop(e1', op, Float, e2')
+       (* TODO: restrict allowed types for boolean comparison. e.g. should we support string equality? *)
        | Equal | Neq when t1 = t2  -> Bool, Binop(e1', op, t1, e2')
        | Less | Leq | Greater | Geq when t1 = Int && t2 = Int -> Bool, Binop(e1', op, Int, e2')
        | Less | Leq | Greater | Geq when t1 = Float && t2 = Float -> Bool, Binop(e1', op, Float, e2')
