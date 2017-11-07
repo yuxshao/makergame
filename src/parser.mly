@@ -45,8 +45,7 @@ decls:
  | decls odecl { add_odecl $1 $2 }
 
 code_block:
-   LCURLY vdecl_list stmt_list RCURLY
-   { { locals = List.rev $2 ; body = $3 } }
+   LCURLY stmt_list RCURLY { $2 }
 
 fdecl:
  | EXTERN typ ID LPAREN formals_opt RPAREN SEMI
@@ -110,10 +109,11 @@ stmt_list:
 
 stmt:
     expr SEMI { Expr $1 }
+  | vdecl { Decl $1 }
   | RETURN SEMI { Return Noexpr }
   | RETURN expr SEMI { Return $2 }
   | code_block { Block($1) }
-  | IF LPAREN expr RPAREN stmt %prec NOELSE { If($3, $5, Block({locals = []; body = []})) }
+  | IF LPAREN expr RPAREN stmt %prec NOELSE { If($3, $5, Block([])) }
   | IF LPAREN expr RPAREN stmt ELSE stmt    { If($3, $5, $7) }
   | FOR LPAREN expr_opt SEMI expr SEMI expr_opt RPAREN stmt
      { For($3, $5, $7, $9) }

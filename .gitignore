@@ -10,3 +10,4 @@ _build
 a.out
 vgcore.*
 trial
+testall.log

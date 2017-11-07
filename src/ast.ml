@@ -33,6 +33,7 @@ type expr =
   | Noexpr
 
 type stmt =
+  | Decl of bind
   | Block of block
   | Expr of expr
   | Return of expr
@@ -40,12 +41,7 @@ type stmt =
   | For of expr * expr * expr * stmt
   | Foreach of string * string * stmt (* TODO: use an object bind type maybe *)
   | While of expr * stmt
-and block = {
-  locals : bind list;
-  body : stmt list;
-}
-
-let make_block locals body = { locals; body }
+and block = stmt list
 
 type func_decl = {
   typ : typ;
@@ -56,7 +52,6 @@ type func_decl = {
 
 module Gameobj = struct
   type event_t = Create | Destroy | Step | Draw
-  type event = event_t * block
 
   (* consider using this for the AST post-semant *)
   type t = {
@@ -69,30 +64,26 @@ module Gameobj = struct
   }
 
   let make name members events =
-    let empty = { locals = []; body = [] } in
     let initial_obj =
       { name = name
       ; members = members
-      ; create = empty
-      ; step = empty
-      ; destroy = empty
-      ; draw = empty }
+      ; create = []; step = []; destroy = []; draw = [] }
     in
     let add_event obj event = match (event : event_t * block) with
       | (Create, block) ->
-        if obj.create != empty
+        if obj.create != []
         then failwith ("CREATE already defined in " ^ obj.name)
         else { obj with create = block }
       | (Step, block) ->
-        if obj.step != empty
+        if obj.step != []
         then failwith ("STEP already defined in " ^ obj.name)
         else { obj with step = block }
       | (Destroy, block) ->
-        if obj.destroy != empty
+        if obj.destroy != []
         then failwith ("DESTROY already defined in " ^ obj.name)
         else { obj with destroy = block }
       | (Draw, block) ->
-        if obj.draw != empty
+        if obj.draw != []
         then failwith ("DRAW already defined in " ^ obj.name)
         else { obj with draw = block }
     in
@@ -165,10 +156,11 @@ let rec string_of_typ = function
 let string_of_vdecl (t, id) = string_of_typ t ^ " " ^ id ^ ";\n"
 
 let rec string_of_stmt = function
-  | Block(blk) -> string_of_block blk;
-  | Expr(expr) -> string_of_expr expr ^ ";\n";
-  | Return(expr) -> "return " ^ string_of_expr expr ^ ";\n";
-  | If(e, s, Block({locals = []; body = []})) ->
+  | Decl d -> string_of_vdecl d
+  | Block(blk) -> string_of_block blk
+  | Expr(expr) -> string_of_expr expr ^ ";\n"
+  | Return(expr) -> "return " ^ string_of_expr expr ^ ";\n"
+  | If(e, s, Block([])) ->
     "if (" ^ string_of_expr e ^ ")\n" ^ string_of_stmt s
   | If(e, s1, s2) ->  "if (" ^ string_of_expr e ^ ")\n" ^
       string_of_stmt s1 ^ "else\n" ^ string_of_stmt s2
@@ -179,10 +171,7 @@ let rec string_of_stmt = function
   | Foreach(obj_t, id, s) ->
       "foreach (" ^ obj_t  ^ " " ^ id ^ ") " ^ string_of_stmt s
 and string_of_block block =
-  "{\n" ^
-  String.concat "" (List.map string_of_vdecl block.locals) ^
-  String.concat "" (List.map string_of_stmt block.body) ^
-  "}\n"
+  "{\n" ^ String.concat "" (List.map string_of_stmt block) ^ "}\n"
 
 let string_of_fdecl fdecl =
   let prefix, suffix =

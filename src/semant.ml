@@ -97,18 +97,9 @@ let check ((globals, functions, gameobjs) : Ast.program) =
       (Gameobj.make "main" [] [Gameobj.Create, block]) :: gameobjs
   in
 
-  let rec check_block ~symbols ~name ~return block : Ast.block =
-    List.iter
-      (check_not_void (fun n -> "illegal void local " ^ n ^ " in " ^ name))
-      block.locals;
-
-    report_duplicate
-      (fun n -> "duplicate local " ^ n ^ " in " ^ name)
-      (List.map snd block.locals);
-
-    let with_binds = List.fold_left (fun m (t, n) -> StringMap.add n t m) in
-
-    let symbols = with_binds symbols block.locals in
+  (* TODO: rename symbols to scope *)
+  let rec check_block ~symbols ~name ~return block =
+    (* TODO: say in LRM it's okay to duplicate locals/formals now *)
 
     (* Type of each variable (global, formal, local), maybe with member chain *)
     let rec type_of_identifier ~symbols (name, chain) =
@@ -122,31 +113,34 @@ let check ((globals, functions, gameobjs) : Ast.program) =
         match typ with
         | Object s ->
           let o = gameobj_decl s in
-          let symbols = with_binds StringMap.empty o.Gameobj.members in
+          let symbols =
+            List.fold_left (fun m (t, n) -> StringMap.add n t m)
+              StringMap.empty o.Gameobj.members
+          in
           type_of_identifier (hd, tl) ~symbols
         | _ -> failwith ("cannot get member of non-object " ^ name)
     in
 
     (* Return the type of an expression and the new expression or throw an exception *)
-    let rec expr e = match e with 
-      | Literal _ -> Int, e 
+    let rec expr symbols e = match e with
+      | Literal _ -> Int, e
       | BoolLit _ -> Bool, e
       | FloatLit _ -> Float, e
       | StringLit _ -> String, e
       | Id(hd, tl) -> type_of_identifier ~symbols (hd, tl), e
-      | Binop(e1, op, _, e2) -> let (t1, e1') = expr e1 and (t2, e2') = expr e2 in
+      | Binop(e1, op, _, e2) -> let (t1, e1') = expr symbols e1 and (t2, e2') = expr symbols e2 in
         (match op with
            Add | Sub | Mult | Div when t1 = Int && t2 = Int -> Int, Binop(e1', op, Int, e2')
          | Add | Sub | Mult | Div when t1 = Float && t2 = Float -> Int, Binop(e1', op, Float, e2')
          | Equal | Neq when t1 = t2  -> Bool, Binop(e1', op, t1, e2')
          | Less | Leq | Greater | Geq when t1 = Int && t2 = Int -> Bool, Binop(e1', op, Int, e2')
-         | Less | Leq | Greater | Geq when t1 = Float && t2 = Float -> Bool, Binop(e1', op, Float, e2')         
+         | Less | Leq | Greater | Geq when t1 = Float && t2 = Float -> Bool, Binop(e1', op, Float, e2')
          | And | Or when t1 = Bool && t2 = Bool -> Bool, Binop(e1', op, Bool, e2')
          | _ -> failwith ("illegal binary operator " ^
                           string_of_typ t1 ^ " " ^ string_of_op op ^ " " ^
                           string_of_typ t2 ^ " in " ^ string_of_expr e)
         )
-      | Unop(op, _, ex) -> let (t, ex') = expr ex in
+      | Unop(op, _, ex) -> let (t, ex') = expr symbols ex in
         (match op with
            Neg when t = Int -> Int, Unop(op, Int, ex')
          | Neg when t = Int -> Float, Unop(op, Float, ex')
@@ -155,7 +149,7 @@ let check ((globals, functions, gameobjs) : Ast.program) =
                           string_of_typ t ^ " in " ^ string_of_expr e))
       | Noexpr -> Void, e
       | Assign(var, ex) -> let lt = type_of_identifier ~symbols var
-        and (rt, e') = expr ex in
+        and (rt, e') = expr symbols ex in
         check_assign lt rt ("illegal assignment " ^ string_of_typ lt ^
                             " = " ^ string_of_typ rt ^ " in " ^
                             string_of_expr e), Assign(var, e')
@@ -166,7 +160,7 @@ let check ((globals, functions, gameobjs) : Ast.program) =
                     " arguments in " ^ string_of_expr call)
         else
           let actuals' = List.map2
-            (fun (ft, _) ex -> let (et, ex') = expr ex in
+            (fun (ft, _) ex -> let (et, ex') = expr symbols ex in
               ignore (check_assign ft et
                         ("illegal actual argument found " ^ string_of_typ et ^
                          " expected " ^ string_of_typ ft ^ " in " ^ string_of_expr ex)); ex')
@@ -174,38 +168,48 @@ let check ((globals, functions, gameobjs) : Ast.program) =
         fd.typ, Call(fname, actuals')
       | Create(obj_type) -> Object((gameobj_decl obj_type).Gameobj.name), e
       | Destroy(e) ->
-        match expr e with
+        match expr symbols e with
         | Object _, e' -> Void, Destroy(e')
         | _ -> failwith ("cannot destroy non-object")
     in
 
-    let check_bool_expr e = let (t, e') = expr e in if t != Bool
+    let check_bool_expr symbols e = let (t, e') = expr symbols e in if t != Bool
       then failwith ("expected Boolean expression in " ^ string_of_expr e)
       else e' in
 
     (* Verify a statement or throw an exception *)
-    let rec stmt = function
-      | Block b -> Block (check_block b ~symbols ~name ~return)
-      | Expr e -> let (_, e') = expr e in Expr e'
+    let rec stmt symbols = function
+      | Decl (t, n) as s ->
+      check_not_void (fun n -> "illegal void local " ^ n ^ " in " ^ name) (t, n);
+      s, StringMap.add n t symbols
+      | Block b -> Block (check_block b ~symbols ~name ~return), symbols
+      | Expr e -> let (_, e') = expr symbols e in Expr e', symbols
       | Return e ->
-        let t, e' = expr e in
-        if t = return then Return e'
+        let t, e' = expr symbols e in
+        if t = return then Return e', symbols
         else failwith ("return gives " ^ string_of_typ t ^ " expected " ^
                        string_of_typ return ^ " in " ^ string_of_expr e)
-      | If(p, b1, b2) -> If (check_bool_expr p, stmt b1, stmt b2)
-      | For(e1, e2, e3, st) -> let (_, e1') = expr e1 in let e2' = check_bool_expr e2 in
-        let (_, e3') = expr e3 in let st' = stmt st in For (e1', e2', e3', st')
-      | While(p, s) -> let p' = check_bool_expr p in let s' = stmt s in While(p', s')
-      | Foreach(obj_t, id, s) -> ignore(gameobj_decl obj_t); let s' = stmt s in Foreach(obj_t, id, s')
+      | If(p, b1, b2) ->
+        let (b1', _), (b2', _) = stmt symbols b1, stmt symbols b2 in
+        If (check_bool_expr symbols p, b1', b2'), symbols
+      | For(e1, e2, e3, st) ->
+        let (_, e1') = expr symbols e1 in let e2' = check_bool_expr symbols e2 in
+        let (_, e3') = expr symbols e3 in let st', _ = stmt symbols st in
+        For (e1', e2', e3', st'), symbols
+      | While(p, s) ->
+        let p' = check_bool_expr symbols p in let s', _ = stmt symbols s in
+        While(p', s'), symbols
+      | Foreach(obj_t, id, s) -> ignore(gameobj_decl obj_t);
+        let s', _ = stmt symbols s in Foreach(obj_t, id, s'), symbols
     in
 
-    let rec stmts = function
-      | [Return _ as s] -> [stmt s]
+    let rec stmts symbols = function
+      | [Return _ as s] -> let s', _ = stmt symbols s in [s']
       | Return _ :: _ -> failwith "nothing may follow a return" (* TODO: change this? *)
-      | s :: ss -> (stmt s) :: (stmts ss)
+      | s :: ss -> let s', symbols' = stmt symbols s in s' :: (stmts symbols' ss)
       | [] -> []
     in
-    { block with body = stmts block.body }
+    stmts symbols block
   in
 
   let check_function ~symbols func =

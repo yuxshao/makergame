@@ -243,22 +243,6 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
 
   (* Fill in the body of the given function *)
   let rec build_block builder scope the_function block return_type =
-    (* Construct the block's scope of locally declared variables. Allocate each
-       on the stack, initialize their value, if appropriate, and remember their
-       values in the map. *)
-    let scope =
-      let locals =
-        let add_local m (t, n) =
-          let local_var = L.build_alloca (ltype_of_typ t) n builder
-          in StringMap.add n (local_var, t) m in
-        List.fold_left add_local StringMap.empty block.A.locals
-      in
-      let add =
-        StringMap.merge (fun _ a b -> match a, b with Some a, _ -> Some a | _ -> b)
-      in
-      scope |> add locals
-    in
-
     (* Return the value for a variable or formal argument *)
     let rec lookup builder scope n chain =
       let (top, top_type) = StringMap.find n scope in
@@ -363,79 +347,84 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
 
     (* Build the code for the given statement; return the builder for
        the statement's successor *)
-    let rec stmt builder = function
+    let rec stmt (builder, scope) = function
+      | A.Decl (typ, name) ->
+        let local_var = L.build_alloca (ltype_of_typ typ) name builder in
+        builder, StringMap.add name (local_var, typ) scope
       | A.Block b ->
         let merge_bb = L.append_block context "block_end" the_function in
         add_terminal
           (build_block builder scope the_function b return_type)
           (L.build_br merge_bb);
-        L.builder_at_end context merge_bb
-      | A.Expr e -> ignore (expr scope builder e); builder
-      | A.Return e -> ignore (match return_type with
+        L.builder_at_end context merge_bb, scope
+      | A.Expr e -> ignore (expr scope builder e); builder, scope
+      | A.Return e ->
+        ignore (match return_type with
           | A.Void -> L.build_ret_void builder
-          | _ -> L.build_ret (expr scope builder e) builder); builder
+          | _ -> L.build_ret (expr scope builder e) builder);
+        builder, scope
       | A.If (predicate, then_stmt, else_stmt) ->
         let bool_val = expr scope builder predicate in
         let merge_bb = L.append_block context "merge" the_function in
 
         let then_bb = L.append_block context "then" the_function in
-        add_terminal (stmt (L.builder_at_end context then_bb) then_stmt)
-          (L.build_br merge_bb);
+        let then_builder, _ =
+          stmt (L.builder_at_end context then_bb, scope) then_stmt
+        in
+        add_terminal then_builder (L.build_br merge_bb);
 
         let else_bb = L.append_block context "else" the_function in
-        add_terminal (stmt (L.builder_at_end context else_bb) else_stmt)
-          (L.build_br merge_bb);
+        let else_builder, _ =
+          stmt (L.builder_at_end context else_bb, scope) else_stmt
+        in
+        add_terminal else_builder (L.build_br merge_bb);
 
         ignore (L.build_cond_br bool_val then_bb else_bb builder);
-        L.builder_at_end context merge_bb
+        L.builder_at_end context merge_bb, scope
 
       | A.While (predicate, body) ->
         let pred_bb = L.append_block context "while" the_function in
         ignore (L.build_br pred_bb builder);
 
         let body_bb = L.append_block context "while_body" the_function in
-        add_terminal (stmt (L.builder_at_end context body_bb) body)
-          (L.build_br pred_bb);
+        let body_builder, _ =
+          stmt (L.builder_at_end context body_bb, scope) body
+        in
+        add_terminal body_builder (L.build_br pred_bb);
 
         let pred_builder = L.builder_at_end context pred_bb in
         let bool_val = expr scope pred_builder predicate in
 
         let merge_bb = L.append_block context "merge" the_function in
         ignore (L.build_cond_br bool_val body_bb merge_bb pred_builder);
-        L.builder_at_end context merge_bb
+        L.builder_at_end context merge_bb, scope
 
       | A.For (e1, e2, e3, body) ->
-        let while_stmts =
-          [A.Expr e1; A.While (e2, A.Block (A.make_block [] [body; A.Expr e3]))]
-        in
-        stmt builder (A.Block (A.make_block [] while_stmts))
+        let while_stmts = [A.Expr e1; A.While (e2, A.Block [body; A.Expr e3])] in
+        let for_builder, _ = stmt (builder, scope) (A.Block while_stmts) in
+        for_builder, scope
       | A.Foreach _ -> failwith "not implemented"
     in
 
     (* Build the code for each statement in the function *)
-    List.fold_left stmt builder block.A.body
+    let builder, _ = List.fold_left stmt (builder, scope) block in
+    builder
   in
 
   let build_function_body the_function formals block return_type =
     let builder = L.builder_at_end context (L.entry_block the_function) in
 
-    (* Construct the function's scope of formal arguments and remember them in
-       the map. *)
+    (* Add the function's formal arguments to the scope of globals. *)
     let scope =
-      let formals =
-        let add_formal m (t, n) p =
-          L.set_value_name n p;
-          let local = L.build_alloca (ltype_of_typ t) n builder in
-          ignore (L.build_store p local builder);
-          StringMap.add n (local, t) m in
-        List.fold_left2
-          add_formal StringMap.empty formals
-          (Array.to_list (L.params the_function))
+      let add_formal m (t, n) p =
+        L.set_value_name n p;
+        let local = L.build_alloca (ltype_of_typ t) n builder in
+        ignore (L.build_store p local builder);
+        StringMap.add n (local, t) m
       in
-      let add =
-        StringMap.merge (fun _ a b -> match a, b with Some a, _ -> Some a | _ -> b)
-      in
-      global_vars |> add formals
+      List.fold_left2
+        add_formal global_vars formals
+        (Array.to_list (L.params the_function))
     in
 
     let builder = build_block builder scope the_function block return_type in
@@ -470,7 +459,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
   List.iter build_gameobj_fn gameobjs;
 
   let create_gb = L.define_function "global_create" (L.function_type void_t [||]) the_module in
-  build_function_body create_gb [] { A.locals = []; body = [A.Expr (A.Create "main")]} A.Void;
+  build_function_body create_gb [] [A.Expr (A.Create "main")] A.Void;
 
   let global_event (name, offset) =
     let step_gb = L.define_function ("global_" ^ name) (L.function_type void_t [||]) the_module in
