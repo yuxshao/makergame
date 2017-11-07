@@ -233,15 +233,8 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
       [|L.const_int i32_t 0; L.const_int i32_t 0|] "" builder
   in
 
-  (* Invoke "f builder" if the current block doesn't already
-     have a terminal (e.g., a branch). *)
-  let add_terminal builder f =
-    match L.block_terminator (L.insertion_block builder) with
-      Some _ -> ()
-    | None -> ignore (f builder) in
-
-
-  (* Fill in the body of the given function *)
+  (* Fill in the body of the given function. Builder is guaranteed to point to a
+     block without a terminator. *)
   let rec build_block builder scope the_function block return_type =
     (* Return the value for a variable or formal argument *)
     let rec lookup builder scope n chain =
@@ -353,16 +346,16 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
         builder, StringMap.add name (local_var, typ) scope
       | A.Block b ->
         let merge_bb = L.append_block context "block_end" the_function in
-        add_terminal
-          (build_block builder scope the_function b return_type)
-          (L.build_br merge_bb);
+        ignore (L.build_br merge_bb
+                  (build_block builder scope the_function b return_type));
         L.builder_at_end context merge_bb, scope
       | A.Expr e -> ignore (expr scope builder e); builder, scope
       | A.Return e ->
         ignore (match return_type with
           | A.Void -> L.build_ret_void builder
           | _ -> L.build_ret (expr scope builder e) builder);
-        builder, scope
+        let dead_bb = L.append_block context "postret" the_function in
+        L.builder_at_end context dead_bb, scope
       | A.If (predicate, then_stmt, else_stmt) ->
         let bool_val = expr scope builder predicate in
         let merge_bb = L.append_block context "merge" the_function in
@@ -371,13 +364,13 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
         let then_builder, _ =
           stmt (L.builder_at_end context then_bb, scope) then_stmt
         in
-        add_terminal then_builder (L.build_br merge_bb);
+        ignore (L.build_br merge_bb then_builder);
 
         let else_bb = L.append_block context "else" the_function in
         let else_builder, _ =
           stmt (L.builder_at_end context else_bb, scope) else_stmt
         in
-        add_terminal else_builder (L.build_br merge_bb);
+        ignore (L.build_br merge_bb else_builder);
 
         ignore (L.build_cond_br bool_val then_bb else_bb builder);
         L.builder_at_end context merge_bb, scope
@@ -390,7 +383,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
         let body_builder, _ =
           stmt (L.builder_at_end context body_bb, scope) body
         in
-        add_terminal body_builder (L.build_br pred_bb);
+        ignore (L.build_br pred_bb body_builder);
 
         let pred_builder = L.builder_at_end context pred_bb in
         let bool_val = expr scope pred_builder predicate in
@@ -429,10 +422,10 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
 
     let builder = build_block builder scope the_function block return_type in
 
-    (* Add a return if the last block falls off the end *)
-    add_terminal builder (match return_type with
-        | A.Void -> L.build_ret_void
-        | t -> L.build_ret (L.const_int (ltype_of_typ t) 0))
+    (* Add a precautionary return to the end *)
+    ignore (match return_type with
+        | A.Void -> L.build_ret_void builder
+        | t -> L.build_ret (L.const_null (ltype_of_typ t)) builder)
   in
 
   let build_function f =

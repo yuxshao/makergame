@@ -160,12 +160,12 @@ let check ((globals, functions, gameobjs) : Ast.program) =
                     " arguments in " ^ string_of_expr call)
         else
           let actuals' = List.map2
-            (fun (ft, _) ex -> let (et, ex') = expr symbols ex in
-              ignore (check_assign ft et
-                        ("illegal actual argument found " ^ string_of_typ et ^
-                         " expected " ^ string_of_typ ft ^ " in " ^ string_of_expr ex)); ex')
-            fd.formals actuals in
-        fd.typ, Call(fname, actuals')
+              (fun (ft, _) ex -> let (et, ex') = expr symbols ex in
+                ignore (check_assign ft et
+                          ("illegal actual argument found " ^ string_of_typ et ^
+                           " expected " ^ string_of_typ ft ^ " in " ^ string_of_expr ex)); ex')
+              fd.formals actuals in
+          fd.typ, Call(fname, actuals')
       | Create(obj_type) -> Object((gameobj_decl obj_type).Gameobj.name), e
       | Destroy(e) ->
         match expr symbols e with
@@ -180,11 +180,11 @@ let check ((globals, functions, gameobjs) : Ast.program) =
     (* Verify a statement or throw an exception *)
     let rec stmt symbols = function
       | Decl (t, n) as s ->
-      check_not_void (fun n -> "illegal void local " ^ n ^ " in " ^ name) (t, n);
-      s, StringMap.add n t symbols
+        check_not_void (fun n -> "illegal void local " ^ n ^ " in " ^ name) (t, n);
+        s, StringMap.add n t symbols
       | Block b -> Block (check_block b ~symbols ~name ~return), symbols
       | Expr e -> let (_, e') = expr symbols e in Expr e', symbols
-      | Return e ->
+      | Return e ->             (* TODO in LRM say stuff can follow returns *)
         let t, e' = expr symbols e in
         if t = return then Return e', symbols
         else failwith ("return gives " ^ string_of_typ t ^ " expected " ^
@@ -203,13 +203,12 @@ let check ((globals, functions, gameobjs) : Ast.program) =
         let s', _ = stmt symbols s in Foreach(obj_t, id, s'), symbols
     in
 
-    let rec stmts symbols = function
-      | [Return _ as s] -> let s', _ = stmt symbols s in [s']
-      | Return _ :: _ -> failwith "nothing may follow a return" (* TODO: change this? *)
-      | s :: ss -> let s', symbols' = stmt symbols s in s' :: (stmts symbols' ss)
-      | [] -> []
+    let _, block' =
+      List.fold_left
+        (fun (sym, accum) s -> let s', sym' = stmt sym s in (sym', s' :: accum))
+        (symbols, []) block
     in
-    stmts symbols block
+    List.rev block'
   in
 
   let check_function ~symbols func =
