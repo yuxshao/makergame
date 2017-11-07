@@ -186,6 +186,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
       let destroy_event = L.build_load (L.build_struct_gep objptr 4 "" builder) "event" builder in
       L.build_call destroy_event [|objref|] "" builder
     in
+    (* TODO: also need to remove object-particular node *)
     ignore (L.build_call list_rem_func [|node|] "" builder);
     ignore (L.build_free node builder);
     ignore (L.build_ret_void builder); f
