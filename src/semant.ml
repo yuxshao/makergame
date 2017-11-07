@@ -97,85 +97,85 @@ let check ((globals, functions, gameobjs) : Ast.program) =
       (Gameobj.make "main" [] [Gameobj.Create, block]) :: gameobjs
   in
 
+  (* Type of each variable (global, formal, local), maybe with member chain *)
+  let rec type_of_identifier ~symbols (name, chain) =
+    let typ =
+      try StringMap.find name symbols
+      with Not_found -> failwith ("undeclared identifier " ^ name)
+    in
+    match chain with
+    | [] -> typ
+    | hd :: tl ->
+      match typ with
+      | Object s ->
+        let o = gameobj_decl s in
+        let symbols =
+          List.fold_left (fun m (t, n) -> StringMap.add n t m)
+            StringMap.empty o.Gameobj.members
+        in
+        type_of_identifier (hd, tl) ~symbols
+      | _ -> failwith ("cannot get member of non-object " ^ name)
+  in
+
+  (* Return the type of an expression and the new expression or throw an exception *)
+  let rec expr symbols e = match e with
+    | Literal _ -> Int, e
+    | BoolLit _ -> Bool, e
+    | FloatLit _ -> Float, e
+    | StringLit _ -> String, e
+    | Id(hd, tl) -> type_of_identifier ~symbols (hd, tl), e
+    | Binop(e1, op, _, e2) -> let (t1, e1') = expr symbols e1 and (t2, e2') = expr symbols e2 in
+      (match op with
+         Add | Sub | Mult | Div when t1 = Int && t2 = Int -> Int, Binop(e1', op, Int, e2')
+       | Add | Sub | Mult | Div when t1 = Float && t2 = Float -> Int, Binop(e1', op, Float, e2')
+       | Equal | Neq when t1 = t2  -> Bool, Binop(e1', op, t1, e2')
+       | Less | Leq | Greater | Geq when t1 = Int && t2 = Int -> Bool, Binop(e1', op, Int, e2')
+       | Less | Leq | Greater | Geq when t1 = Float && t2 = Float -> Bool, Binop(e1', op, Float, e2')
+       | And | Or when t1 = Bool && t2 = Bool -> Bool, Binop(e1', op, Bool, e2')
+       | _ -> failwith ("illegal binary operator " ^
+                        string_of_typ t1 ^ " " ^ string_of_op op ^ " " ^
+                        string_of_typ t2 ^ " in " ^ string_of_expr e)
+      )
+    | Unop(op, _, ex) -> let (t, ex') = expr symbols ex in
+      (match op with
+         Neg when t = Int -> Int, Unop(op, Int, ex')
+       | Neg when t = Int -> Float, Unop(op, Float, ex')
+       | Not when t = Bool -> Bool, Unop(op, Bool, ex')
+       | _ -> failwith ("illegal unary operator " ^ string_of_uop op ^
+                        string_of_typ t ^ " in " ^ string_of_expr e))
+    | Noexpr -> Void, e
+    | Assign(var, ex) -> let lt = type_of_identifier ~symbols var
+      and (rt, e') = expr symbols ex in
+      check_assign lt rt ("illegal assignment " ^ string_of_typ lt ^
+                          " = " ^ string_of_typ rt ^ " in " ^
+                          string_of_expr e), Assign(var, e')
+    | Call(fname, actuals) as call -> let fd = function_decl fname in
+      if List.length actuals != List.length fd.formals then
+        failwith ("expecting " ^
+                  string_of_int (List.length fd.formals) ^
+                  " arguments in " ^ string_of_expr call)
+      else
+        let actuals' = List.map2
+            (fun (ft, _) ex -> let (et, ex') = expr symbols ex in
+              ignore (check_assign ft et
+                        ("illegal actual argument found " ^ string_of_typ et ^
+                         " expected " ^ string_of_typ ft ^ " in " ^ string_of_expr ex)); ex')
+            fd.formals actuals in
+        fd.typ, Call(fname, actuals')
+    | Create(obj_type) -> Object((gameobj_decl obj_type).Gameobj.name), e
+    | Destroy(e) ->
+      match expr symbols e with
+      | Object _, e' -> Void, Destroy(e')
+      | _ -> failwith ("cannot destroy non-object")
+  in
+
+  let check_bool_expr symbols e = let (t, e') = expr symbols e in if t != Bool
+    then failwith ("expected Boolean expression in " ^ string_of_expr e)
+    else e' in
+
   (* TODO: rename symbols to scope *)
   let rec check_block ~symbols ~name ~return block =
     (* TODO: say in LRM it's okay to duplicate locals/formals now *)
-
-    (* Type of each variable (global, formal, local), maybe with member chain *)
-    let rec type_of_identifier ~symbols (name, chain) =
-      let typ =
-        try StringMap.find name symbols
-        with Not_found -> failwith ("undeclared identifier " ^ name)
-      in
-      match chain with
-      | [] -> typ
-      | hd :: tl ->
-        match typ with
-        | Object s ->
-          let o = gameobj_decl s in
-          let symbols =
-            List.fold_left (fun m (t, n) -> StringMap.add n t m)
-              StringMap.empty o.Gameobj.members
-          in
-          type_of_identifier (hd, tl) ~symbols
-        | _ -> failwith ("cannot get member of non-object " ^ name)
-    in
-
-    (* Return the type of an expression and the new expression or throw an exception *)
-    let rec expr symbols e = match e with
-      | Literal _ -> Int, e
-      | BoolLit _ -> Bool, e
-      | FloatLit _ -> Float, e
-      | StringLit _ -> String, e
-      | Id(hd, tl) -> type_of_identifier ~symbols (hd, tl), e
-      | Binop(e1, op, _, e2) -> let (t1, e1') = expr symbols e1 and (t2, e2') = expr symbols e2 in
-        (match op with
-           Add | Sub | Mult | Div when t1 = Int && t2 = Int -> Int, Binop(e1', op, Int, e2')
-         | Add | Sub | Mult | Div when t1 = Float && t2 = Float -> Int, Binop(e1', op, Float, e2')
-         | Equal | Neq when t1 = t2  -> Bool, Binop(e1', op, t1, e2')
-         | Less | Leq | Greater | Geq when t1 = Int && t2 = Int -> Bool, Binop(e1', op, Int, e2')
-         | Less | Leq | Greater | Geq when t1 = Float && t2 = Float -> Bool, Binop(e1', op, Float, e2')
-         | And | Or when t1 = Bool && t2 = Bool -> Bool, Binop(e1', op, Bool, e2')
-         | _ -> failwith ("illegal binary operator " ^
-                          string_of_typ t1 ^ " " ^ string_of_op op ^ " " ^
-                          string_of_typ t2 ^ " in " ^ string_of_expr e)
-        )
-      | Unop(op, _, ex) -> let (t, ex') = expr symbols ex in
-        (match op with
-           Neg when t = Int -> Int, Unop(op, Int, ex')
-         | Neg when t = Int -> Float, Unop(op, Float, ex')
-         | Not when t = Bool -> Bool, Unop(op, Bool, ex')
-         | _ -> failwith ("illegal unary operator " ^ string_of_uop op ^
-                          string_of_typ t ^ " in " ^ string_of_expr e))
-      | Noexpr -> Void, e
-      | Assign(var, ex) -> let lt = type_of_identifier ~symbols var
-        and (rt, e') = expr symbols ex in
-        check_assign lt rt ("illegal assignment " ^ string_of_typ lt ^
-                            " = " ^ string_of_typ rt ^ " in " ^
-                            string_of_expr e), Assign(var, e')
-      | Call(fname, actuals) as call -> let fd = function_decl fname in
-        if List.length actuals != List.length fd.formals then
-          failwith ("expecting " ^
-                    string_of_int (List.length fd.formals) ^
-                    " arguments in " ^ string_of_expr call)
-        else
-          let actuals' = List.map2
-              (fun (ft, _) ex -> let (et, ex') = expr symbols ex in
-                ignore (check_assign ft et
-                          ("illegal actual argument found " ^ string_of_typ et ^
-                           " expected " ^ string_of_typ ft ^ " in " ^ string_of_expr ex)); ex')
-              fd.formals actuals in
-          fd.typ, Call(fname, actuals')
-      | Create(obj_type) -> Object((gameobj_decl obj_type).Gameobj.name), e
-      | Destroy(e) ->
-        match expr symbols e with
-        | Object _, e' -> Void, Destroy(e')
-        | _ -> failwith ("cannot destroy non-object")
-    in
-
-    let check_bool_expr symbols e = let (t, e') = expr symbols e in if t != Bool
-      then failwith ("expected Boolean expression in " ^ string_of_expr e)
-      else e' in
 
     (* Verify a statement or throw an exception *)
     let rec stmt symbols = function

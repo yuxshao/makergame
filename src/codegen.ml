@@ -233,111 +233,111 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
       [|L.const_int i32_t 0; L.const_int i32_t 0|] "" builder
   in
 
+  (* Return the value for a variable or formal argument *)
+  let rec lookup builder scope n chain =
+    let (top, top_type) = StringMap.find n scope in
+    match chain with
+    | [] -> top
+    | hd :: tl ->
+      match top_type with
+      | A.Object objname ->
+        let nodeptr = L.build_struct_gep top 1 (n ^ "_nodeptr") builder in
+        let node = L.build_load nodeptr (n ^ "_node") builder in
+        let (obj_type, _) = StringMap.find objname gameobj_types in
+        let lltop = L.build_bitcast node (L.pointer_type obj_type) n builder in
+        lookup builder (gameobj_members lltop objname builder) hd tl
+      | _ -> assert false (* failwith "cannot get member of non-object type" *)
+  in
+
+  (* Construct code for an expression; return its value *)
+  let rec expr scope builder = function
+    | A.Literal i -> L.const_int i32_t i
+    | A.BoolLit b -> L.const_int i1_t (if b then 1 else 0)
+    | A.StringLit l -> L.build_global_stringptr l "literal" builder
+    | A.FloatLit f -> L.const_float float_t f
+    | A.Noexpr -> L.const_int i32_t 0
+    | A.Id (hd, tl) -> L.build_load (lookup builder scope hd tl) hd builder
+    | A.Binop (e1, op, _, e2) ->
+      let e1' = expr scope builder e1
+      and e2' = expr scope builder e2 in
+      (match op with
+       | A.Add     -> L.build_add
+       | A.Sub     -> L.build_sub
+       | A.Mult    -> L.build_mul
+       | A.Div     -> L.build_sdiv
+       | A.Expo    -> failwith "not implemented"
+       | A.Modulo  -> failwith "not implemented"
+       | A.And     -> L.build_and (* TODO: SHOULD WE SHORT CIRCUIT? *)
+       | A.Or      -> L.build_or
+       | A.Equal   -> L.build_icmp L.Icmp.Eq
+       | A.Neq     -> L.build_icmp L.Icmp.Ne
+       | A.Less    -> L.build_icmp L.Icmp.Slt
+       | A.Leq     -> L.build_icmp L.Icmp.Sle
+       | A.Greater -> L.build_icmp L.Icmp.Sgt
+       | A.Geq     -> L.build_icmp L.Icmp.Sge
+      ) e1' e2' "tmp" builder
+    | A.Unop(op, _, e) ->
+      let e' = expr scope builder e in
+      (match op with
+         A.Neg     -> L.build_neg
+       | A.Not     -> L.build_not) e' "tmp" builder
+    | A.Assign ((hd, tl), e) -> let e' = expr scope builder e in
+      ignore (L.build_store e' (lookup builder scope hd tl) builder); e'
+    | A.Call ("printstr", [e]) ->
+      L.build_call printf_func
+        [| fmt_str str_fmt_str builder; (expr scope builder e) |]
+        "printf" builder
+    | A.Call ("print", [e]) | A.Call ("printb", [e]) ->
+      L.build_call printf_func
+        [| fmt_str int_fmt_str builder; (expr scope builder e) |]
+        "printf" builder
+    | A.Call ("print_float", [e]) -> (* TODO: test this fn *)
+      L.build_call printf_func
+        [| fmt_str float_fmt_str builder; (expr scope builder e) |]
+        "printf" builder
+    (* TODO: unify print names and their tests *)
+    | A.Call (f, act) ->
+      let (fdef, fdecl) = StringMap.find f function_decls in
+      (* TODO: can arguments have side effects? what's the order-currently LtR *)
+      let actuals = List.map (expr scope builder) act in
+      let result =
+        match fdecl.A.typ with A.Void -> "" | _ -> f ^ "_result"
+      in
+      L.build_call fdef (Array.of_list actuals) result builder
+    | A.Create objname ->
+      let (objtype, _) = StringMap.find objname gameobj_types in
+      let llobj = L.build_malloc objtype objname builder in
+      let llnode = L.build_bitcast llobj nodeptr_t (objname ^ "_node") builder in
+      let llobjnode =
+        L.build_bitcast (L.build_struct_gep llobj 1 "" builder)
+          nodeptr_t (objname ^ "_objnode") builder
+      in
+      ignore (L.build_call list_add_func [|llobjnode; obj_head objname|] "" builder);
+      ignore (L.build_call list_add_func [|llnode; gameobj_head|] "" builder);
+      let llid = L.build_load global_objid "old_id" builder in
+      let llid = L.build_add llid (L.const_int i64_t 1) "new_id" builder in
+      ignore (L.build_store llid global_objid builder);
+      let events =
+        ["create"; "step"; "destroy"; "draw"]
+        |> List.map (fun x ->
+            Some (L.build_bitcast
+                    (StringMap.find (objname ^ "_" ^ x) gameobj_func_decls)
+                    eventptr_t (objname ^ "_" ^ x) builder))
+      in
+      let llobj_gen = L.build_bitcast llobj objptr_t (objname ^ "_gen") builder in
+      build_struct_ptr_assign llobj_gen (Array.of_list (None :: Some llid :: events)) builder;
+      let objref = build_struct_assign (L.undef objref_t) [|Some llid; Some llnode|] builder in
+      let create_event = match List.hd events with | Some ev -> ev | None -> assert false in
+      (* TODO: include something in LRM about non-initialized values *)
+      ignore (L.build_call create_event [|objref|] "" builder);
+      objref
+    | A.Destroy e ->
+      L.build_call destroy_func [|expr scope builder e|] "" builder
+  in
+
   (* Fill in the body of the given function. Builder is guaranteed to point to a
      block without a terminator. *)
   let rec build_block builder scope the_function block return_type =
-    (* Return the value for a variable or formal argument *)
-    let rec lookup builder scope n chain =
-      let (top, top_type) = StringMap.find n scope in
-      match chain with
-      | [] -> top
-      | hd :: tl ->
-        match top_type with
-        | A.Object objname ->
-          let nodeptr = L.build_struct_gep top 1 (n ^ "_nodeptr") builder in
-          let node = L.build_load nodeptr (n ^ "_node") builder in
-          let (obj_type, _) = StringMap.find objname gameobj_types in
-          let lltop = L.build_bitcast node (L.pointer_type obj_type) n builder in
-          lookup builder (gameobj_members lltop objname builder) hd tl
-        | _ -> assert false (* failwith "cannot get member of non-object type" *)
-    in
-
-    (* Construct code for an expression; return its value *)
-    let rec expr scope builder = function
-      | A.Literal i -> L.const_int i32_t i
-      | A.BoolLit b -> L.const_int i1_t (if b then 1 else 0)
-      | A.StringLit l -> L.build_global_stringptr l "literal" builder
-      | A.FloatLit f -> L.const_float float_t f
-      | A.Noexpr -> L.const_int i32_t 0
-      | A.Id (hd, tl) -> L.build_load (lookup builder scope hd tl) hd builder
-      | A.Binop (e1, op, _, e2) ->
-        let e1' = expr scope builder e1
-        and e2' = expr scope builder e2 in
-        (match op with
-         | A.Add     -> L.build_add
-         | A.Sub     -> L.build_sub
-         | A.Mult    -> L.build_mul
-         | A.Div     -> L.build_sdiv
-         | A.Expo    -> failwith "not implemented"
-         | A.Modulo  -> failwith "not implemented"
-         | A.And     -> L.build_and (* TODO: SHOULD WE SHORT CIRCUIT? *)
-         | A.Or      -> L.build_or
-         | A.Equal   -> L.build_icmp L.Icmp.Eq
-         | A.Neq     -> L.build_icmp L.Icmp.Ne
-         | A.Less    -> L.build_icmp L.Icmp.Slt
-         | A.Leq     -> L.build_icmp L.Icmp.Sle
-         | A.Greater -> L.build_icmp L.Icmp.Sgt
-         | A.Geq     -> L.build_icmp L.Icmp.Sge
-        ) e1' e2' "tmp" builder
-      | A.Unop(op, _, e) ->
-        let e' = expr scope builder e in
-        (match op with
-           A.Neg     -> L.build_neg
-         | A.Not     -> L.build_not) e' "tmp" builder
-      | A.Assign ((hd, tl), e) -> let e' = expr scope builder e in
-        ignore (L.build_store e' (lookup builder scope hd tl) builder); e'
-      | A.Call ("printstr", [e]) ->
-        L.build_call printf_func
-          [| fmt_str str_fmt_str builder; (expr scope builder e) |]
-          "printf" builder
-      | A.Call ("print", [e]) | A.Call ("printb", [e]) ->
-        L.build_call printf_func
-          [| fmt_str int_fmt_str builder; (expr scope builder e) |]
-          "printf" builder
-      | A.Call ("print_float", [e]) -> (* TODO: test this fn *)
-        L.build_call printf_func
-          [| fmt_str float_fmt_str builder; (expr scope builder e) |]
-          "printf" builder
-      (* TODO: unify print names and their tests *)
-      | A.Call (f, act) ->
-        let (fdef, fdecl) = StringMap.find f function_decls in
-        (* TODO: can arguments have side effects? what's the order-currently LtR *)
-        let actuals = List.map (expr scope builder) act in
-        let result =
-          match fdecl.A.typ with A.Void -> "" | _ -> f ^ "_result"
-        in
-        L.build_call fdef (Array.of_list actuals) result builder
-      | A.Create objname ->
-        let (objtype, _) = StringMap.find objname gameobj_types in
-        let llobj = L.build_malloc objtype objname builder in
-        let llnode = L.build_bitcast llobj nodeptr_t (objname ^ "_node") builder in
-        let llobjnode =
-          L.build_bitcast (L.build_struct_gep llobj 1 "" builder)
-            nodeptr_t (objname ^ "_objnode") builder
-        in
-        ignore (L.build_call list_add_func [|llobjnode; obj_head objname|] "" builder);
-        ignore (L.build_call list_add_func [|llnode; gameobj_head|] "" builder);
-        let llid = L.build_load global_objid "old_id" builder in
-        let llid = L.build_add llid (L.const_int i64_t 1) "new_id" builder in
-        ignore (L.build_store llid global_objid builder);
-        let events =
-          ["create"; "step"; "destroy"; "draw"]
-          |> List.map (fun x ->
-              Some (L.build_bitcast
-                      (StringMap.find (objname ^ "_" ^ x) gameobj_func_decls)
-                      eventptr_t (objname ^ "_" ^ x) builder))
-        in
-        let llobj_gen = L.build_bitcast llobj objptr_t (objname ^ "_gen") builder in
-        build_struct_ptr_assign llobj_gen (Array.of_list (None :: Some llid :: events)) builder;
-        let objref = build_struct_assign (L.undef objref_t) [|Some llid; Some llnode|] builder in
-        let create_event = match List.hd events with | Some ev -> ev | None -> assert false in
-        (* TODO: include something in LRM about non-initialized values *)
-        ignore (L.build_call create_event [|objref|] "" builder);
-        objref
-      | A.Destroy e ->
-        L.build_call destroy_func [|expr scope builder e|] "" builder
-    in
-
     (* Build the code for the given statement; return the builder for
        the statement's successor *)
     let rec stmt (builder, scope) = function
