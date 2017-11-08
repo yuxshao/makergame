@@ -214,9 +214,9 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
       [|L.const_int i32_t 0; L.const_int i32_t 0|] "" builder
   in
 
-  let build_object_loop builder the_function ~head ~body =
+  let build_node_loop builder the_function ~head ~body =
     let node_ptr = L.build_alloca nodeptr_t "node" builder in
-    (* ignore (L.build_call printf_func [|L.build_global_stringptr ("%s\n") "strfmt" builder; L.build_global_stringptr name name builder|] "" builder); *)
+    (* ignore (L.build_call printf_func [|L.build_global_stringptr ("%s\n") "strfmt" builder; L.build_global_stringptr "loop" "loop" builder|] "" builder); *)
     ignore (L.build_store head node_ptr builder);
     let pred_bb = L.append_block context "check" the_function in
     ignore (L.build_br pred_bb builder);
@@ -225,10 +225,10 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     let curr = L.build_load node_ptr "cur_node" pred_builder in
     let next = L.build_load (L.build_struct_gep curr 0 "" pred_builder) "next_ptr" pred_builder in
     (* let next_int = L.build_ptrtoint next i64_t "" pred_builder in *)
-    (* let head_int = L.build_ptrtoint gameobj_head i64_t "" pred_builder in *)
+    (* let head_int = L.build_ptrtoint head i64_t "" pred_builder in *)
     (* ignore (L.build_call printf_func [|L.build_global_stringptr "%d %d\n" "ptrfmt" pred_builder; next_int; head_int|] "" pred_builder); *)
     ignore (L.build_store next node_ptr pred_builder);
-    let diff = L.build_ptrdiff next gameobj_head "diff" pred_builder in
+    let diff = L.build_ptrdiff next head "diff" pred_builder in
     let bool_val = L.build_icmp L.Icmp.Eq diff (L.const_null (L.i64_type context)) "cont" pred_builder in
 
     let body_bb = L.append_block context "body" the_function in
@@ -239,6 +239,21 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     ignore (L.build_cond_br bool_val merge_bb body_bb pred_builder);
     ignore (L.build_ret_void (L.builder_at_end context merge_bb))
   in
+
+  let build_object_loop builder the_function ~objname ~body =
+    let objtype, _ = StringMap.find objname gameobj_types in
+    build_node_loop builder the_function
+      ~head:(StringMap.find objname obj_heads)
+      ~body:(fun builder node ->
+          let null = L.const_null (L.pointer_type objtype) in
+          let offset = L.build_struct_gep null 1 "offset" builder in
+          let offsetint = L.build_ptrtoint offset i64_t "offsetint" builder in
+          let intptr = L.build_ptrtoint node i64_t "intptr" builder in
+          let intnew = L.build_sub intptr offsetint "intnew" builder in
+          (* ignore (L.build_call printf_func [|L.build_global_stringptr "%d %d %d\n" "ptrfmt" builder; offsetint; intptr; intnew|] "" builder); *)
+          let obj = L.build_inttoptr intnew (L.pointer_type objtype) objname builder in
+          body builder obj)
+    in
 
   (* Return the value for a variable or formal argument *)
   let rec lookup builder scope n chain =
@@ -480,17 +495,17 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
   build_function_body create_gb [] [A.Expr (A.Create "main")] A.Void;
 
   let global_event (name, offset) =
-    let step_gb = L.define_function ("global_" ^ name) (L.function_type void_t [||]) the_module in
-    let builder = L.builder_at_end context (L.entry_block step_gb) in
-    let body builder next =
-      let objptr = L.build_bitcast next objptr_t "objptr" builder in
+    let fn = L.define_function ("global_" ^ name) (L.function_type void_t [||]) the_module in
+    let builder = L.builder_at_end context (L.entry_block fn) in
+    let body builder node =
+      let objptr = L.build_bitcast node objptr_t "objptr" builder in
       let sf = L.build_load (L.build_struct_gep objptr offset "" builder) ("this_" ^ name) builder in
       let id = L.build_load (L.build_struct_gep objptr 1 "id_ptr" builder) "id" builder in
-      let next_ref = build_struct_assign (L.undef objref_t) [|Some id; Some next|] builder in
-      ignore (L.build_call sf [|next_ref|] "" builder);
+      let objref = build_struct_assign (L.undef objref_t) [|Some id; Some node|] builder in
+      ignore (L.build_call sf [|objref|] "" builder);
       builder
     in
-    build_object_loop builder step_gb ~head:gameobj_head ~body
+    build_node_loop builder fn ~head:gameobj_head ~body
   in
   List.iter global_event ["step", 3; "draw", 5];
 
