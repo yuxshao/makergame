@@ -10,7 +10,7 @@ open Ast
 %token RETURN IF ELSE FOR WHILE FOREACH
 %token INT BOOL FLOAT STRING SPRITE SOUND VOID
 %token CREATE DESTROY DRAW STEP
-%token EXTERN
+%token EXTERN THIS
 %token <int> LITERAL
 %token <string> ID
 %token <string> STRLIT
@@ -154,6 +154,9 @@ expr:
 
 id_chain:
   | ID { $1, [] }
+  /* 'this' can only be used in id chains; not assignment nor declaration */
+  /* TODO: not very informative putting it in the parser. but it gets the job done? */
+  | THIS PERIOD id_chain { let (h, t) = $3 in "this", h :: t }
   | ID PERIOD id_chain { let (h, t) = $3 in $1, h :: t }
 
 actuals_opt:

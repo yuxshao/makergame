@@ -441,7 +441,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     let build_fn (f_name, block) =
       let name = g.name ^ "_" ^ f_name in
       let llfn = StringMap.find name gameobj_func_decls in
-      build_function_body llfn [A.Object(g.name), "this"] block A.Void (* TODO: make sure you can't reassign this *)
+      build_function_body llfn [A.Object(g.name), "this"] block A.Void
     in
     List.iter build_fn [("create", g.create); ("step", g.step); ("destroy", g.destroy); ("draw", g.draw)]
   in
