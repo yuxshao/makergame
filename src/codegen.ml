@@ -237,23 +237,24 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
 
     let merge_bb = L.append_block context "merge" the_function in
     ignore (L.build_cond_br bool_val merge_bb body_bb pred_builder);
-    ignore (L.build_ret_void (L.builder_at_end context merge_bb))
+    L.builder_at_end context merge_bb
   in
+
 
   let build_object_loop builder the_function ~objname ~body =
     let objtype, _ = StringMap.find objname gameobj_types in
-    build_node_loop builder the_function
-      ~head:(StringMap.find objname obj_heads)
-      ~body:(fun builder node ->
-          let null = L.const_null (L.pointer_type objtype) in
-          let offset = L.build_struct_gep null 1 "offset" builder in
-          let offsetint = L.build_ptrtoint offset i64_t "offsetint" builder in
-          let intptr = L.build_ptrtoint node i64_t "intptr" builder in
-          let intnew = L.build_sub intptr offsetint "intnew" builder in
-          (* ignore (L.build_call printf_func [|L.build_global_stringptr "%d %d %d\n" "ptrfmt" builder; offsetint; intptr; intnew|] "" builder); *)
-          let obj = L.build_inttoptr intnew (L.pointer_type objtype) objname builder in
-          body builder obj)
+    let body builder node =
+      let null = L.const_null (L.pointer_type objtype) in
+      let offset = L.build_struct_gep null 1 "offset" builder in
+      let offsetint = L.build_ptrtoint offset i64_t "offsetint" builder in
+      let intptr = L.build_ptrtoint node i64_t "intptr" builder in
+      let intnew = L.build_sub intptr offsetint "intnew" builder in
+      (* ignore (L.build_call printf_func [|L.build_global_stringptr "%d %d %d\n" "ptrfmt" builder; offsetint; intptr; intnew|] "" builder); *)
+      let obj = L.build_inttoptr intnew nodeptr_t objname builder in
+      body builder obj
     in
+    build_node_loop builder the_function ~head:(StringMap.find objname obj_heads) ~body
+  in
 
   (* Return the value for a variable or formal argument *)
   let rec lookup builder scope n chain =
@@ -505,7 +506,8 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
       ignore (L.build_call sf [|objref|] "" builder);
       builder
     in
-    build_node_loop builder fn ~head:gameobj_head ~body
+    let builder = build_node_loop builder fn ~head:gameobj_head ~body in
+    ignore (L.build_ret_void builder)
   in
   List.iter global_event ["step", 3; "draw", 5];
 
