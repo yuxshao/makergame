@@ -221,8 +221,10 @@ let check ((globals, functions, gameobjs) : Ast.program) =
       | While(p, s) ->
         let p' = check_bool_expr scope p in let s', _ = stmt scope s in
         While(p', s'), scope
-      | Foreach(obj_t, id, s) -> ignore(gameobj_decl obj_t);
-        let s', _ = stmt scope s in Foreach(obj_t, id, s'), scope
+      | Foreach(obj_t, id, s) ->
+        ignore(gameobj_decl obj_t);
+        let s', _ = stmt (StringMap.add id (Object(obj_t)) scope) s in
+        Foreach(obj_t, id, s'), scope
     in
 
     let _, block' =

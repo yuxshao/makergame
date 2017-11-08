@@ -437,7 +437,19 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
         let while_stmts = [A.Expr e1; A.While (e2, A.Block [body; A.Expr e3])] in
         let for_builder, _ = stmt (builder, scope) (A.Block while_stmts) in
         for_builder, scope
-      | A.Foreach _ -> failwith "not implemented"
+      | A.Foreach (objname, name, body_stmt) ->
+        let body builder node =
+          let objptr = L.build_bitcast node objptr_t "objptr" builder in
+          let id = L.build_load (L.build_struct_gep objptr 1 "" builder) "id" builder in
+          let obj = build_struct_assign (L.undef objref_t) [|Some id; Some node|] builder in
+          let objref = L.build_alloca objref_t "ref" builder in
+          ignore (L.build_store obj objref builder);
+          let builder, _ =
+            stmt (builder, StringMap.add name (objref, A.Object(objname)) scope) body_stmt
+          in
+          builder
+        in
+        build_object_loop builder the_function ~objname ~body, scope
     in
 
     (* Build the code for each statement in the function *)
