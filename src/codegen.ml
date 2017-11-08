@@ -223,7 +223,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
 
     let pred_builder = L.builder_at_end context pred_bb in
     let curr = L.build_load node_ptr "cur_node" pred_builder in
-    let next = L.build_load (L.build_struct_gep curr 0 "" pred_builder) "next_ptr" pred_builder in
+    let next = L.build_load (L.build_struct_gep curr 1 "" pred_builder) "next_ptr" pred_builder in
     (* let next_int = L.build_ptrtoint next i64_t "" pred_builder in *)
     (* let head_int = L.build_ptrtoint head i64_t "" pred_builder in *)
     (* ignore (L.build_call printf_func [|L.build_global_stringptr "%d %d\n" "ptrfmt" pred_builder; next_int; head_int|] "" pred_builder); *)
