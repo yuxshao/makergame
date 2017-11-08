@@ -1,1 +1,1 @@
-Fatal error: exception Parsing.Parse_error
+Fatal error: exception Failure("cannot shadow or overwrite identifier 'this' in formals of compute")

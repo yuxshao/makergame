@@ -54,7 +54,6 @@ rule token = parse
   | "destroy" { DESTROY }
   | "draw" { DRAW }
   | "step" { STEP }
-  | "this" { THIS }
   (* misc keywords *)
   | "extern" { EXTERN }
   (* literals *)

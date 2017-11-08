@@ -1,7 +1,5 @@
-main {
-  create {
-    int this; /* error: this cannot be declared */
+void main() {
+  int this; /* error: this cannot be declared */
 
-    this = 3;
-  }
+  this = 3;
 }

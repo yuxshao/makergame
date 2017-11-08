@@ -1,0 +1,1 @@
+Fatal error: exception Failure("'this' cannot be assigned in 'this = create main'")

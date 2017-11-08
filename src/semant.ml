@@ -26,6 +26,16 @@ let check ((globals, functions, gameobjs) : Ast.program) =
     | _ -> ()
   in
 
+  (* Add to the scope. But only if we're not using the identifier 'this' *)
+  (* TODO: mention where 'this' can be used. anywhere but assignment but declaration as a regular obj identifier *)
+  let add_to_scope ?loc n t m =
+    let failstr = "cannot shadow or overwrite identifier 'this'" in
+    match loc, n with
+    | None, "this" -> failwith failstr
+    | Some l, "this" -> failwith (failstr ^ " in " ^ l)
+    | _ -> StringMap.add n t m
+  in
+
   (* Raise an exception of the given rvalue type cannot be assigned to
      the given lvalue type *)
   let check_assign lvaluet rvaluet err =
@@ -62,11 +72,15 @@ let check ((globals, functions, gameobjs) : Ast.program) =
     (List.map (fun fd -> fd.Gameobj.name) gameobjs);
 
   let function_decls =
-    List.fold_left (fun m fd -> StringMap.add fd.fname fd m) StringMap.empty functions
+    List.fold_left
+      (fun m fd -> add_to_scope ~loc:"function declarations" fd.fname fd m)
+      StringMap.empty functions
   in
 
   let gameobj_decls =
-    List.fold_left (fun m obj -> StringMap.add obj.Gameobj.name obj m) StringMap.empty gameobjs
+    List.fold_left
+      (fun m obj -> add_to_scope ~loc:"gameobj declarations" obj.Gameobj.name obj m)
+      StringMap.empty gameobjs
   in
 
   let function_decl s =
@@ -97,6 +111,12 @@ let check ((globals, functions, gameobjs) : Ast.program) =
       (Gameobj.make "main" [] [Gameobj.Create, block]) :: gameobjs
   in
 
+  let gameobj_scope o =
+    List.fold_left
+      (fun m (t, n) -> add_to_scope ~loc:(o.Gameobj.name ^ " members") n t m)
+      StringMap.empty o.Gameobj.members
+  in
+
   (* Type of each variable (global, formal, local), maybe with member chain *)
   let rec type_of_identifier ~scope (name, chain) =
     let typ =
@@ -109,10 +129,7 @@ let check ((globals, functions, gameobjs) : Ast.program) =
       match typ with
       | Object s ->
         let o = gameobj_decl s in
-        let scope =
-          List.fold_left (fun m (t, n) -> StringMap.add n t m)
-            StringMap.empty o.Gameobj.members
-        in
+        let scope = gameobj_scope o in
         type_of_identifier (hd, tl) ~scope
       | _ -> failwith ("cannot get member of non-object " ^ name)
   in
@@ -145,7 +162,11 @@ let check ((globals, functions, gameobjs) : Ast.program) =
        | _ -> failwith ("illegal unary operator " ^ string_of_uop op ^
                         string_of_typ t ^ " in " ^ string_of_expr e))
     | Noexpr -> Void, e
-    | Assign(var, ex) -> let lt = type_of_identifier ~scope var
+    | Assign(var, ex) ->
+      (match var with
+      | "this", [] -> failwith ("'this' cannot be assigned in '" ^ (string_of_expr e) ^ "'")
+      | _ -> ());
+      let lt = type_of_identifier ~scope var
       and (rt, e') = expr scope ex in
       check_assign lt rt ("illegal assignment " ^ string_of_typ lt ^
                           " = " ^ string_of_typ rt ^ " in " ^
@@ -176,12 +197,13 @@ let check ((globals, functions, gameobjs) : Ast.program) =
 
   let rec check_block ~scope ~name ~return block =
     (* TODO: say in LRM it's okay to duplicate locals/formals now *)
+    (* TODO: clarify in LRM where scope starts and ends for decls *)
 
     (* Verify a statement or throw an exception *)
     let rec stmt scope = function
       | Decl (t, n) as s ->
         check_not_void (fun n -> "illegal void local " ^ n ^ " in " ^ name) (t, n);
-        s, StringMap.add n t scope
+        s, add_to_scope ~loc:name n t scope
       | Block b -> Block (check_block b ~scope ~name ~return), scope
       | Expr e -> let (_, e') = expr scope e in Expr e', scope
       | Return e ->             (* TODO in LRM say stuff can follow returns *)
@@ -216,7 +238,11 @@ let check ((globals, functions, gameobjs) : Ast.program) =
       (check_not_void (fun n -> "illegal void formal " ^ n ^ " in " ^ func.fname))
       func.formals;
 
-    let scope = List.fold_left (fun m (t, n) -> StringMap.add n t m) scope func.formals in
+    let scope =
+      List.fold_left
+        (fun m (t, n) -> add_to_scope ~loc:("formals of " ^ func.fname) n t m)
+        scope func.formals
+    in
 
     (* formals can have the same name as locals. is this okay? think about these
        edge cases *)
@@ -240,6 +266,9 @@ let check ((globals, functions, gameobjs) : Ast.program) =
        ("draw", Gameobj.Draw, obj.draw);
        ("destroy", Gameobj.Destroy, obj.destroy)]
     in
+
+    ignore (gameobj_scope obj);
+
     report_duplicate
       (fun n -> "duplicate members " ^ n ^ " in " ^ obj.name)
       (List.map snd obj.members);
@@ -251,7 +280,10 @@ let check ((globals, functions, gameobjs) : Ast.program) =
     make obj.name obj.members blocks'
   in
 
-  let scope = List.fold_left (fun m (t, n) -> StringMap.add n t m) StringMap.empty globals in
+  let scope =
+    List.fold_left (fun m (t, n) -> add_to_scope ~loc:"globals" n t m)
+      StringMap.empty globals
+  in
   let functions' = List.map (check_function ~scope) functions in
   let gameobjs' = List.map (check_gameobj ~scope) new_gameobjs in
   (globals, functions', gameobjs')
