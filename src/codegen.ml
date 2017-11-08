@@ -173,25 +173,6 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     ignore (L.build_ret_void builder); f
   in
 
-  let destroy_func =
-    let f =
-      let t = L.function_type void_t [|objref_t|] in
-      L.define_function "destroy" t the_module
-    in
-    let builder = L.builder_at_end context (L.entry_block f) in
-    let objref = L.param f 0 in
-    let node = L.build_extractvalue objref 1 "node" builder in
-    let _ =
-      let objptr = L.build_bitcast node objptr_t "objptr" builder in
-      let destroy_event = L.build_load (L.build_struct_gep objptr 4 "" builder) "event" builder in
-      L.build_call destroy_event [|objref|] "" builder
-    in
-    (* TODO: also need to remove object-particular node *)
-    ignore (L.build_call list_rem_func [|node|] "" builder);
-    ignore (L.build_free node builder);
-    ignore (L.build_ret_void builder); f
-  in
-
   (* Define each function (arguments and return type) so we can call it *)
   let function_decls =
     let function_decl m fdecl =
@@ -331,8 +312,23 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
       (* TODO: include something in LRM about non-initialized values *)
       ignore (L.build_call create_event [|objref|] "" builder);
       objref
-    | A.Destroy e ->
-      L.build_call destroy_func [|expr scope builder e|] "" builder
+    | A.Destroy (e, objtype) ->
+      let objref = expr scope builder e in
+      let node = L.build_extractvalue objref 1 "node" builder in
+      let _ =
+        let objptr = L.build_bitcast node objptr_t "objptr" builder in
+        let destroy_event = L.build_load (L.build_struct_gep objptr 4 "" builder) "event" builder in
+        L.build_call destroy_event [|objref|] "" builder
+      in
+      (* Find & remove the list node connecting objects of this particular type *)
+      let llobjt, _ = StringMap.find objtype gameobj_types in
+      let obj = L.build_bitcast node (L.pointer_type llobjt) objtype builder in
+      let objnode = L.build_struct_gep obj 1 (objtype ^ "_node") builder in
+      ignore (L.build_call list_rem_func [|objnode|] "" builder);
+      (* Remove node for general gameobjs *)
+      ignore (L.build_call list_rem_func [|node|] "" builder);
+      ignore (L.build_free node builder);
+      expr scope builder (A.Noexpr) (* considered Void in semant *)
   in
 
   (* Fill in the body of the given function. Builder is guaranteed to point to a

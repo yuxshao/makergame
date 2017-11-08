@@ -149,7 +149,7 @@ expr:
   | id_chain ASSIGN expr   { Assign($1, $3) }
   | ID LPAREN actuals_opt RPAREN { Call($1, $3) }
   | CREATE ID { Create($2) }
-  | DESTROY expr { Destroy($2) }
+  | DESTROY expr { Destroy($2, "") }
   | LPAREN expr RPAREN { $2 }
 
 id_chain:

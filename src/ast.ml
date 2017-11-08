@@ -29,7 +29,7 @@ type expr =
   | Assign of (string * string list) * expr
   | Call of string * expr list
   | Create of string
-  | Destroy of expr
+  | Destroy of expr * string
   | Noexpr
 
 type stmt =
@@ -139,7 +139,7 @@ let rec string_of_expr = function
   | Call(f, el) ->
       f ^ "(" ^ String.concat ", " (List.map string_of_expr el) ^ ")"
   | Create o -> "create " ^ o   (* TODO: precedence? parentheses? *)
-  | Destroy o -> "destroy " ^ (string_of_expr o) (* TODO: ibid *)
+  | Destroy (o, _) -> "destroy " ^ (string_of_expr o) (* TODO: ibid *)
   | Noexpr -> ""
 
 let rec string_of_typ = function

@@ -164,9 +164,9 @@ let check ((globals, functions, gameobjs) : Ast.program) =
             fd.formals actuals in
         fd.typ, Call(fname, actuals')
     | Create(obj_type) -> Object((gameobj_decl obj_type).Gameobj.name), e
-    | Destroy(e) ->
+    | Destroy(e, _) ->
       match expr scope e with
-      | Object _, e' -> Void, Destroy(e')
+      | Object n, e' -> Void, Destroy(e', n)
       | _ -> failwith ("cannot destroy non-object")
   in
 
