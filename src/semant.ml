@@ -197,7 +197,7 @@ let check ((globals, functions, gameobjs) : Ast.program) =
 
   let rec check_block ~scope ~name ~return block =
     (* TODO: say in LRM it's okay to duplicate locals/formals now *)
-    (* TODO: clarify in LRM where scope starts and ends for decls *)
+    (* TODO: clarify in LRM where STATIC scope starts and ends for decls *)
 
     (* Verify a statement or throw an exception *)
     let rec stmt scope = function

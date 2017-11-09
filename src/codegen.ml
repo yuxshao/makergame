@@ -215,24 +215,43 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
   in
 
   let build_node_loop builder the_function ~head ~body =
-    let node_ptr = L.build_alloca nodeptr_t "node" builder in
-    (* ignore (L.build_call printf_func [|L.build_global_stringptr ("%s\n") "strfmt" builder; L.build_global_stringptr "loop" "loop" builder|] "" builder); *)
-    ignore (L.build_store head node_ptr builder);
+    (* Keep track of curr and next in case curr is modified when body is run. *)
+    let curr_ptr = L.build_alloca nodeptr_t "curr_ptr" builder in
+    let next_ptr = L.build_alloca nodeptr_t "next_ptr" builder in
+    (* ignore (L.build_call printf_func *)
+    (*           [|L.build_global_stringptr ("%s\n") "strfmt" builder; *)
+    (*             L.build_global_stringptr "loop" "loop" builder|] "" builder); *)
+    ignore (L.build_store head curr_ptr builder);
+
+    let next = L.build_load (L.build_struct_gep head 1 "" builder) "" builder in
+    ignore (L.build_store next next_ptr builder);
+
     let pred_bb = L.append_block context "check" the_function in
     ignore (L.build_br pred_bb builder);
 
     let pred_builder = L.builder_at_end context pred_bb in
-    let curr = L.build_load node_ptr "cur_node" pred_builder in
-    let next = L.build_load (L.build_struct_gep curr 1 "" pred_builder) "next_ptr" pred_builder in
+    (* Move forward one *)
+    let curr = L.build_load next_ptr "curr" pred_builder in
+    let next =
+      L.build_load (L.build_struct_gep curr 1 "" pred_builder) "next" pred_builder
+    in
+    (* let curr_int = L.build_ptrtoint curr i64_t "" pred_builder in *)
     (* let next_int = L.build_ptrtoint next i64_t "" pred_builder in *)
     (* let head_int = L.build_ptrtoint head i64_t "" pred_builder in *)
-    (* ignore (L.build_call printf_func [|L.build_global_stringptr "%d %d\n" "ptrfmt" pred_builder; next_int; head_int|] "" pred_builder); *)
-    ignore (L.build_store next node_ptr pred_builder);
-    let diff = L.build_ptrdiff next head "diff" pred_builder in
-    let bool_val = L.build_icmp L.Icmp.Eq diff (L.const_null (L.i64_type context)) "cont" pred_builder in
+    (* ignore (L.build_call printf_func *)
+    (*           [|L.build_global_stringptr "%d %d %d\n" "ptrfmt" pred_builder; *)
+    (*             curr_int; next_int; head_int|] "" pred_builder); *)
+    ignore (L.build_store curr curr_ptr pred_builder);
+    ignore (L.build_store next next_ptr pred_builder);
+    let diff = L.build_ptrdiff curr head "diff" pred_builder in
+    let bool_val =
+      L.build_icmp L.Icmp.Eq
+        diff (L.const_null (L.i64_type context))
+        "cont" pred_builder
+    in
 
     let body_bb = L.append_block context "body" the_function in
-    let body_builder = body (L.builder_at_end context body_bb) next in
+    let body_builder = body (L.builder_at_end context body_bb) curr in
     ignore (L.build_br pred_bb body_builder);
 
     let merge_bb = L.append_block context "merge" the_function in
@@ -249,7 +268,9 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
       let offsetint = L.build_ptrtoint offset i64_t "offsetint" builder in
       let intptr = L.build_ptrtoint node i64_t "intptr" builder in
       let intnew = L.build_sub intptr offsetint "intnew" builder in
-      (* ignore (L.build_call printf_func [|L.build_global_stringptr "%d %d %d\n" "ptrfmt" builder; offsetint; intptr; intnew|] "" builder); *)
+      (* ignore (L.build_call printf_func *)
+      (*           [|L.build_global_stringptr "%d %d %d\n" "ptrfmt" builder; *)
+      (*             offsetint; intptr; intnew|] "" builder); *)
       let obj = L.build_inttoptr intnew nodeptr_t objname builder in
       body builder obj
     in
@@ -368,6 +389,9 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
       (* Find & remove the list node connecting objects of this particular type *)
       let llobjt, _ = StringMap.find objtype gameobj_types in
       let obj = L.build_bitcast node (L.pointer_type llobjt) objtype builder in
+      (* Lazy delete by marking its id as 0 *)
+      (* let idptr = L.build_struct_gep obj 1 (objtype ^ "_id") builder in *)
+      (* ignore (L.build_store (L.const_int i64_t 0) idptr builder); *)
       let objnode = L.build_struct_gep obj 1 (objtype ^ "_node") builder in
       ignore (L.build_call list_rem_func [|objnode|] "" builder);
       (* Remove node for general gameobjs *)
