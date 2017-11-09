@@ -218,6 +218,15 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
       [|L.const_int i32_t 0; L.const_int i32_t 0|] "" builder
   in
 
+  (* let build_print fmt elems builder = *)
+  (*   ignore (L.build_call printf_func *)
+  (*             (Array.of_list (L.build_global_stringptr (fmt ^ "\n") "" builder *)
+  (*                             :: elems)) "" builder) *)
+  (* in *)
+  (* let build_printstr str builder = *)
+  (*   build_print "%s" [L.build_global_stringptr str "" builder] builder *)
+  (* in *)
+
   let build_if ~pred ~then_ ?(else_ = (fun b _ -> b)) builder the_function =
     let bool_val = pred builder the_function in
     let merge_bb = L.append_block context "merge" the_function in
@@ -234,16 +243,20 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     L.builder_at_end context merge_bb
   in
 
+  (* Builds a while LLVM construct given a predicate construct (returning a bool
+     llvalue and possibly some information to body) and a body construct. *)
   let build_while ~pred ~body builder the_function =
     let pred_bb = L.append_block context "while" the_function in
     ignore (L.build_br pred_bb builder);
 
-    let body_bb = L.append_block context "while_body" the_function in
-    let body_builder = body (L.builder_at_end context body_bb) the_function in
-    ignore (L.build_br pred_bb body_builder);
-
     let pred_builder = L.builder_at_end context pred_bb in
-    let bool_val = pred pred_builder the_function in
+    let bool_val, transfer = pred pred_builder the_function in
+
+    let body_bb = L.append_block context "while_body" the_function in
+    let body_builder =
+      body (L.builder_at_end context body_bb) the_function transfer
+    in
+    ignore (L.build_br pred_bb body_builder);
 
     let merge_bb = L.append_block context "merge" the_function in
     ignore (L.build_cond_br bool_val body_bb merge_bb pred_builder);
@@ -254,82 +267,58 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     (* Keep track of curr and next in case curr is modified when body is run. *)
     let curr_ptr = L.build_alloca nodeptr_t "curr_ptr" builder in
     let next_ptr = L.build_alloca nodeptr_t "next_ptr" builder in
-    (* ignore (L.build_call printf_func *)
-    (*           [|L.build_global_stringptr ("%s\n") "strfmt" builder; *)
-    (*             L.build_global_stringptr "loop" "loop" builder|] "" builder); *)
     ignore (L.build_store head curr_ptr builder);
+    (* build_printstr "loop" builder; *)
 
     let next = L.build_load (L.build_struct_gep head 1 "" builder) "" builder in
     ignore (L.build_store next next_ptr builder);
 
-    let pred_bb = L.append_block context "check" the_function in
-    ignore (L.build_br pred_bb builder);
+    let pred builder _ =
+      (* Move forward one *)
+      let curr = L.build_load next_ptr "curr" builder in
+      let next =
+        L.build_load (L.build_struct_gep curr 1 "" builder) "next" builder
+      in
 
-    let pred_builder = L.builder_at_end context pred_bb in
-    (* Move forward one *)
-    let curr = L.build_load next_ptr "curr" pred_builder in
-    let next =
-      L.build_load (L.build_struct_gep curr 1 "" pred_builder) "next" pred_builder
-    in
-    (* let curr_int = L.build_ptrtoint curr i64_t "" pred_builder in *)
-    (* let next_int = L.build_ptrtoint next i64_t "" pred_builder in *)
-    (* let head_int = L.build_ptrtoint head i64_t "" pred_builder in *)
-    (* ignore (L.build_call printf_func *)
-    (*           [|L.build_global_stringptr "%d %d %d\n" "ptrfmt" pred_builder; *)
-    (*             curr_int; next_int; head_int|] "" pred_builder); *)
-    ignore (L.build_store curr curr_ptr pred_builder);
-    ignore (L.build_store next next_ptr pred_builder);
-    let diff = L.build_ptrdiff curr head "diff" pred_builder in
-    let bool_val =
-      L.build_icmp L.Icmp.Eq
-        diff (L.const_null (L.i64_type context))
-        "cont" pred_builder
+      (* let curr_int = L.build_ptrtoint curr i64_t "" builder in *)
+      (* let next_int = L.build_ptrtoint next i64_t "" builder in *)
+      (* let head_int = L.build_ptrtoint head i64_t "" builder in *)
+      (* build_print "%d %d %d" [curr_int; next_int; head_int] builder; *)
+
+      ignore (L.build_store curr curr_ptr builder);
+      ignore (L.build_store next next_ptr builder);
+      L.build_icmp L.Icmp.Ne curr head "cont" builder, curr
     in
 
-    let body_bb = L.append_block context "body" the_function in
-    let body_builder = body (L.builder_at_end context body_bb) curr in
-    ignore (L.build_br pred_bb body_builder);
-
-    let merge_bb = L.append_block context "merge" the_function in
-    ignore (L.build_cond_br bool_val merge_bb body_bb pred_builder);
-    L.builder_at_end context merge_bb
+    let body builder _ curr = body builder curr in
+    build_while builder the_function ~pred ~body
   in
 
+  let build_container_of container_t ?(cast=container_t) offset v name builder =
+    let null = L.const_null (L.pointer_type container_t) in
+    let offset = L.build_struct_gep null offset "offset" builder in
+    let offsetint = L.build_ptrtoint offset i64_t "offsetint" builder in
+    let intptr = L.build_ptrtoint v i64_t "intptr" builder in
+    let intnew = L.build_sub intptr offsetint "intnew" builder in
+    (* build_print "%d %d %d" [offsetint; intptr; intnew] builder; *)
+    L.build_inttoptr intnew (L.pointer_type cast) name builder
+  in
 
   let build_object_loop builder the_function ~objname ~body =
     let objtype, _ = StringMap.find objname gameobj_types in
     let body builder node =
       (* Calculating offsets to get the object pointer *)
-      let null = L.const_null (L.pointer_type objtype) in
-      let offset = L.build_struct_gep null 1 "offset" builder in
-      let offsetint = L.build_ptrtoint offset i64_t "offsetint" builder in
-      let intptr = L.build_ptrtoint node i64_t "intptr" builder in
-      let intnew = L.build_sub intptr offsetint "intnew" builder in
-      (* ignore (L.build_call printf_func *)
-      (*           [|L.build_global_stringptr "%d %d %d\n" "ptrfmt" builder; *)
-      (*             offsetint; intptr; intnew|] "" builder); *)
-      let obj = L.build_inttoptr intnew nodeptr_t objname builder in
+      let obj = build_container_of objtype 1 node objname builder ~cast:node_t in
 
-      (* Get values for the removal check *)
-      let genobj = L.build_bitcast obj objptr_t (objname ^ "_gen") builder in
-      let id = L.build_load (L.build_struct_gep genobj 1 "id_ptr" builder) "id" builder in
-      (* ignore (L.build_call printf_func *)
-      (*           [|L.build_global_stringptr "%d\n" "ptrfmt" builder; *)
-      (*             id|] "" builder); *)
-      let is_removed = L.build_icmp L.Icmp.Eq id (L.const_null i64_t) "is_removed" builder in
-
-      (* The block that runs the body *)
-      let body_bb = L.append_block context "body" the_function in
-      let body_bldr = body (L.builder_at_end context body_bb) obj in
-
-      (* The block after the condition *)
-      let merge_bb = L.append_block context "merge" the_function in
-
-      (* Add terminators *)
-      ignore (L.build_br merge_bb body_bldr);
-      ignore (L.build_cond_br is_removed merge_bb body_bb builder);
-
-      L.builder_at_end context merge_bb
+      let pred builder _ =
+        (* Get values for the removal check *)
+        let genobj = L.build_bitcast obj objptr_t (objname ^ "_gen") builder in
+        let id = L.build_load (L.build_struct_gep genobj 1 "id_ptr" builder) "id" builder in
+        (* build_print "%d" id builder; *)
+        L.build_icmp L.Icmp.Ne id (L.const_null i64_t) "is_removed" builder
+      in
+      let then_ builder _ = body builder obj in
+      build_if ~pred ~then_ builder the_function
     in
     build_node_loop builder the_function ~head:(StringMap.find objname obj_heads) ~body
   in
@@ -497,8 +486,8 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
           ~else_:(fun b _ -> let b, _ = stmt (b, scope) else_stmt in b), scope
       | A.While (predicate, body) ->
         build_while builder the_function
-          ~pred:(fun b _ -> expr scope b predicate)
-          ~body:(fun b _ -> let b, _ = stmt (b, scope) body in b), scope
+          ~pred:(fun b _ -> expr scope b predicate, ())
+          ~body:(fun b _ () -> let b, _ = stmt (b, scope) body in b), scope
       | A.For (e1, e2, e3, body) ->
         let while_stmts = [A.Expr e1; A.While (e2, A.Block [body; A.Expr e3])] in
         let for_builder, _ = stmt (builder, scope) (A.Block while_stmts) in
