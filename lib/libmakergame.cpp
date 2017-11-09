@@ -1,9 +1,11 @@
 #include <SFML/Graphics.hpp>
+#include <SFML/Audio.hpp>
 #include <map>
 #include <string>
 #include <iostream>
 
 static std::map<std::string, sf::Texture> image_map;
+static std::map<std::string, sf::SoundBuffer> sound_map;
 static sf::RenderWindow window;
 
 static void display_window(sf::RenderWindow *window) { window->display(); }
@@ -17,9 +19,24 @@ static void close_window(sf::RenderWindow *window) {
   if (window->isOpen()) window->close();
 }
 
+static void play_sound(sf::Sound *sound, bool loop) {
+  sound->stop();
+  sound->setLoop(loop);
+  sound->play();
+}
+
 static bool game_ended = false;
 
 extern "C" {
+
+sf::Sound *load_sound(const char *filename) {
+  if (!sound_map.count(filename) && !sound_map[filename].loadFromFile(filename))
+    std::cerr << "unable to load sound " << filename << "\n";
+  return new sf::Sound(sound_map[filename]);
+}
+
+void play_sound(sf::Sound *sound) { play_sound(sound, false); }
+void loop_sound(sf::Sound *sound) { play_sound(sound, true); }
 
 sf::Sprite *load_image(const char *filename) {
   if (!image_map.count(filename) && !image_map[filename].loadFromFile(filename))
@@ -58,5 +75,9 @@ int main() {
     global_draw();
     window.display();
   }
+
+  sound_map.empty();
+  image_map.empty();
+
   return 0;
 }
