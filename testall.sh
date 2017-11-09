@@ -20,7 +20,7 @@ CC="cc"
 MICROC="./microc.native"
 #MICROC="_build/microc.native"
 
-LSFML="-lsfml-graphics -lsfml-window -lsfml-system -lstdc++"
+LSFML="-lsfml-audio -lsfml-graphics -lsfml-window -lsfml-system -lstdc++"
 
 # Set time limit for all operations
 ulimit -t 30
@@ -33,7 +33,7 @@ globalerror=0
 keep=0
 
 Usage() {
-    echo "Usage: testall.sh [options] [.mc files]"
+    echo "Usage: testall.sh [options] [.mg files]"
     echo "-k    Keep intermediate files"
     echo "-h    Print this help"
     exit 1
@@ -82,8 +82,8 @@ RunFail() {
 Check() {
     error=0
     basename=`echo $1 | sed 's/.*\\///
-                             s/.mc//'`
-    reffile=`echo $1 | sed 's/.mc$//'`
+                             s/.mg//'`
+    reffile=`echo $1 | sed 's/.mg$//'`
     basedir="`echo $1 | sed 's/\/[^\/]*$//'`/."
 
     echo -n "$basename..."
@@ -117,8 +117,8 @@ Check() {
 CheckFail() {
     error=0
     basename=`echo $1 | sed 's/.*\\///
-                             s/.mc//'`
-    reffile=`echo $1 | sed 's/.mc$//'`
+                             s/.mg//'`
+    reffile=`echo $1 | sed 's/.mg$//'`
     basedir="`echo $1 | sed 's/\/[^\/]*$//'`/."
 
     echo -n "$basename..."
@@ -185,7 +185,7 @@ if [ $# -ge 1 ]
 then
     files=$@
 else
-    files="tests/test-*.mc tests/fail-*.mc"
+    files="tests/test-*.mg tests/fail-*.mg"
 fi
 
 for file in $files
