@@ -571,29 +571,23 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
       let objptr = L.build_bitcast node objptr_t "objptr" builder in
       let id = L.build_load (L.build_struct_gep objptr 1 "id_ptr" builder) "id" builder in
 
-      (* Call the object-specific function *)
-      let call_bb = L.append_block context "make_call" fn in
-      let call_bldr = L.builder_at_end context call_bb in
-      let this_fn = L.build_load (L.build_struct_gep objptr offset "" builder) ("this_" ^ name) builder in
-      let objref = build_struct_assign (L.undef objref_t) [|Some id; Some node|] call_bldr in
-      ignore (L.build_call this_fn [|objref|] "" call_bldr);
+      let pred b _ = L.build_icmp L.Icmp.Ne id (L.const_null i64_t) "is_removed" b in
 
-      (* Remove general gameobj node and free *)
-      let remove_bb = L.append_block context "delete_obj" fn in
-      let remove_bldr = L.builder_at_end context remove_bb in
-      ignore (L.build_call list_rem_func [|node|] "" remove_bldr);
-      ignore (L.build_store (L.const_null node_t) node remove_bldr); (* for safety/faster errors *)
-      ignore (L.build_free node remove_bldr);
+      let call b _ =
+        let this_fn =
+          L.build_load (L.build_struct_gep objptr offset "" b) ("this_" ^ name) b
+        in
+        let objref = build_struct_assign (L.undef objref_t) [|Some id; Some node|] b in
+        ignore (L.build_call this_fn [|objref|] "" b); b
+      in
 
-      let merge_bb = L.append_block context "merge" fn in
+      let remove b _ =
+        ignore (L.build_call list_rem_func [|node|] "" b);
+        ignore (L.build_store (L.const_null node_t) node b); (* for safety/faster errors *)
+        ignore (L.build_free node b); b
+      in
 
-      (* Add terminators *)
-      let is_removed = L.build_icmp L.Icmp.Eq id (L.const_null i64_t) "is_removed" builder in
-      ignore (L.build_cond_br is_removed remove_bb call_bb builder);
-      ignore (L.build_br merge_bb call_bldr);
-      ignore (L.build_br merge_bb remove_bldr);
-
-      L.builder_at_end context merge_bb
+      build_if ~pred ~then_:call ~else_:remove builder fn
     in
     let builder = build_node_loop builder fn ~head:gameobj_head ~body in
     ignore (L.build_ret_void builder)
