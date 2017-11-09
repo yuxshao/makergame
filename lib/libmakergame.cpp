@@ -3,6 +3,7 @@
 #include <map>
 #include <string>
 #include <iostream>
+#include <cstdlib>
 
 static std::map<std::string, sf::Texture> image_map;
 static std::map<std::string, sf::SoundBuffer> sound_map;
@@ -52,12 +53,24 @@ void draw_sprite(sf::Sprite *sprite) { window.draw(*sprite); }
 
 void end_game() { close_window(&window); game_ended = true; }
 
+// TODO find a better place for libs
+int irandom(int x) { return rand() % x; }
+
+// TODO remove
+double to_dbl(int x) { return (double)x; }
+
+// TODO find better way. enums in our language? or namespaces?
+bool key_pressed(int code) {
+  return sf::Keyboard::isKeyPressed(sf::Keyboard::Key(code));
+}
+
 void global_create();
 void global_step();
 void global_draw();
 }
 
 int main() {
+  srand(time(NULL));
   global_create();
   if (game_ended) return 0;
 
