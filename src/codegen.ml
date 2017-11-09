@@ -53,16 +53,19 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
   L.struct_set_body gameobj_t [|node_t; i64_t; eventptr_t; eventptr_t; eventptr_t; eventptr_t|] false;
 
   (* Define linked list heads *)
-  let (gameobj_head, obj_heads) =
-    let make_head name =
-      let n = L.declare_global node_t (name ^ "_head") the_module in
-      L.set_initializer (L.const_named_struct node_t [|n; n|]) n; n
+  let (gameobj_end, obj_ends) =
+    let make_end name =
+      let h = L.declare_global node_t (name ^ "_head") the_module in
+      let t = L.declare_global node_t (name ^ "_tail") the_module in
+      L.set_initializer (L.const_named_struct node_t [|t; t|]) h;
+      L.set_initializer (L.const_named_struct node_t [|h; h|]) t;
+      h, t
     in
-    let add_head map name = StringMap.add name (make_head name) map in
+    let add_end map name = StringMap.add name (make_end name) map in
     let names = List.map (fun x -> x.A.Gameobj.name) gameobjs in
-    (make_head "gameobj", List.fold_left add_head StringMap.empty names)
+    make_end "gameobj", List.fold_left add_end StringMap.empty names
   in
-  let obj_head n = StringMap.find n obj_heads in
+  let obj_end n = StringMap.find n obj_ends in
   (* TODO: make tails and insert created things after those so they can step/be looped correctly *)
   (* TODO: test case for order where i destroy myself and create a thing *)
 
@@ -263,8 +266,12 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     L.builder_at_end context merge_bb
   in
 
-  let build_node_loop builder the_function ~head ~body =
+  let build_node_loop builder the_function ~ends ~body =
+    let head, tail = ends in
     (* Keep track of curr and next in case curr is modified when body is run. *)
+    (* If something's added right in front of the iterator, it'll be skipped. To
+       ensure adding right behind head is always safe, an empty tail node is
+       added to ensure a space between the iterator and the end. *)
     let curr_ptr = L.build_alloca nodeptr_t "curr_ptr" builder in
     let next_ptr = L.build_alloca nodeptr_t "next_ptr" builder in
     ignore (L.build_store head curr_ptr builder);
@@ -273,7 +280,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     let next = L.build_load (L.build_struct_gep head 1 "" builder) "" builder in
     ignore (L.build_store next next_ptr builder);
 
-    let pred builder _ =
+    let check_head builder _ =
       (* Move forward one *)
       let curr = L.build_load next_ptr "curr" builder in
       let next =
@@ -283,15 +290,26 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
       (* let curr_int = L.build_ptrtoint curr i64_t "" builder in *)
       (* let next_int = L.build_ptrtoint next i64_t "" builder in *)
       (* let head_int = L.build_ptrtoint head i64_t "" builder in *)
-      (* build_print "%d %d %d" [curr_int; next_int; head_int] builder; *)
+      (* let tail_int = L.build_ptrtoint tail i64_t "" builder in *)
+      (* build_print "%d %d %d %d" [curr_int; next_int; head_int; tail_int] builder; *)
 
       ignore (L.build_store curr curr_ptr builder);
       ignore (L.build_store next next_ptr builder);
       L.build_icmp L.Icmp.Ne curr head "cont" builder, curr
     in
 
-    let body builder _ curr = body builder curr in
-    build_while builder the_function ~pred ~body
+    let move_tail builder _ =
+      ignore (L.build_call list_rem_func [|tail|] "" builder);
+      ignore (L.build_call list_add_func [|tail; head|] "" builder);
+      builder
+    in
+
+    let body builder _ curr =
+      let check_tail builder _ = L.build_icmp L.Icmp.Ne curr tail "cont" builder in
+      let body builder _ = body builder curr in
+      build_if builder the_function ~pred:check_tail ~then_:body ~else_:move_tail
+    in
+    build_while builder the_function ~pred:check_head ~body
   in
 
   let build_container_of container_t ?(cast=container_t) offset v name builder =
@@ -320,7 +338,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
       let then_ builder _ = body builder obj in
       build_if ~pred ~then_ builder the_function
     in
-    build_node_loop builder the_function ~head:(StringMap.find objname obj_heads) ~body
+    build_node_loop builder the_function ~ends:(obj_end objname) ~body
   in
 
   (* Return the value for a variable or formal argument *)
@@ -402,7 +420,8 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
         L.build_bitcast (L.build_struct_gep llobj 1 "" builder)
           nodeptr_t (objname ^ "_objnode") builder
       in
-      ignore (L.build_call list_add_func [|llobjnode; obj_head objname|] "" builder);
+      let obj_head, _ = obj_end objname in let gameobj_head, _ = gameobj_end in
+      ignore (L.build_call list_add_func [|llobjnode; obj_head|] "" builder);
       ignore (L.build_call list_add_func [|llnode; gameobj_head|] "" builder);
       let llid = L.build_load global_objid "old_id" builder in
       let llid = L.build_add llid (L.const_int i64_t 1) "new_id" builder in
@@ -589,7 +608,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
 
       build_if ~pred ~then_:call ~else_:remove builder fn
     in
-    let builder = build_node_loop builder fn ~head:gameobj_head ~body in
+    let builder = build_node_loop builder fn ~ends:gameobj_end ~body in
     ignore (L.build_ret_void builder)
   in
   List.iter global_event ["step", 3; "draw", 5];
