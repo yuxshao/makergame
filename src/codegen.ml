@@ -63,6 +63,8 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     (make_head "gameobj", List.fold_left add_head StringMap.empty names)
   in
   let obj_head n = StringMap.find n obj_heads in
+  (* TODO: make tails and insert created things after those so they can step/be looped correctly *)
+  (* TODO: test case for order where i destroy myself and create a thing *)
 
   let global_objid = L.define_global "last_objid" (L.const_int i64_t 0) the_module in
 
@@ -214,6 +216,38 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
   let fmt_str global builder =
     L.build_gep global
       [|L.const_int i32_t 0; L.const_int i32_t 0|] "" builder
+  in
+
+  let build_if ~pred ~then_ ?(else_ = (fun b _ -> b)) builder the_function =
+    let bool_val = pred builder the_function in
+    let merge_bb = L.append_block context "merge" the_function in
+
+    let then_bb = L.append_block context "then" the_function in
+    let then_builder = then_ (L.builder_at_end context then_bb) the_function in
+    ignore (L.build_br merge_bb then_builder);
+
+    let else_bb = L.append_block context "else" the_function in
+    let else_builder = else_ (L.builder_at_end context else_bb) the_function in
+    ignore (L.build_br merge_bb else_builder);
+
+    ignore (L.build_cond_br bool_val then_bb else_bb builder);
+    L.builder_at_end context merge_bb
+  in
+
+  let build_while ~pred ~body builder the_function =
+    let pred_bb = L.append_block context "while" the_function in
+    ignore (L.build_br pred_bb builder);
+
+    let body_bb = L.append_block context "while_body" the_function in
+    let body_builder = body (L.builder_at_end context body_bb) the_function in
+    ignore (L.build_br pred_bb body_builder);
+
+    let pred_builder = L.builder_at_end context pred_bb in
+    let bool_val = pred pred_builder the_function in
+
+    let merge_bb = L.append_block context "merge" the_function in
+    ignore (L.build_cond_br bool_val body_bb merge_bb pred_builder);
+    L.builder_at_end context merge_bb
   in
 
   let build_node_loop builder the_function ~head ~body =
@@ -457,41 +491,14 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
         let dead_bb = L.append_block context "postret" the_function in
         L.builder_at_end context dead_bb, scope
       | A.If (predicate, then_stmt, else_stmt) ->
-        let bool_val = expr scope builder predicate in
-        let merge_bb = L.append_block context "merge" the_function in
-
-        let then_bb = L.append_block context "then" the_function in
-        let then_builder, _ =
-          stmt (L.builder_at_end context then_bb, scope) then_stmt
-        in
-        ignore (L.build_br merge_bb then_builder);
-
-        let else_bb = L.append_block context "else" the_function in
-        let else_builder, _ =
-          stmt (L.builder_at_end context else_bb, scope) else_stmt
-        in
-        ignore (L.build_br merge_bb else_builder);
-
-        ignore (L.build_cond_br bool_val then_bb else_bb builder);
-        L.builder_at_end context merge_bb, scope
-
+        build_if builder the_function
+          ~pred:(fun b _ -> expr scope b predicate)
+          ~then_:(fun b _ -> let b, _ = stmt (b, scope) then_stmt in b)
+          ~else_:(fun b _ -> let b, _ = stmt (b, scope) else_stmt in b), scope
       | A.While (predicate, body) ->
-        let pred_bb = L.append_block context "while" the_function in
-        ignore (L.build_br pred_bb builder);
-
-        let body_bb = L.append_block context "while_body" the_function in
-        let body_builder, _ =
-          stmt (L.builder_at_end context body_bb, scope) body
-        in
-        ignore (L.build_br pred_bb body_builder);
-
-        let pred_builder = L.builder_at_end context pred_bb in
-        let bool_val = expr scope pred_builder predicate in
-
-        let merge_bb = L.append_block context "merge" the_function in
-        ignore (L.build_cond_br bool_val body_bb merge_bb pred_builder);
-        L.builder_at_end context merge_bb, scope
-
+        build_while builder the_function
+          ~pred:(fun b _ -> expr scope b predicate)
+          ~body:(fun b _ -> let b, _ = stmt (b, scope) body in b), scope
       | A.For (e1, e2, e3, body) ->
         let while_stmts = [A.Expr e1; A.While (e2, A.Block [body; A.Expr e3])] in
         let for_builder, _ = stmt (builder, scope) (A.Block while_stmts) in
