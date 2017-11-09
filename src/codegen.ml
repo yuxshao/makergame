@@ -140,6 +140,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
       let t = L.function_type void_t [|nodeptr_t; nodeptr_t|] in
       L.define_function "list_add" t the_module
     in
+    (* TODO: add to front so not skipped in lookahead (think of as circular + marker) *)
     let builder = L.builder_at_end context (L.entry_block f) in
     let node, head = L.param f 0, L.param f 1 in
     let following_prev_ptr = L.build_struct_gep head 0 "prev_ptr" builder in
@@ -160,6 +161,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
       let t = L.function_type void_t [|nodeptr_t|] in
       L.define_function "list_rem" t the_module
     in
+    (* TODO: do only if prev and next actually connect to node *)
     let builder = L.builder_at_end context (L.entry_block f) in
     let node = L.param f 0 in
     let prev_ptr = L.build_struct_gep node 0 "prev_ptr" builder in
@@ -263,6 +265,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
   let build_object_loop builder the_function ~objname ~body =
     let objtype, _ = StringMap.find objname gameobj_types in
     let body builder node =
+      (* Calculating offsets to get the object pointer *)
       let null = L.const_null (L.pointer_type objtype) in
       let offset = L.build_struct_gep null 1 "offset" builder in
       let offsetint = L.build_ptrtoint offset i64_t "offsetint" builder in
@@ -272,7 +275,27 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
       (*           [|L.build_global_stringptr "%d %d %d\n" "ptrfmt" builder; *)
       (*             offsetint; intptr; intnew|] "" builder); *)
       let obj = L.build_inttoptr intnew nodeptr_t objname builder in
-      body builder obj
+
+      (* Get values for the removal check *)
+      let genobj = L.build_bitcast obj objptr_t (objname ^ "_gen") builder in
+      let id = L.build_load (L.build_struct_gep genobj 1 "id_ptr" builder) "id" builder in
+      (* ignore (L.build_call printf_func *)
+      (*           [|L.build_global_stringptr "%d\n" "ptrfmt" builder; *)
+      (*             id|] "" builder); *)
+      let is_removed = L.build_icmp L.Icmp.Eq id (L.const_null i64_t) "is_removed" builder in
+
+      (* The block that runs the body *)
+      let body_bb = L.append_block context "body" the_function in
+      let body_bldr = body (L.builder_at_end context body_bb) obj in
+
+      (* The block after the condition *)
+      let merge_bb = L.append_block context "merge" the_function in
+
+      (* Add terminators *)
+      ignore (L.build_br merge_bb body_bldr);
+      ignore (L.build_cond_br is_removed merge_bb body_bb builder);
+
+      L.builder_at_end context merge_bb
     in
     build_node_loop builder the_function ~head:(StringMap.find objname obj_heads) ~body
   in
@@ -376,27 +399,36 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
       ignore (L.build_call create_event [|objref|] "" builder);
       objref
     | A.Destroy (e, objtype) ->
-      (* TODO: lazy destroy AFTER the event. else things like "destroy this"
-         won't work. consider actually removing and deallocating in the next
-         loop or something. test destroy this. *)
+      (* Destruction is lazy in that it involves just removing the
+         object-specific link from an node's neighbours (i.e. used for foreach)
+         and setting id to 0. When the main event loop encounters an object with
+         id 0, it looks ahead to the next node and deletes the current. Other
+         loops ignore 0-id objects.
+
+         This way, a kind of induction can show that there's always a forward
+         path from such an object to the head of the list (its neighbours don't
+         point to it, but it still points to what it thinks are its neighbours
+         have a forward path). So a loop like a foreach that might end up on a
+         dead object still behaves well. The main event loop is guaranteed to
+         run outside of any other loops, so it's safe to actually delete the
+         nodes there. *)
       let objref = expr scope builder e in
       let node = L.build_extractvalue objref 1 "node" builder in
       let _ =
+        (* Call its destroy event *)
         let objptr = L.build_bitcast node objptr_t "objptr" builder in
         let destroy_event = L.build_load (L.build_struct_gep objptr 4 "" builder) "event" builder in
-        L.build_call destroy_event [|objref|] "" builder
+        ignore (L.build_call destroy_event [|objref|] "" builder);
+        (* Mark its id as 0 *)
+        let idptr = L.build_struct_gep objptr 1 (objtype ^ "_id") builder in
+        ignore (L.build_store (L.const_int i64_t 0) idptr builder)
       in
-      (* Find & remove the list node connecting objects of this particular type *)
+      (* Find the list node connecting objects of this particular type *)
       let llobjt, _ = StringMap.find objtype gameobj_types in
       let obj = L.build_bitcast node (L.pointer_type llobjt) objtype builder in
-      (* Lazy delete by marking its id as 0 *)
-      (* let idptr = L.build_struct_gep obj 1 (objtype ^ "_id") builder in *)
-      (* ignore (L.build_store (L.const_int i64_t 0) idptr builder); *)
+      (* Disconnect particular object neighbours' node links. *)
       let objnode = L.build_struct_gep obj 1 (objtype ^ "_node") builder in
       ignore (L.build_call list_rem_func [|objnode|] "" builder);
-      (* Remove node for general gameobjs *)
-      ignore (L.build_call list_rem_func [|node|] "" builder);
-      ignore (L.build_free node builder);
       expr scope builder (A.Noexpr) (* considered Void in semant *)
   in
 
@@ -462,6 +494,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
         let for_builder, _ = stmt (builder, scope) (A.Block while_stmts) in
         for_builder, scope
       | A.Foreach (objname, name, body_stmt) ->
+        (* TODO: describe semantics. what if obj of type is destroyed or created in this? *)
         let body builder node =
           let objptr = L.build_bitcast node objptr_t "objptr" builder in
           let id = L.build_load (L.build_struct_gep objptr 1 "" builder) "id" builder in
@@ -531,16 +564,37 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
   let create_gb = L.define_function "global_create" (L.function_type void_t [||]) the_module in
   build_function_body create_gb [] [A.Expr (A.Create "main")] A.Void;
 
+  (* TODO: test destroy self, next. destroy in foreach *)
   let global_event (name, offset) =
     let fn = L.define_function ("global_" ^ name) (L.function_type void_t [||]) the_module in
     let builder = L.builder_at_end context (L.entry_block fn) in
     let body builder node =
       let objptr = L.build_bitcast node objptr_t "objptr" builder in
-      let sf = L.build_load (L.build_struct_gep objptr offset "" builder) ("this_" ^ name) builder in
       let id = L.build_load (L.build_struct_gep objptr 1 "id_ptr" builder) "id" builder in
-      let objref = build_struct_assign (L.undef objref_t) [|Some id; Some node|] builder in
-      ignore (L.build_call sf [|objref|] "" builder);
-      builder
+
+      (* Call the object-specific function *)
+      let call_bb = L.append_block context "make_call" fn in
+      let call_bldr = L.builder_at_end context call_bb in
+      let this_fn = L.build_load (L.build_struct_gep objptr offset "" builder) ("this_" ^ name) builder in
+      let objref = build_struct_assign (L.undef objref_t) [|Some id; Some node|] call_bldr in
+      ignore (L.build_call this_fn [|objref|] "" call_bldr);
+
+      (* Remove general gameobj node and free *)
+      let remove_bb = L.append_block context "delete_obj" fn in
+      let remove_bldr = L.builder_at_end context remove_bb in
+      ignore (L.build_call list_rem_func [|node|] "" remove_bldr);
+      ignore (L.build_store (L.const_null node_t) node remove_bldr); (* for safety/faster errors *)
+      ignore (L.build_free node remove_bldr);
+
+      let merge_bb = L.append_block context "merge" fn in
+
+      (* Add terminators *)
+      let is_removed = L.build_icmp L.Icmp.Eq id (L.const_null i64_t) "is_removed" builder in
+      ignore (L.build_cond_br is_removed remove_bb call_bb builder);
+      ignore (L.build_br merge_bb call_bldr);
+      ignore (L.build_br merge_bb remove_bldr);
+
+      L.builder_at_end context merge_bb
     in
     let builder = build_node_loop builder fn ~head:gameobj_head ~body in
     ignore (L.build_ret_void builder)
