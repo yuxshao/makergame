@@ -13,3 +13,4 @@ a.out
 vgcore.*
 trial
 testall.log
+*.exe

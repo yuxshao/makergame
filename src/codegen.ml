@@ -412,6 +412,9 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
          dead object still behaves well. The main event loop is guaranteed to
          run outside of any other loops, so it's safe to actually delete the
          nodes there. *)
+      (* TODO: describe setup and effects in LRM. destroyed objs are immediately
+         invisible to loops but refs to them still work until at least end of
+         event. *)
       let objref = expr scope builder e in
       let node = L.build_extractvalue objref 1 "node" builder in
       let _ =
