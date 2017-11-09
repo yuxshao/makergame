@@ -477,59 +477,53 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
       expr scope builder (A.Noexpr) (* considered Void in semant *)
   in
 
-  (* Fill in the body of the given function. Builder is guaranteed to point to a
-     block without a terminator. *)
-  let rec build_block builder scope the_function block return_type =
-    (* Build the code for the given statement; return the builder for
-       the statement's successor *)
-    let rec stmt (builder, scope) = function
-      | A.Decl (typ, name) ->
-        let local_var = L.build_alloca (ltype_of_typ typ) name builder in
-        builder, StringMap.add name (local_var, typ) scope
-      | A.Block b ->
-        let merge_bb = L.append_block context "block_end" the_function in
-        ignore (L.build_br merge_bb
-                  (build_block builder scope the_function b return_type));
-        L.builder_at_end context merge_bb, scope
-      | A.Expr e -> ignore (expr scope builder e); builder, scope
-      | A.Return e ->
-        ignore (match return_type with
+  (* Build the code for the given statement; return the builder for the
+     statement's successor. Builder is guaranteed to point to a block without a
+     terminator. *)
+  let rec stmt fn ret_t (builder, scope) = function
+    | A.Decl (typ, name) ->
+      let local_var = L.build_alloca (ltype_of_typ typ) name builder in
+      builder, StringMap.add name (local_var, typ) scope
+    | A.Block b ->
+      let merge_bb = L.append_block context "block_end" fn in
+      let builder, _ = List.fold_left (stmt fn ret_t) (builder, scope) b in
+      ignore (L.build_br merge_bb builder);
+      L.builder_at_end context merge_bb, scope
+    | A.Expr e -> ignore (expr scope builder e); builder, scope
+    | A.Return e ->
+      ignore (match ret_t with
           | A.Void -> L.build_ret_void builder
           | _ -> L.build_ret (expr scope builder e) builder);
-        let dead_bb = L.append_block context "postret" the_function in
-        L.builder_at_end context dead_bb, scope
-      | A.If (predicate, then_stmt, else_stmt) ->
-        build_if builder the_function
-          ~pred:(fun b _ -> expr scope b predicate)
-          ~then_:(fun b _ -> let b, _ = stmt (b, scope) then_stmt in b)
-          ~else_:(fun b _ -> let b, _ = stmt (b, scope) else_stmt in b), scope
-      | A.While (predicate, body) ->
-        build_while builder the_function
-          ~pred:(fun b _ -> expr scope b predicate, ())
-          ~body:(fun b _ () -> let b, _ = stmt (b, scope) body in b), scope
-      | A.For (e1, e2, e3, body) ->
-        let while_stmts = [A.Expr e1; A.While (e2, A.Block [body; A.Expr e3])] in
-        let for_builder, _ = stmt (builder, scope) (A.Block while_stmts) in
-        for_builder, scope
-      | A.Foreach (objname, name, body_stmt) ->
-        (* TODO: describe semantics. what if obj of type is destroyed or created in this? *)
-        let body builder node =
-          let objptr = L.build_bitcast node objptr_t "objptr" builder in
-          let id = L.build_load (L.build_struct_gep objptr 1 "" builder) "id" builder in
-          let obj = build_struct_assign (L.undef objref_t) [|Some id; Some node|] builder in
-          let objref = L.build_alloca objref_t "ref" builder in
-          ignore (L.build_store obj objref builder);
-          let builder, _ =
-            stmt (builder, StringMap.add name (objref, A.Object(objname)) scope) body_stmt
-          in
-          builder
+      let dead_bb = L.append_block context "postret" fn in
+      L.builder_at_end context dead_bb, scope
+    | A.If (predicate, then_stmt, else_stmt) ->
+      build_if builder fn
+        ~pred:(fun b _ -> expr scope b predicate)
+        ~then_:(fun b _ -> let b, _ = stmt fn ret_t (b, scope) then_stmt in b)
+        ~else_:(fun b _ -> let b, _ = stmt fn ret_t (b, scope) else_stmt in b), scope
+    | A.While (predicate, body) ->
+      build_while builder fn
+        ~pred:(fun b _ -> expr scope b predicate, ())
+        ~body:(fun b _ () -> let b, _ = stmt fn ret_t (b, scope) body in b), scope
+    | A.For (e1, e2, e3, body) ->
+      let while_stmts = [A.Expr e1; A.While (e2, A.Block [body; A.Expr e3])] in
+      let for_builder, _ = stmt fn ret_t (builder, scope) (A.Block while_stmts) in
+      for_builder, scope
+    | A.Foreach (objname, name, body_stmt) ->
+      (* TODO: describe semantics. what if obj of type is destroyed or created in this? *)
+      let body builder node =
+        let objptr = L.build_bitcast node objptr_t "objptr" builder in
+        let id = L.build_load (L.build_struct_gep objptr 1 "" builder) "id" builder in
+        let obj = build_struct_assign (L.undef objref_t) [|Some id; Some node|] builder in
+        let objref = L.build_alloca objref_t "ref" builder in
+        ignore (L.build_store obj objref builder);
+        let builder, _ =
+          let scope' = StringMap.add name (objref, A.Object(objname)) scope in
+          stmt fn ret_t (builder, scope') body_stmt
         in
-        build_object_loop builder the_function ~objname ~body, scope
-    in
-
-    (* Build the code for each statement in the function *)
-    let builder, _ = List.fold_left stmt (builder, scope) block in
-    builder
+        builder
+      in
+      build_object_loop builder fn ~objname ~body, scope
   in
 
   let build_function_body the_function formals block return_type =
@@ -548,7 +542,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
         (Array.to_list (L.params the_function))
     in
 
-    let builder = build_block builder scope the_function block return_type in
+    let builder, _ = stmt the_function return_type (builder, scope) (A.Block(block)) in
 
     (* Add a precautionary return to the end *)
     ignore (match return_type with
