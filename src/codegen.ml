@@ -365,29 +365,29 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     | A.FloatLit f -> L.const_float float_t f
     | A.Noexpr -> L.const_int i32_t 0
     | A.Id (hd, tl) -> L.build_load (lookup builder scope hd tl) hd builder
-    | A.Binop (e1, op, _, e2) ->
+    | A.Binop (e1, op, t, e2) ->
       let e1' = expr scope builder e1
       and e2' = expr scope builder e2 in
       (match op with
-       | A.Add     -> L.build_add
-       | A.Sub     -> L.build_sub
-       | A.Mult    -> L.build_mul
-       | A.Div     -> L.build_sdiv
+       | A.Add     -> if t=A.Int then L.build_add else L.build_fadd
+       | A.Sub     -> if t=A.Int then L.build_sub else L.build_fsub
+       | A.Mult    -> if t=A.Int then L.build_mul else L.build_fmul
+       | A.Div     -> if t=A.Int then L.build_sdiv else L.build_fdiv
        | A.Expo    -> failwith "not implemented"
        | A.Modulo  -> failwith "not implemented"
        | A.And     -> L.build_and (* TODO: SHOULD WE SHORT CIRCUIT? *)
        | A.Or      -> L.build_or
-       | A.Equal   -> L.build_icmp L.Icmp.Eq
-       | A.Neq     -> L.build_icmp L.Icmp.Ne
-       | A.Less    -> L.build_icmp L.Icmp.Slt
-       | A.Leq     -> L.build_icmp L.Icmp.Sle
-       | A.Greater -> L.build_icmp L.Icmp.Sgt
-       | A.Geq     -> L.build_icmp L.Icmp.Sge
+       | A.Equal   -> if t=A.Int then L.build_icmp L.Icmp.Eq else L.build_fcmp L.Fcmp.Oeq
+       | A.Neq     -> if t=A.Int then L.build_icmp L.Icmp.Ne else L.build_fcmp L.Fcmp.One
+       | A.Less    -> if t=A.Int then L.build_icmp L.Icmp.Slt else L.build_fcmp L.Fcmp.Olt
+       | A.Leq     -> if t=A.Int then L.build_icmp L.Icmp.Sle else L.build_fcmp L.Fcmp.Ole
+       | A.Greater -> if t=A.Int then L.build_icmp L.Icmp.Sgt else L.build_fcmp L.Fcmp.Ogt
+       | A.Geq     -> if t=A.Int then L.build_icmp L.Icmp.Sge else L.build_fcmp L.Fcmp.Oge
       ) e1' e2' "tmp" builder
-    | A.Unop(op, _, e) ->
+    | A.Unop(op, t, e) ->
       let e' = expr scope builder e in
       (match op with
-         A.Neg     -> L.build_neg
+         A.Neg     -> if t=A.Int then L.build_neg else L.build_fneg
        | A.Not     -> L.build_not) e' "tmp" builder
     | A.Assign ((hd, tl), e) -> let e' = expr scope builder e in
       ignore (L.build_store e' (lookup builder scope hd tl) builder); e'
