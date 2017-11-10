@@ -199,6 +199,12 @@ let check ((globals, functions, gameobjs) : Ast.program) =
     (* TODO: say in LRM it's okay to duplicate locals/formals now *)
     (* TODO: clarify in LRM where STATIC scope starts and ends for decls *)
 
+    (* Check duplicate locals *)
+    List.fold_left
+      (fun a n -> match n with Decl (_, n) -> n :: a | _ -> a) [] block
+    |> report_duplicate
+      (fun n -> "duplicate local '" ^ n ^ "' in single block of " ^ name);
+
     (* Verify a statement or throw an exception *)
     let rec stmt scope = function
       | Decl (t, n) as s ->

@@ -11,7 +11,7 @@ void main () {
 
   if (x == 3) {
     print (x);
-    int x;
+    int x; // OK: can redeclare in different block
     x = 5;
     print (x);
   }
