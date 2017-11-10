@@ -368,7 +368,6 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     | A.Binop (e1, op, t, e2) ->
       let e1' = expr scope builder e1
       and e2' = expr scope builder e2 in
-<<<<<<< HEAD
       let (iop, fop) = (match op with
        | A.Add     -> L.build_add, L.build_fadd
        | A.Sub     -> L.build_sub, L.build_fsub
@@ -387,24 +386,6 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
       )
       in
       (match t with A.Int -> iop | A.Float -> fop | _ -> assert false) e1' e2' "tmp" builder
-=======
-      (match op with
-       | A.Add     -> if t=A.Int then L.build_add else L.build_fadd
-       | A.Sub     -> if t=A.Int then L.build_sub else L.build_fsub
-       | A.Mult    -> if t=A.Int then L.build_mul else L.build_fmul
-       | A.Div     -> if t=A.Int then L.build_sdiv else L.build_fdiv
-       | A.Expo    -> failwith "not implemented"
-       | A.Modulo  -> failwith "not implemented"
-       | A.And     -> L.build_and (* TODO: SHOULD WE SHORT CIRCUIT? *)
-       | A.Or      -> L.build_or
-       | A.Equal   -> if t=A.Int then L.build_icmp L.Icmp.Eq else L.build_fcmp L.Fcmp.Oeq
-       | A.Neq     -> if t=A.Int then L.build_icmp L.Icmp.Ne else L.build_fcmp L.Fcmp.One
-       | A.Less    -> if t=A.Int then L.build_icmp L.Icmp.Slt else L.build_fcmp L.Fcmp.Olt
-       | A.Leq     -> if t=A.Int then L.build_icmp L.Icmp.Sle else L.build_fcmp L.Fcmp.Ole
-       | A.Greater -> if t=A.Int then L.build_icmp L.Icmp.Sgt else L.build_fcmp L.Fcmp.Ogt
-       | A.Geq     -> if t=A.Int then L.build_icmp L.Icmp.Sge else L.build_fcmp L.Fcmp.Oge
-      ) e1' e2' "tmp" builder
->>>>>>> 6ce5f8ccc5e2b458fa44048cfc0a71435d4aef95
     | A.Unop(op, t, e) ->
       let e' = expr scope builder e in
       (match op with
