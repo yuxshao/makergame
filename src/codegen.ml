@@ -250,18 +250,18 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
      llvalue and possibly some information to body) and a body construct. *)
   let build_while ~pred ~body builder the_function =
     let pred_bb = L.append_block context "while" the_function in
+    let body_bb = L.append_block context "while_body" the_function in
+    let merge_bb = L.append_block context "merge" the_function in
     ignore (L.build_br pred_bb builder);
 
     let pred_builder = L.builder_at_end context pred_bb in
     let bool_val, transfer = pred pred_builder the_function in
 
-    let body_bb = L.append_block context "while_body" the_function in
     let body_builder =
-      body (L.builder_at_end context body_bb) the_function transfer
+      body (L.builder_at_end context body_bb) merge_bb the_function transfer
     in
     ignore (L.build_br pred_bb body_builder);
 
-    let merge_bb = L.append_block context "merge" the_function in
     ignore (L.build_cond_br bool_val body_bb merge_bb pred_builder);
     L.builder_at_end context merge_bb
   in
@@ -304,9 +304,9 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
       builder
     in
 
-    let body builder _ curr =
+    let body builder break_bb _ curr =
       let check_tail builder _ = L.build_icmp L.Icmp.Ne curr tail "cont" builder in
-      let body builder _ = body builder curr in
+      let body builder _ = body builder break_bb curr in
       build_if builder the_function ~pred:check_tail ~then_:body ~else_:move_tail
     in
     build_while builder the_function ~pred:check_head ~body
@@ -324,7 +324,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
 
   let build_object_loop builder the_function ~objname ~body =
     let objtype, _ = StringMap.find objname gameobj_types in
-    let body builder node =
+    let body builder break_bb node =
       (* Calculating offsets to get the object pointer *)
       let obj = build_container_of objtype 1 node objname builder ~cast:node_t in
 
@@ -335,7 +335,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
         (* build_print "%d" id builder; *)
         L.build_icmp L.Icmp.Ne id (L.const_null i64_t) "is_removed" builder
       in
-      let then_ builder _ = body builder obj in
+      let then_ builder _ = body builder break_bb obj in
       build_if ~pred ~then_ builder the_function
     in
     build_node_loop builder the_function ~ends:(obj_end objname) ~body
@@ -479,19 +479,29 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
       expr scope builder (A.Noexpr) (* considered Void in semant *)
   in
 
-  (* Build the code for the given statement; return the builder for the
-     statement's successor. Builder is guaranteed to point to a block without a
-     terminator. *)
-  let rec stmt fn ret_t (builder, scope) = function
+  (* Build the code for the given statement, given the following:
+     - the encapsulating function llvalue
+     - the block to jump to in the case of a break
+     - the return type
+     - the builder to start at
+     - the current scope.
+     Returns the builder for the statement's successor. Builder is
+     guaranteed to point to a block without a terminator. *)
+  let rec stmt fn break_bb ret_t (builder, scope) = function
     | A.Decl (typ, name) ->
       let local_var = L.build_alloca (ltype_of_typ typ) name builder in
       builder, StringMap.add name (local_var, typ) scope
     | A.Block b ->
       let merge_bb = L.append_block context "block_end" fn in
-      let builder, _ = List.fold_left (stmt fn ret_t) (builder, scope) b in
+      let builder, _ =
+        List.fold_left (stmt fn break_bb ret_t) (builder, scope) b
+      in
       ignore (L.build_br merge_bb builder);
       L.builder_at_end context merge_bb, scope
     | A.Expr e -> ignore (expr scope builder e); builder, scope
+    | A.Break -> ignore (L.build_br break_bb builder);
+      let dead_bb = L.append_block context "postbreak" fn in
+      L.builder_at_end context dead_bb, scope
     | A.Return e ->
       ignore (match ret_t with
           | A.Void -> L.build_ret_void builder
@@ -499,21 +509,23 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
       let dead_bb = L.append_block context "postret" fn in
       L.builder_at_end context dead_bb, scope
     | A.If (predicate, then_stmt, else_stmt) ->
-      build_if builder fn
-        ~pred:(fun b _ -> expr scope b predicate)
-        ~then_:(fun b _ -> let b, _ = stmt fn ret_t (b, scope) then_stmt in b)
-        ~else_:(fun b _ -> let b, _ = stmt fn ret_t (b, scope) else_stmt in b), scope
+      let run st b _ = fst (stmt fn break_bb ret_t (b, scope) st) in
+      build_if builder fn ~then_:(run then_stmt) ~else_:(run else_stmt)
+        ~pred:(fun b _ -> expr scope b predicate),
+      scope
     | A.While (predicate, body) ->
       build_while builder fn
         ~pred:(fun b _ -> expr scope b predicate, ())
-        ~body:(fun b _ () -> let b, _ = stmt fn ret_t (b, scope) body in b), scope
+        ~body:(fun b br _ () -> fst (stmt fn br ret_t (b, scope) body)), scope
     | A.For (e1, e2, e3, body) ->
       let while_stmts = [A.Expr e1; A.While (e2, A.Block [body; A.Expr e3])] in
-      let for_builder, _ = stmt fn ret_t (builder, scope) (A.Block while_stmts) in
+      let for_builder, _ =
+        stmt fn break_bb ret_t (builder, scope) (A.Block while_stmts)
+      in
       for_builder, scope
     | A.Foreach (objname, name, body_stmt) ->
       (* TODO: describe semantics. what if obj of type is destroyed or created in this? *)
-      let body builder node =
+      let body builder break_bb node =
         let objptr = L.build_bitcast node objptr_t "objptr" builder in
         let id = L.build_load (L.build_struct_gep objptr 1 "" builder) "id" builder in
         let obj = build_struct_assign (L.undef objref_t) [|Some id; Some node|] builder in
@@ -521,7 +533,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
         ignore (L.build_store obj objref builder);
         let builder, _ =
           let scope' = StringMap.add name (objref, A.Object(objname)) scope in
-          stmt fn ret_t (builder, scope') body_stmt
+          stmt fn break_bb ret_t (builder, scope') body_stmt
         in
         builder
       in
@@ -529,7 +541,8 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
   in
 
   let build_function_body the_function formals block return_type =
-    let builder = L.builder_at_end context (L.entry_block the_function) in
+    let entry = L.entry_block the_function in
+    let builder = L.builder_at_end context entry in
 
     (* Add the function's formal arguments to the scope of globals. *)
     let scope =
@@ -544,7 +557,9 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
         (Array.to_list (L.params the_function))
     in
 
-    let builder, _ = stmt the_function return_type (builder, scope) (A.Block(block)) in
+    let builder, _ =
+      stmt the_function entry return_type (builder, scope) (A.Block(block))
+    in
 
     (* Add a precautionary return to the end *)
     ignore (match return_type with
@@ -582,7 +597,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
   let global_event (name, offset) =
     let fn = L.define_function ("global_" ^ name) (L.function_type void_t [||]) the_module in
     let builder = L.builder_at_end context (L.entry_block fn) in
-    let body builder node =
+    let body builder _ node =
       let objptr = L.build_bitcast node objptr_t "objptr" builder in
       let id = L.build_load (L.build_struct_gep objptr 1 "id_ptr" builder) "id" builder in
 

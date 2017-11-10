@@ -7,7 +7,7 @@ open Ast
 %token SEMI LPAREN RPAREN LBRACK RBRACK LCURLY RCURLY COMMA PERIOD
 %token PLUS MINUS TIMES DIVIDE EXPONENT MODULO ASSIGN NOT
 %token EQ NEQ LT LEQ GT GEQ TRUE FALSE AND OR
-%token RETURN IF ELSE FOR WHILE FOREACH
+%token BREAK RETURN IF ELSE FOR WHILE FOREACH
 %token INT BOOL FLOAT STRING SPRITE SOUND VOID
 %token CREATE DESTROY DRAW STEP
 %token EXTERN
@@ -111,6 +111,7 @@ stmt:
     expr SEMI { Expr $1 }
   | vdecl { Decl $1 }
   | RETURN expr_opt SEMI { Return $2 }
+  | BREAK SEMI { Break }
   | code_block { Block($1) }
   | IF LPAREN expr RPAREN stmt %prec NOELSE { If($3, $5, Block([])) }
   | IF LPAREN expr RPAREN stmt ELSE stmt    { If($3, $5, $7) }

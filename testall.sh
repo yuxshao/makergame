@@ -185,11 +185,12 @@ if [ $# -ge 1 ]
 then
     files=$@
 else
-    files="tests/test-*.mg tests/fail-*.mg"
+    files=`ls tests -t | grep .mg`
 fi
 
 for file in $files
 do
+    file="tests/$file"
     case $file in
 	*test-*)
 	    Check $file 2>> $globallog

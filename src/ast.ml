@@ -36,6 +36,7 @@ type stmt =
   | Decl of bind
   | Block of block
   | Expr of expr
+  | Break
   | Return of expr
   | If of expr * stmt * stmt
   | For of expr * expr * expr * stmt
@@ -159,6 +160,7 @@ let rec string_of_stmt = function
   | Decl d -> string_of_vdecl d
   | Block(blk) -> string_of_block blk
   | Expr(expr) -> string_of_expr expr ^ ";\n"
+  | Break -> "break;\n"
   | Return(expr) -> "return " ^ string_of_expr expr ^ ";\n"
   | If(e, s, Block([])) ->
     "if (" ^ string_of_expr e ^ ")\n" ^ string_of_stmt s

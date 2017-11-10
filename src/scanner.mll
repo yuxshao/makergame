@@ -40,6 +40,7 @@ rule token = parse
   | "for"    { FOR }
   | "while"  { WHILE }
   | "foreach" { FOREACH }
+  | "break"  { BREAK }
   | "return" { RETURN }
   (* datatypes *)
   | "int"    { INT }

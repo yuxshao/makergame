@@ -210,6 +210,7 @@ let check ((globals, functions, gameobjs) : Ast.program) =
       | Decl (t, n) as s ->
         check_not_void (fun n -> "illegal void local " ^ n ^ " in " ^ name) (t, n);
         s, add_to_scope ~loc:name n t scope
+      | Break -> Break, scope
       | Block b -> Block (check_block b ~scope ~name ~return), scope
       | Expr e -> let (_, e') = expr scope e in Expr e', scope
       | Return e ->             (* TODO in LRM say stuff can follow returns *)
@@ -240,6 +241,13 @@ let check ((globals, functions, gameobjs) : Ast.program) =
     in
     List.rev block'
   in
+  let check_block ~scope ~name ~return block =
+    List.iter
+      (function Break ->
+         failwith ("cannot break in top level block of " ^ name) | _ -> ())
+      block;
+    check_block ~scope ~name ~return block
+  in
 
   let check_function ~scope func =
     List.iter
@@ -260,7 +268,8 @@ let check ((globals, functions, gameobjs) : Ast.program) =
 
     let block =
       match func.block with
-      | Some block -> Some (check_block ~scope ~name:func.fname ~return:func.typ block)
+      | Some block ->
+        Some (check_block ~scope ~name:func.fname ~return:func.typ block)
       | None -> None
     in
     { func with block = block }
@@ -282,7 +291,8 @@ let check ((globals, functions, gameobjs) : Ast.program) =
       (List.map snd obj.members);
     let scope = StringMap.add "this" (Object(obj.name)) scope in
     let check_obj_fn (name, eventtype, block) =
-      eventtype, check_block ~scope ~name:(obj.name ^ "::" ^ name) ~return:Void block
+      eventtype,
+      check_block ~scope ~name:(obj.name ^ "::" ^ name) ~return:Void block
     in
     let blocks' = List.map check_obj_fn (obj_fn_list obj) in
     make obj.name obj.members blocks'
