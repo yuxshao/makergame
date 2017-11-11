@@ -31,7 +31,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
   and void_t   = L.void_type   context in
 
   (* Declare types for each object type *)
-  let gameobj_types =          (* TODO: test. *)
+  let gameobj_types =
     let lltype_of m gdecl =
       let name = gdecl.A.Gameobj.name in
       StringMap.add name (L.named_struct_type context name, gdecl) m
@@ -91,47 +91,74 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
        L.struct_set_body t (Array.of_list (gameobj_t :: node_t :: ll_members)) false)
     gameobj_types;
 
-  (* Declare each global variable; remember its value in a map *)
-  let global_vars =
-    let global_var m (t, n) =
-      let init = L.const_null (ltype_of_typ t)
-      in StringMap.add n (L.define_global n init the_module, t) m in
-    List.fold_left global_var StringMap.empty globals in
-
-  (* Define each function (arguments and return type) so we can call it *)
-  let function_to_str name = "function." ^ name in
-  let function_decls =
+  let fn_decls functions obj to_llname =
     let function_decl m fdecl =
-      let name = fdecl.A.fname
-      and formal_types =
-        Array.of_list (List.map (fun (t,_) -> ltype_of_typ t) fdecl.A.formals)
-      in let ftype = L.function_type (ltype_of_typ fdecl.A.typ) formal_types in
+      let name = fdecl.A.fname in
+      let formals =
+        match obj with
+        | Some o -> (A.Object(o), "this") :: fdecl.A.formals
+        | None -> fdecl.A.formals
+      in
+      let formal_types = Array.of_list (List.map (fun (t,_) -> ltype_of_typ t) formals) in
+      let ftype = L.function_type (ltype_of_typ fdecl.A.typ) formal_types in
       let d_function name =
         match fdecl.A.block with
-        | Some _ -> L.define_function (function_to_str name)
+        | Some _ -> L.define_function (to_llname name)
         | None -> L.declare_function name
       in
       StringMap.add name (d_function name ftype the_module, fdecl) m in
     List.fold_left function_decl StringMap.empty functions
   in
-  let find_function_decl name = StringMap.find name function_decls in
 
-  let event_to_str gname ename = "object." ^ gname ^ ".event." ^ ename in
-  let event_decls =
-    let event_decls g =
-      let open A.Gameobj in
-      let decl_fn (f_name, _) =
-        let name = event_to_str g.name f_name in
-        let llfn_t = L.function_type void_t [|ltype_of_typ (A.Object(g.name))|] in
-        (name, L.define_function name llfn_t the_module)
-      in
-      List.map decl_fn [("create", g.create); ("step", g.step); ("destroy", g.destroy); ("draw", g.draw)]
+  (* Declare each global variable; remember its value in a map *)
+  let global_vars =
+    let var m (t, n) =
+      let init = L.const_null (ltype_of_typ t)
+      in StringMap.add n (L.define_global n init the_module, t) m
     in
-    List.concat (List.map event_decls gameobjs)
-    |> List.fold_left (fun map (k, v) -> StringMap.add k v map) StringMap.empty
+    List.fold_left var StringMap.empty globals
   in
-  let find_event_decl objname event =
-    StringMap.find (event_to_str objname event) event_decls
+  let global_fn_to_llname name = "function." ^ name in
+  let global_fns = fn_decls functions None global_fn_to_llname in
+
+  (* Define each function (arguments and return type) so we can call it *)
+  let event_to_llname gname ename = "object." ^ gname ^ ".event." ^ ename in
+  let obj_events =
+    let open A.Gameobj in
+    let event_decls g =
+      let add_decl m (f_name, _) =
+        let name = event_to_llname g.name f_name in
+        let llfn_t = L.function_type void_t [|ltype_of_typ (A.Object(g.name))|] in
+        StringMap.add f_name (L.define_function name llfn_t the_module) m
+      in
+      List.fold_left add_decl StringMap.empty
+        [("create", g.create); ("step", g.step); ("destroy", g.destroy); ("draw", g.draw)]
+    in
+    List.fold_left (fun m g -> StringMap.add g.name (event_decls g) m)
+      StringMap.empty gameobjs
+  in
+
+  let obj_fn_to_llname gname ename = "object." ^ gname ^ ".function." ^ ename in
+  let obj_fns =
+    let open A.Gameobj in
+    let add_decls m g =
+      let decls = fn_decls g.methods (Some g.name) (obj_fn_to_llname g.name) in
+      StringMap.add g.name decls m
+    in
+    List.fold_left add_decls StringMap.empty gameobjs
+  in
+
+  let find_function_decl name =
+    try StringMap.find name global_fns
+    with Not_found -> failwith ("global " ^ name)
+  in
+  let find_obj_fn_decl oname fname =
+    try StringMap.find fname (StringMap.find oname obj_fns)
+    with Not_found -> failwith ("obj " ^ oname ^ "." ^ fname)
+  in
+  let find_obj_event_decl oname event =
+    try StringMap.find event (StringMap.find oname obj_events)
+    with Not_found -> failwith ("event " ^ oname ^ "." ^ event)
   in
 
   (* Given value ll for an object of type objname, builds and returns scope of
@@ -436,7 +463,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
       let events =
         ["create"; "step"; "destroy"; "draw"]
         |> List.map (fun event ->
-            Some (L.build_bitcast (find_event_decl objname event)
+            Some (L.build_bitcast (find_obj_event_decl objname event)
                     eventptr_t (objname ^ "_" ^ event) builder))
       in
       let llobj_gen = L.build_bitcast llobj objptr_t (objname ^ "_gen") builder in
@@ -597,15 +624,27 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
   in
   List.iter build_function functions;
 
-  let build_gameobj_fn g =
+  let build_obj_functions g =
+    let open A.Gameobj in
+    let build_fn { A.typ; fname; formals; block } =
+      let llfn, _ = find_obj_fn_decl g.name fname in
+      match block with
+      | Some block -> build_function_body llfn formals block typ ~gameobj:g.name
+      | None -> assert false    (* Semant ensures obj fns are not external *)
+    in
+    List.iter build_fn g.methods
+  in
+  List.iter build_obj_functions gameobjs;
+
+  let build_obj_events g =
     let open A.Gameobj in
     let build_fn (f_name, block) =
-      let llfn = find_event_decl g.name f_name in
+      let llfn = find_obj_event_decl g.name f_name in
       build_function_body llfn [] block A.Void ~gameobj:g.name
     in
     List.iter build_fn [("create", g.create); ("step", g.step); ("destroy", g.destroy); ("draw", g.draw)]
   in
-  List.iter build_gameobj_fn gameobjs;
+  List.iter build_obj_events gameobjs;
 
   let create_gb = L.define_function "global_create" (L.function_type void_t [||]) the_module in
   build_function_body create_gb [] [A.Expr (A.Create "main")] A.Void;
