@@ -101,10 +101,16 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
 
   (* Given value ll for an object of type objname, builds and returns scope of
      that object in StringMap. *)
-  let gameobj_members ll objname builder =
+  let gameobj_members objref objname builder =
+    let llobj =
+      let nodeptr = L.build_struct_gep objref 1 (objname ^ "_nodeptr") builder in
+      let node = L.build_load nodeptr (objname ^ "_node") builder in
+      let (obj_type, _) = StringMap.find objname gameobj_types in
+      L.build_bitcast node (L.pointer_type obj_type) objname builder
+    in
     let (_, objtype) = StringMap.find objname gameobj_types in
     let add_member (map, ind) (typ, name) =
-      let member_var = L.build_struct_gep ll ind name builder in
+      let member_var = L.build_struct_gep llobj ind name builder in
       (StringMap.add name (member_var, typ) map, ind + 1)
     in
     let (members, _) =
@@ -113,6 +119,8 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     in
     members
   in
+
+  let add_to_scope to_add scope = StringMap.fold StringMap.add scope to_add in
 
   (* Declare printf(), which the print built-in function will call *)
   let printf_t = L.var_arg_function_type i32_t [| L.pointer_type i8_t |] in
@@ -349,11 +357,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     | hd :: tl ->
       match top_type with
       | A.Object objname ->
-        let nodeptr = L.build_struct_gep top 1 (n ^ "_nodeptr") builder in
-        let node = L.build_load nodeptr (n ^ "_node") builder in
-        let (obj_type, _) = StringMap.find objname gameobj_types in
-        let lltop = L.build_bitcast node (L.pointer_type obj_type) n builder in
-        lookup builder (gameobj_members lltop objname builder) hd tl
+        lookup builder (gameobj_members top objname builder) hd tl
       | _ -> assert false (* failwith "cannot get member of non-object type" *)
   in
 
@@ -540,21 +544,35 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
       build_object_loop builder fn ~objname ~body, scope
   in
 
-  let build_function_body the_function formals block return_type =
+  let build_function_body the_function formals block ?gameobj return_type =
     let entry = L.entry_block the_function in
     let builder = L.builder_at_end context entry in
 
-    (* Add the function's formal arguments to the scope of globals. *)
-    let scope =
+    (* If this is a function in a gameobj, add 'this' to the arguments *)
+    let formals =
+      match gameobj with
+      | Some obj -> (A.Object(obj), "this") :: formals
+      | None -> formals
+    in
+    let formal_scope =
       let add_formal m (t, n) p =
         L.set_value_name n p;
         let local = L.build_alloca (ltype_of_typ t) n builder in
         ignore (L.build_store p local builder);
         StringMap.add n (local, t) m
       in
-      List.fold_left2
-        add_formal global_vars formals
+      List.fold_left2 add_formal StringMap.empty formals
         (Array.to_list (L.params the_function))
+    in
+    let member_scope =
+      match gameobj with
+      | Some obj ->
+        let this, _ = StringMap.find "this" formal_scope in
+        gameobj_members this obj builder
+      | None -> StringMap.empty
+    in
+    let scope =
+      global_vars |> add_to_scope member_scope |> add_to_scope formal_scope
     in
 
     let builder, _ =
@@ -576,7 +594,6 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
       build_function_body the_function formals block return_type
     | None -> ()
   in
-
   List.iter build_function functions;
 
   let build_gameobj_fn g =
@@ -584,7 +601,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     let build_fn (f_name, block) =
       let name = g.name ^ "_" ^ f_name in
       let llfn = StringMap.find name gameobj_func_decls in
-      build_function_body llfn [A.Object(g.name), "this"] block A.Void
+      build_function_body llfn [] block A.Void ~gameobj:g.name
     in
     List.iter build_fn [("create", g.create); ("step", g.step); ("destroy", g.destroy); ("draw", g.draw)]
   in

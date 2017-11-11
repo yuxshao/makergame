@@ -128,9 +128,7 @@ let check ((globals, functions, gameobjs) : Ast.program) =
     | hd :: tl ->
       match typ with
       | Object s ->
-        let o = gameobj_decl s in
-        let scope = gameobj_scope o in
-        type_of_identifier (hd, tl) ~scope
+        type_of_identifier (hd, tl) ~scope:(gameobj_scope (gameobj_decl s))
       | _ -> failwith ("cannot get member of non-object " ^ name)
   in
 
@@ -284,12 +282,16 @@ let check ((globals, functions, gameobjs) : Ast.program) =
        ("destroy", Gameobj.Destroy, obj.destroy)]
     in
 
-    ignore (gameobj_scope obj);
-
     report_duplicate
       (fun n -> "duplicate members " ^ n ^ " in " ^ obj.name)
       (List.map snd obj.members);
-    let scope = StringMap.add "this" (Object(obj.name)) scope in
+
+    (* Add "this" and gameobj members to scope *)
+    (* gameobj_scope also checks that no members are named 'this' *)
+    let scope =
+      StringMap.fold StringMap.add scope (gameobj_scope obj)
+      |> StringMap.add "this" (Object(obj.name))
+    in
     let check_obj_fn (name, eventtype, block) =
       eventtype,
       check_block ~scope ~name:(obj.name ^ "::" ^ name) ~return:Void block
