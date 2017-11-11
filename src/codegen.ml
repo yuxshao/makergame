@@ -66,7 +66,6 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     make_end "gameobj", List.fold_left add_end StringMap.empty names
   in
   let obj_end n = StringMap.find n obj_ends in
-  (* TODO: make tails and insert created things after those so they can step/be looped correctly *)
   (* TODO: test case for order where i destroy myself and create a thing *)
 
   let global_objid = L.define_global "last_objid" (L.const_int i64_t 0) the_module in
@@ -74,7 +73,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
   let ltype_of_typ = function
     | A.Int -> i32_t
     | A.Bool -> i1_t
-    | A.Float -> float_t        (* FIXME: FLOAT OPERATIONS DISALLOWED & UNSUPPORTED. *)
+    | A.Float -> float_t
     | A.Arr _ -> failwith "not implemented"
     | A.String -> L.pointer_type i8_t
     (* | A.Arr (typ, len) -> L.array_type (ltype_of_typ typ) len *)
@@ -189,6 +188,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
   in
 
   (* Define each function (arguments and return type) so we can call it *)
+  let function_to_str name = "function." ^ name in
   let function_decls =
     let function_decl m fdecl =
       let name = fdecl.A.fname
@@ -197,25 +197,30 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
       in let ftype = L.function_type (ltype_of_typ fdecl.A.typ) formal_types in
       let d_function name =
         match fdecl.A.block with
-        | Some _ -> L.define_function ("f_" ^ name)
+        | Some _ -> L.define_function (function_to_str name)
         | None -> L.declare_function name
       in
       StringMap.add name (d_function name ftype the_module, fdecl) m in
     List.fold_left function_decl StringMap.empty functions
   in
+  let find_function_decl name = StringMap.find name function_decls in
 
-  let gameobj_func_decls =
-    let func_decls g =     (* TODO: test *)
+  let event_to_str gname ename = "object." ^ gname ^ ".event." ^ ename in
+  let event_decls =
+    let event_decls g =
       let open A.Gameobj in
       let decl_fn (f_name, _) =
-        let name = g.name ^ "_" ^ f_name in
+        let name = event_to_str g.name f_name in
         let llfn_t = L.function_type void_t [|ltype_of_typ (A.Object(g.name))|] in
         (name, L.define_function name llfn_t the_module)
       in
       List.map decl_fn [("create", g.create); ("step", g.step); ("destroy", g.destroy); ("draw", g.draw)]
     in
-    List.concat (List.map func_decls gameobjs)
+    List.concat (List.map event_decls gameobjs)
     |> List.fold_left (fun map (k, v) -> StringMap.add k v map) StringMap.empty
+  in
+  let find_event_decl objname event =
+    StringMap.find (event_to_str objname event) event_decls
   in
 
   let fmt_str name contents =
@@ -411,7 +416,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
         "printf" builder
     (* TODO: unify print names and their tests *)
     | A.Call (f, act) ->
-      let (fdef, fdecl) = StringMap.find f function_decls in
+      let (fdef, fdecl) = find_function_decl f in
       (* TODO: can arguments have side effects? what's the order-currently LtR *)
       let actuals = List.map (expr scope builder) act in
       let result =
@@ -434,10 +439,9 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
       ignore (L.build_store llid global_objid builder);
       let events =
         ["create"; "step"; "destroy"; "draw"]
-        |> List.map (fun x ->
-            Some (L.build_bitcast
-                    (StringMap.find (objname ^ "_" ^ x) gameobj_func_decls)
-                    eventptr_t (objname ^ "_" ^ x) builder))
+        |> List.map (fun event ->
+            Some (L.build_bitcast (find_event_decl objname event)
+                    eventptr_t (objname ^ "_" ^ event) builder))
       in
       let llobj_gen = L.build_bitcast llobj objptr_t (objname ^ "_gen") builder in
       build_struct_ptr_assign llobj_gen (Array.of_list (None :: Some llid :: events)) builder;
@@ -588,7 +592,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
   let build_function f =
     match f.A.block with
     | Some block ->
-      let (the_function, _) = StringMap.find f.A.fname function_decls in
+      let (the_function, _) = find_function_decl f.A.fname in
       let formals = f.A.formals in
       let return_type = f.A.typ in
       build_function_body the_function formals block return_type
@@ -599,8 +603,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
   let build_gameobj_fn g =
     let open A.Gameobj in
     let build_fn (f_name, block) =
-      let name = g.name ^ "_" ^ f_name in
-      let llfn = StringMap.find name gameobj_func_decls in
+      let llfn = find_event_decl g.name f_name in
       build_function_body llfn [] block A.Void ~gameobj:g.name
     in
     List.iter build_fn [("create", g.create); ("step", g.step); ("destroy", g.destroy); ("draw", g.draw)]
