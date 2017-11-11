@@ -385,7 +385,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
        | A.Geq     -> L.build_icmp L.Icmp.Sge, L.build_fcmp L.Fcmp.Oge
       )
       in
-      (match t with A.Int -> iop | A.Float -> fop | _ -> assert false) e1' e2' "tmp" builder
+      (match t with A.Int | A.Bool -> iop | A.Float -> fop | _ -> assert false) e1' e2' "tmp" builder
     | A.Unop(op, t, e) ->
       let e' = expr scope builder e in
       (match op with
