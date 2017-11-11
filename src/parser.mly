@@ -66,13 +66,16 @@ event:
   | EVENT STEP code_block { (Gameobj.Step, $3) }
   | EVENT DRAW code_block { (Gameobj.Draw, $3) }
 
-event_list:
-    /* nothing */    { [] }
-  | event event_list { $1 :: $2 }
-
 odecl:
-   OBJECT ID LCURLY vdecl_list event_list RCURLY
-     { Gameobj.make $2 (List.rev $4) $5 }
+   OBJECT ID LCURLY odecl_body RCURLY
+     { Gameobj.make $2 $4 }
+
+odecl_body:
+    /* nothing */ { [], [], [] }
+  | odecl_body vdecl { add_vdecl $1 $2 }
+  | odecl_body fdecl { add_fdecl $1 $2 }
+  | odecl_body event { add_odecl $1 $2 }
+
 
 formals_opt:
     /* nothing */ { [] }
@@ -92,10 +95,6 @@ typ:
   | STRING { String }
   | ID { Object($1) }
   | typ LBRACK LITERAL RBRACK { Arr($1, $3) }
-
-vdecl_list:
-    /* nothing */    { [] }
-  | vdecl_list vdecl { $2 :: $1 }
 
 /* TODO: allow typ ID EQ EXPR (vdecldef) for function-local variables.
    also think about what can go in if/while conditions, as well as for

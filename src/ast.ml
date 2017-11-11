@@ -59,35 +59,28 @@ module Gameobj = struct
   type t = {
     name : string;
     members : bind list;
+    methods : func_decl list;
     create : block;
     step : block;
     destroy : block;
     draw : block;
   }
 
-  let make name members events =
+  let make name (members, methods, events) =
     let initial_obj =
-      { name = name
-      ; members = members
-      ; create = []; step = []; destroy = []; draw = [] }
+      { name; members; methods; create = []; step = []; destroy = []; draw = [] }
     in
-    let add_event obj event = match (event : event_t * block) with
+    let fail n = failwith (n ^ " defined multiple times in " ^ name) in
+    (* TODO: someone can still duplicate by defining the first as empty *)
+    let add_event o event = match (event : event_t * block) with
       | (Create, block) ->
-        if obj.create != []
-        then failwith ("CREATE already defined in " ^ obj.name)
-        else { obj with create = block }
+        if o.create != [] then fail "create" else { o with create = block }
       | (Step, block) ->
-        if obj.step != []
-        then failwith ("STEP already defined in " ^ obj.name)
-        else { obj with step = block }
+        if o.step != [] then fail "step" else { o with step = block }
       | (Destroy, block) ->
-        if obj.destroy != []
-        then failwith ("DESTROY already defined in " ^ obj.name)
-        else { obj with destroy = block }
+        if o.destroy != [] then fail "destroy" else { o with destroy = block }
       | (Draw, block) ->
-        if obj.draw != []
-        then failwith ("DRAW already defined in " ^ obj.name)
-        else { obj with draw = block }
+        if o.draw != [] then fail "draw" else { o with draw = block }
     in
     List.fold_left add_event initial_obj events
 end

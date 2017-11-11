@@ -108,7 +108,7 @@ let check ((globals, functions, gameobjs) : Ast.program) =
       in
       (match fn.typ with Void -> () | _ -> failwith not_void_err);
       (match fn.formals with [] -> () | _ -> failwith arg_err);
-      (Gameobj.make "main" [] [Gameobj.Create, block]) :: gameobjs
+      (Gameobj.make "main" ([], [], [Gameobj.Create, block])) :: gameobjs
   in
 
   let gameobj_scope o =
@@ -290,12 +290,18 @@ let check ((globals, functions, gameobjs) : Ast.program) =
       StringMap.fold StringMap.add scope (gameobj_scope obj)
       |> StringMap.add "this" (Object(obj.name))
     in
-    let check_obj_fn (name, eventtype, block) =
+    let check_obj_fn func =
+      match func.block with
+      | Some _ -> check_function ~scope func
+      | _ -> failwith ("illegal extern function " ^ obj.name ^ "::" ^ func.fname)
+    in
+    let check_event (name, eventtype, block) =
       eventtype,
       check_block ~scope ~name:(obj.name ^ "::" ^ name) ~return:Void block
     in
-    let blocks' = List.map check_obj_fn (obj_fn_list obj) in
-    make obj.name obj.members blocks'
+    let methods' = List.map check_obj_fn obj.methods in
+    let blocks' = List.map check_event (obj_fn_list obj) in
+    make obj.name (obj.members, methods', blocks')
   in
 
   let scope =
