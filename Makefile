@@ -4,7 +4,11 @@
 
 # Easiest way to build: using ocamlbuild, which in turn uses ocamlfind
 
+.PHONY : all
 all : microc.native lib/libmakergame.o lib/libtestergame.o
+
+test : microc.native lib/libtestergame.o testall.sh
+	./testall.sh
 
 lib/libmakergame.o:
 	gcc -c lib/libmakergame.cpp -o lib/libmakergame.o -std=c++11
