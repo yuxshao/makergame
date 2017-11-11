@@ -613,13 +613,11 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
         | t -> L.build_ret (L.const_null (ltype_of_typ t)) builder)
   in
 
-  let build_function f =
-    match f.A.block with
+  let build_function { A.block; fname; formals; typ } =
+    match block with
     | Some block ->
-      let (the_function, _) = find_function_decl f.A.fname in
-      let formals = f.A.formals in
-      let return_type = f.A.typ in
-      build_function_body the_function formals block return_type
+      let llfn, _ = find_function_decl fname in
+      build_function_body llfn formals block typ
     | None -> ()
   in
   List.iter build_function functions;
