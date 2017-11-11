@@ -98,6 +98,42 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
       in StringMap.add n (L.define_global n init the_module, t) m in
     List.fold_left global_var StringMap.empty globals in
 
+  (* Define each function (arguments and return type) so we can call it *)
+  let function_to_str name = "function." ^ name in
+  let function_decls =
+    let function_decl m fdecl =
+      let name = fdecl.A.fname
+      and formal_types =
+        Array.of_list (List.map (fun (t,_) -> ltype_of_typ t) fdecl.A.formals)
+      in let ftype = L.function_type (ltype_of_typ fdecl.A.typ) formal_types in
+      let d_function name =
+        match fdecl.A.block with
+        | Some _ -> L.define_function (function_to_str name)
+        | None -> L.declare_function name
+      in
+      StringMap.add name (d_function name ftype the_module, fdecl) m in
+    List.fold_left function_decl StringMap.empty functions
+  in
+  let find_function_decl name = StringMap.find name function_decls in
+
+  let event_to_str gname ename = "object." ^ gname ^ ".event." ^ ename in
+  let event_decls =
+    let event_decls g =
+      let open A.Gameobj in
+      let decl_fn (f_name, _) =
+        let name = event_to_str g.name f_name in
+        let llfn_t = L.function_type void_t [|ltype_of_typ (A.Object(g.name))|] in
+        (name, L.define_function name llfn_t the_module)
+      in
+      List.map decl_fn [("create", g.create); ("step", g.step); ("destroy", g.destroy); ("draw", g.draw)]
+    in
+    List.concat (List.map event_decls gameobjs)
+    |> List.fold_left (fun map (k, v) -> StringMap.add k v map) StringMap.empty
+  in
+  let find_event_decl objname event =
+    StringMap.find (event_to_str objname event) event_decls
+  in
+
   (* Given value ll for an object of type objname, builds and returns scope of
      that object in StringMap. *)
   let gameobj_members objref objname builder =
@@ -184,42 +220,6 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     let prev_next = L.build_struct_gep prev 1 "prev_next" builder in
     ignore (L.build_store next prev_next builder);
     ignore (L.build_ret_void builder); f
-  in
-
-  (* Define each function (arguments and return type) so we can call it *)
-  let function_to_str name = "function." ^ name in
-  let function_decls =
-    let function_decl m fdecl =
-      let name = fdecl.A.fname
-      and formal_types =
-        Array.of_list (List.map (fun (t,_) -> ltype_of_typ t) fdecl.A.formals)
-      in let ftype = L.function_type (ltype_of_typ fdecl.A.typ) formal_types in
-      let d_function name =
-        match fdecl.A.block with
-        | Some _ -> L.define_function (function_to_str name)
-        | None -> L.declare_function name
-      in
-      StringMap.add name (d_function name ftype the_module, fdecl) m in
-    List.fold_left function_decl StringMap.empty functions
-  in
-  let find_function_decl name = StringMap.find name function_decls in
-
-  let event_to_str gname ename = "object." ^ gname ^ ".event." ^ ename in
-  let event_decls =
-    let event_decls g =
-      let open A.Gameobj in
-      let decl_fn (f_name, _) =
-        let name = event_to_str g.name f_name in
-        let llfn_t = L.function_type void_t [|ltype_of_typ (A.Object(g.name))|] in
-        (name, L.define_function name llfn_t the_module)
-      in
-      List.map decl_fn [("create", g.create); ("step", g.step); ("destroy", g.destroy); ("draw", g.draw)]
-    in
-    List.concat (List.map event_decls gameobjs)
-    |> List.fold_left (fun map (k, v) -> StringMap.add k v map) StringMap.empty
-  in
-  let find_event_decl objname event =
-    StringMap.find (event_to_str objname event) event_decls
   in
 
   let fmt_str name contents =
