@@ -1,1 +1,1 @@
-main { step { break; } }
+object main { event step { break; } }

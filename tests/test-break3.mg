@@ -1,8 +1,8 @@
 extern void end_game();
 
-helper { }
-main {
-  create {
+object helper { }
+object main {
+  event create {
     create helper;
     create helper;
     create helper;

@@ -4,9 +4,9 @@ void set(main m) {
   m.x = 3;
 }
 
-main {
+object main {
   int x;
-  create {
+  event create {
     set(this);
     print(this.x);
     end_game();

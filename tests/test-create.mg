@@ -1,15 +1,15 @@
 extern void end_game();
 
-helper {
+object helper {
   int y;
-  create { this.y = 3; }
+  event create { this.y = 3; }
 }
 
-main {
+object main {
   int y;
   helper h;
-  create { this.y = 4; this.h = create helper; }
-  step {
+  event create { this.y = 4; this.h = create helper; }
+  event step {
     int y;
     y = 5;
     print(y);

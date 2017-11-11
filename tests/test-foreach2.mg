@@ -1,10 +1,10 @@
 extern void end_game();
 
-aide { create { printstr("aide"); } }
+object aide { event create { printstr("aide"); } }
 
-main {
+object main {
   bool created;
-  create {
+  event create {
     int i;
     create aide;
     i = 1;

@@ -1,9 +1,9 @@
 extern void end_game();
 
-main {
+object main {
   int x;
   int y;
-  create {
+  event create {
     x = 0;
     this.y = 1;
     print(this.x);

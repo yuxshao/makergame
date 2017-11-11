@@ -1,7 +1,7 @@
 extern void end_game();
 
-main {
-  create {
+object main {
+  event create {
     foreach (asdf x) { print(3); } /* error: obj nonexistent */
   }
 }

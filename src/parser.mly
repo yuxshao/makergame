@@ -9,7 +9,7 @@ open Ast
 %token EQ NEQ LT LEQ GT GEQ TRUE FALSE AND OR
 %token BREAK RETURN IF ELSE FOR WHILE FOREACH
 %token INT BOOL FLOAT STRING SPRITE SOUND VOID
-%token CREATE DESTROY DRAW STEP
+%token OBJECT EVENT CREATE DESTROY DRAW STEP
 %token EXTERN
 %token <int> LITERAL
 %token <string> ID
@@ -60,18 +60,18 @@ fdecl:
        ; block = Some $6 } }
 
 event:
-  | CREATE code_block { (Gameobj.Create, $2) }
-  | DESTROY code_block { (Gameobj.Destroy, $2) }
-  | STEP code_block { (Gameobj.Step, $2) }
-  | DRAW code_block { (Gameobj.Draw, $2) }
+  | EVENT CREATE code_block { (Gameobj.Create, $3) }
+  | EVENT DESTROY code_block { (Gameobj.Destroy, $3) }
+  | EVENT STEP code_block { (Gameobj.Step, $3) }
+  | EVENT DRAW code_block { (Gameobj.Draw, $3) }
 
 event_list:
     /* nothing */    { [] }
   | event event_list { $1 :: $2 }
 
 odecl:
-   ID LCURLY vdecl_list event_list RCURLY
-     { Gameobj.make $1 (List.rev $3) $4 }
+   OBJECT ID LCURLY vdecl_list event_list RCURLY
+     { Gameobj.make $2 (List.rev $4) $5 }
 
 formals_opt:
     /* nothing */ { [] }

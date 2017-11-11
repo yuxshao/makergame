@@ -1,7 +1,7 @@
 extern void end_game();
 
-main {
-  create {
+object main {
+  event create {
     foreach (int x) { print(x); } /* error: can only loop over objs */
   }
 }

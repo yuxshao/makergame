@@ -1,19 +1,19 @@
 extern void end_game();
 
-helper {
+object helper {
   // should run before main's second step
-  step { printstr("helper"); }
+  event step { printstr("helper"); }
 }
 
-aide {
+object aide {
   // should run before main's second step
-  step { printstr("aide"); }
+  event step { printstr("aide"); }
 }
 
-main {
+object main {
   bool created;
-  create { this.created = false; create aide; }
-  step {
+  event create { this.created = false; create aide; }
+  event step {
     printstr("main");
     if (!this.created) {
       create helper;

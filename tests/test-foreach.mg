@@ -1,15 +1,15 @@
 extern void end_game();
 
 int y;
-helper {
+object helper {
   int y;
 
-  create { y = y + 2; this.y = y; }
+  event create { y = y + 2; this.y = y; }
 }
 
-main {
+object main {
   int y;
-  create {
+  event create {
     this.y = 3; /* this is not printed since it's not a helper */
 
     int x;

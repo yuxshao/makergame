@@ -51,10 +51,12 @@ rule token = parse
   | "sprite" { SPRITE }
   | "sound"  { SOUND }
   (* game keywords *)
+  | "object" { OBJECT }
+  | "event"  { EVENT }
   | "create" { CREATE }
   | "destroy" { DESTROY }
-  | "draw" { DRAW }
-  | "step" { STEP }
+  | "draw"   { DRAW }
+  | "step"   { STEP }
   (* misc keywords *)
   | "extern" { EXTERN }
   (* literals *)

@@ -1,12 +1,12 @@
 extern void end_game();
 
-helper {
+object helper {
   int i;
-  create { this.i = 3; }
+  event create { this.i = 3; }
 }
 
-main {
-  create {
+object main {
+  event create {
     helper h;
     h = create helper;
     destroy h;

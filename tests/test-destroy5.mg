@@ -1,10 +1,10 @@
 extern void end_game();
 
-helper { }
+object helper { }
 
-main {
+object main {
   int j;
-  create {
+  event create {
     this.j = 0;
     int i;
     for (i = 0; i < 5; i = i + 1) create helper;
@@ -18,7 +18,7 @@ main {
       }
     }
   }
-  step {
+  event step {
     if (this.j > 100) end_game();
     this.j = this.j + 1;
   }

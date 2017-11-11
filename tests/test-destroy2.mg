@@ -1,11 +1,11 @@
 extern void end_game();
 
-helper {
-  create { destroy this; }
+object helper {
+  event create { destroy this; }
 }
 
-main {
-  create {
+object main {
+  event create {
     create helper;
     int i;
     i = 0; /* count # helpers */

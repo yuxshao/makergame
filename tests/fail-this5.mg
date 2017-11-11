@@ -1,4 +1,4 @@
-this { } /* error: this cannot be a gameobj name */
+object this { } /* error: this cannot be a gameobj name */
 
-main {
+object main {
 }
