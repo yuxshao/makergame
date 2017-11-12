@@ -18,10 +18,10 @@ bool egg_touching_player(Egg e, Player p) {
   return (e.x < p.x + 50 && e.x > p.x - 50 && e.y < p.y + 10 && e.y > p.y - 10);
 }
 
-Egg {
+object Egg {
   int x; int y;
-  create { play_sound(boinkSound); } 
-  step {
+  event create { play_sound(boinkSound); } 
+  event step {
     this.y = this.y + 5;
     if (hit_ground(this)) {
       foreach (Egg o) destroy o;
@@ -31,17 +31,17 @@ Egg {
       create Gameover;
     }
   }
-  draw {
+  event draw {
     set_sprite_position(eggSprite, to_dbl(this.x - 16), to_dbl(this.y - 16));
     draw_sprite(eggSprite);
   }
 }
 
-Player {
+object Player {
   int x; int y;
 
-  create { this.x = 300; this.y = 500; }
-  step { 
+  event create { this.x = 300; this.y = 500; }
+  event step { 
     if (key_pressed(71)) this.x = this.x - 5;
     if (key_pressed(72)) this.x = this.x + 5;
 
@@ -54,16 +54,16 @@ Player {
     }
   }
 
-  draw {
+  event draw {
     set_sprite_position(playerSprite, to_dbl(this.x - 50), to_dbl(this.y - 16));
     draw_sprite(playerSprite);
   }
 }
 
-Spawner {
+object Spawner {
   int timer;
-  create { this.timer = 50; }
-  step {
+  event create { this.timer = 50; }
+  event step {
     this.timer = this.timer - 1;
     if (this.timer == 0) {
       this.timer = 50;
@@ -75,8 +75,8 @@ Spawner {
   }
 }
 
-main {
-  create {
+object main {
+  event create {
     score = 0;
     playerSprite = load_image("player.png");
     eggSprite = load_image("egg.png");
@@ -86,8 +86,8 @@ main {
   }
 }
 
-Gameover {
+object Gameover {
   sprite s;
-  create { this.s = load_image("gameover.png"); }
-  draw { draw_sprite(this.s); }
+  event create { this.s = load_image("gameover.png"); }
+  event draw { draw_sprite(this.s); }
 }
