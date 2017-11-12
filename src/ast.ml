@@ -52,6 +52,7 @@ type func_decl = {
   typ : typ;
   fname : string;
   formals : bind list;
+  gameobj : string option;
   block : block option;
 }
 
@@ -70,6 +71,8 @@ module Gameobj = struct
   }
 
   let make name (members, methods, events) =
+    (* Tag each method with this object name *)
+    let methods = List.map (fun x -> { x with gameobj = Some name }) methods in
     let initial_obj =
       { name; members; methods; create = []; step = []; destroy = []; draw = [] }
     in

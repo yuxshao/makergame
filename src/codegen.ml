@@ -383,13 +383,13 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
   in
 
   (* Construct code for an expression used for assignment; return its value *)
-  let rec lexpr scope builder = function
-    | A.Id n -> let v, _ = StringMap.find n scope in v
+  let rec lexpr (vscope, fscope) builder = function
+    | A.Id n -> let v, _ = StringMap.find n vscope in v
     | A.Member(e, objname, n) ->
-      let scope = gameobj_members (expr scope builder e) objname builder in
-      lexpr scope builder (A.Id(n))
+      let vscope = gameobj_members (expr (vscope, fscope) builder e) objname builder in
+      lexpr (vscope, fscope) builder (A.Id(n))
     | A.Assign (l, r) ->
-      let l', r' = lexpr scope builder l, expr scope builder r in
+      let l', r' = lexpr (vscope, fscope) builder l, expr (vscope, fscope) builder r in
       ignore (L.build_store r' l' builder); l'
     | _ -> assert false (* Semant should catch other illegal attempts at assignment *)
   (* Construct code for an expression; return its value *)
@@ -441,9 +441,15 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
         "printf" builder
     (* TODO: unify print names and their tests *)
     | A.Call (f, act) ->
-      let (fdef, fdecl) = find_function_decl f in
+      let _, fscope = scope in
+      let (fdef, fdecl) = StringMap.find f fscope in
       (* TODO: can arguments have side effects? what's the order-currently LtR *)
       let actuals = List.map (expr scope builder) act in
+      let actuals =             (* Add 'this' argument if member function *)
+        match fdecl.A.gameobj with
+        | Some _ -> (expr scope builder (A.Id("this"))) :: actuals
+        | None -> actuals
+      in
       let result =
         match fdecl.A.typ with A.Void -> "" | _ -> f ^ "_result"
       in
@@ -530,8 +536,9 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
      guaranteed to point to a block without a terminator. *)
   let rec stmt fn break_bb ret_t (builder, scope) = function
     | A.Decl (typ, name) ->
+      let vscope, fscope = scope in
       let local_var = L.build_alloca (ltype_of_typ typ) name builder in
-      builder, StringMap.add name (local_var, typ) scope
+      builder, (StringMap.add name (local_var, typ) vscope, fscope)
     | A.Block b ->
       let merge_bb = L.append_block context "block_end" fn in
       let builder, _ =
@@ -573,8 +580,9 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
         let objref = L.build_alloca objref_t "ref" builder in
         ignore (L.build_store obj objref builder);
         let builder, _ =
-          let scope' = StringMap.add name (objref, A.Object(objname)) scope in
-          stmt fn break_bb ret_t (builder, scope') body_stmt
+          let vscope, fscope = scope in
+          let vscope' = StringMap.add name (objref, A.Object(objname)) vscope in
+          stmt fn break_bb ret_t (builder, (vscope', fscope)) body_stmt
         in
         builder
       in
@@ -610,7 +618,10 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
       | None -> StringMap.empty
     in
     let scope =
-      global_vars |> add_to_scope member_scope |> add_to_scope formal_scope
+      global_vars |> add_to_scope member_scope |> add_to_scope formal_scope,
+      match gameobj with
+      | Some obj -> StringMap.fold StringMap.add (StringMap.find obj obj_fns) global_fns
+      | _ -> global_fns
     in
 
     let builder, _ =
@@ -623,7 +634,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
         | t -> L.build_ret (L.const_null (ltype_of_typ t)) builder)
   in
 
-  let build_function { A.block; fname; formals; typ } =
+  let build_function { A.block; fname; formals; typ; gameobj = _ } =
     match block with
     | Some block ->
       let llfn, _ = find_function_decl fname in
@@ -634,7 +645,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
 
   let build_obj_functions g =
     let open A.Gameobj in
-    let build_fn { A.typ; fname; formals; block } =
+    let build_fn { A.typ; fname; formals; block; gameobj = _ } =
       let llfn, _ = find_obj_fn_decl g.name fname in
       match block with
       | Some block -> build_function_body llfn formals block typ ~gameobj:g.name

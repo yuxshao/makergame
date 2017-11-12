@@ -53,11 +53,13 @@ fdecl:
      { { typ = $2
        ; fname = $3
        ; formals = $5
+       ; gameobj = None
        ; block = None } }
  | typ ID LPAREN formals_opt RPAREN code_block
      { { typ = $1
        ; fname = $2
        ; formals = $4
+       ; gameobj = None
        ; block = Some $6 } }
 
 event:
