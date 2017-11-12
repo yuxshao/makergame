@@ -100,6 +100,12 @@ let check ((globals, functions, gameobjs) : Ast.program) =
       StringMap.empty o.Gameobj.members
   in
 
+  (* Check that the expression can indeed be assigned to *)
+  let check_lvalue loc = function
+    | Id("this") -> failwith ("'this' cannot be assigned in '" ^ loc ^ "'")
+    | Id _ | Member _ | Assign _ -> ()
+    | _ -> failwith ("LHS ineligible for assignment in " ^ loc)
+  in
   (* Return the type of an expression and the new expression or throw an exception *)
   let rec expr scope e = match e with
     | Literal _ -> Int, e
@@ -142,10 +148,7 @@ let check ((globals, functions, gameobjs) : Ast.program) =
                         string_of_typ t ^ " in " ^ string_of_expr e))
     | Noexpr -> Void, e
     | Assign(l, r) ->
-      (match l with             (* Only allow identifiers and members to be assigned *)
-      | Id("this") -> failwith ("'this' cannot be assigned in '" ^ string_of_expr e ^ "'")
-      | Id _ | Member _ | Assign _ -> ()
-      | _ -> failwith ("LHS ineligible for assignment in " ^ string_of_expr e));
+      check_lvalue (string_of_expr e) l;
       let (lt, l') = expr scope l and (rt, r') = expr scope r in
       check_assign lt rt ("illegal assignment " ^ string_of_typ lt ^
                           " = " ^ string_of_typ rt ^ " in " ^
