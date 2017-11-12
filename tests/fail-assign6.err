@@ -1,0 +1,1 @@
+Fatal error: exception Failure("LHS ineligible for assignment in 3 + 4 = 7")

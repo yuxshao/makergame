@@ -1,0 +1,1 @@
+Fatal error: exception Failure("LHS ineligible for assignment in compute() = 5")

@@ -29,6 +29,7 @@ open Ast
 %left TIMES DIVIDE
 %left EXPONENT MODULO
 %right NOT NEG
+%left PERIOD
 
 %start program
 %type <Ast.program> program
@@ -130,7 +131,8 @@ expr:
   | FLOATLIT         { FloatLit($1) }
   | TRUE             { BoolLit(true) }
   | FALSE            { BoolLit(false) }
-  | id_chain         { Id(fst $1, snd $1) }
+  | ID               { Id($1) }
+  | expr PERIOD ID   { Member($1, "", $3) }
   | expr PLUS   expr { Binop($1, Add, Void,  $3) }
   | expr MINUS  expr { Binop($1, Sub, Void,  $3) }
   | expr TIMES  expr { Binop($1, Mult, Void, $3) }
@@ -147,15 +149,11 @@ expr:
   | expr OR     expr { Binop($1, Or, Void,   $3) }
   | MINUS expr %prec NEG { Unop(Neg, Void,   $2) }
   | NOT expr         { Unop(Not, Void, $2) }
-  | id_chain ASSIGN expr   { Assign($1, $3) }
+  | expr ASSIGN expr   { Assign($1, $3) }
   | ID LPAREN actuals_opt RPAREN { Call($1, $3) }
   | CREATE ID { Create($2) }
   | DESTROY expr { Destroy($2, "") }
   | LPAREN expr RPAREN { $2 }
-
-id_chain:
-  | ID { $1, [] }
-  | ID PERIOD id_chain { let (h, t) = $3 in $1, h :: t }
 
 actuals_opt:
     /* nothing */ { [] }

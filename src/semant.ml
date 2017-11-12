@@ -117,28 +117,26 @@ let check ((globals, functions, gameobjs) : Ast.program) =
       StringMap.empty o.Gameobj.members
   in
 
-  (* Type of each variable (global, formal, local), maybe with member chain *)
-  let rec type_of_identifier ~scope (name, chain) =
-    let typ =
-      try StringMap.find name scope
-      with Not_found -> failwith ("undeclared identifier " ^ name)
-    in
-    match chain with
-    | [] -> typ
-    | hd :: tl ->
-      match typ with
-      | Object s ->
-        type_of_identifier (hd, tl) ~scope:(gameobj_scope (gameobj_decl s))
-      | _ -> failwith ("cannot get member of non-object " ^ name)
-  in
-
   (* Return the type of an expression and the new expression or throw an exception *)
   let rec expr scope e = match e with
     | Literal _ -> Int, e
     | BoolLit _ -> Bool, e
     | FloatLit _ -> Float, e
     | StringLit _ -> String, e
-    | Id(hd, tl) -> type_of_identifier ~scope (hd, tl), e
+    | Id name ->
+      (try StringMap.find name scope, e
+      with Not_found -> failwith ("undeclared identifier " ^ name))
+    | Member(e, _, name) ->
+      (match expr scope e with
+       | Object s, e' ->
+         let t =
+           try StringMap.find name (gameobj_scope (gameobj_decl s))
+           with Not_found ->
+             failwith ("undefined member " ^ name ^ " in " ^
+                       string_of_expr e ^ " of type " ^ s)
+         in
+         t, Member(e', s, name)
+       | _ -> failwith ("cannot get member of non-object " ^ (string_of_expr e)))
     | Binop(e1, op, _, e2) -> let (t1, e1') = expr scope e1 and (t2, e2') = expr scope e2 in
       (match op with
          Add | Sub | Mult | Div when t1 = Int && t2 = Int -> Int, Binop(e1', op, Int, e2')
@@ -160,15 +158,15 @@ let check ((globals, functions, gameobjs) : Ast.program) =
        | _ -> failwith ("illegal unary operator " ^ string_of_uop op ^
                         string_of_typ t ^ " in " ^ string_of_expr e))
     | Noexpr -> Void, e
-    | Assign(var, ex) ->
-      (match var with
-      | "this", [] -> failwith ("'this' cannot be assigned in '" ^ (string_of_expr e) ^ "'")
-      | _ -> ());
-      let lt = type_of_identifier ~scope var
-      and (rt, e') = expr scope ex in
+    | Assign(l, r) ->
+      (match l with             (* Only allow identifiers and members to be assigned *)
+      | Id("this") -> failwith ("'this' cannot be assigned in '" ^ string_of_expr e ^ "'")
+      | Id _ | Member _ -> ()
+      | _ -> failwith ("LHS ineligible for assignment in " ^ string_of_expr e));
+      let (lt, l') = expr scope l and (rt, r') = expr scope r in
       check_assign lt rt ("illegal assignment " ^ string_of_typ lt ^
                           " = " ^ string_of_typ rt ^ " in " ^
-                          string_of_expr e), Assign(var, e')
+                          string_of_expr e), Assign(l', r')
     | Call(fname, actuals) as call -> let fd = function_decl fname in
       if List.length actuals != List.length fd.formals then
         failwith ("expecting " ^

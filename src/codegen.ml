@@ -102,8 +102,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
      that object in StringMap. *)
   let gameobj_members objref objname builder =
     let llobj =
-      let nodeptr = L.build_struct_gep objref 1 (objname ^ "_nodeptr") builder in
-      let node = L.build_load nodeptr (objname ^ "_node") builder in
+      let node = L.build_extractvalue objref 1 (objname ^ "_node") builder in
       let (obj_type, _) = StringMap.find objname gameobj_types in
       L.build_bitcast node (L.pointer_type obj_type) objname builder
     in
@@ -354,26 +353,21 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     build_node_loop builder the_function ~ends:(obj_end objname) ~body
   in
 
-  (* Return the value for a variable or formal argument *)
-  let rec lookup builder scope n chain =
-    let (top, top_type) = StringMap.find n scope in
-    match chain with
-    | [] -> top
-    | hd :: tl ->
-      match top_type with
-      | A.Object objname ->
-        lookup builder (gameobj_members top objname builder) hd tl
-      | _ -> assert false (* failwith "cannot get member of non-object type" *)
-  in
-
+  (* Construct code for an expression used for assignment; return its value *)
+  let rec lexpr scope builder = function
+    | A.Id n -> let v, _ = StringMap.find n scope in v
+    | A.Member(e, objname, n) ->
+      let scope = gameobj_members (expr scope builder e) objname builder in
+      lexpr scope builder (A.Id(n))
+    | _ -> assert false (* Semant should catch other illegal attempts at assignment *)
   (* Construct code for an expression; return its value *)
-  let rec expr scope builder = function
+  and expr scope builder = function
     | A.Literal i -> L.const_int i32_t i
     | A.BoolLit b -> L.const_int i1_t (if b then 1 else 0)
     | A.StringLit l -> L.build_global_stringptr l "literal" builder
     | A.FloatLit f -> L.const_float float_t f
     | A.Noexpr -> L.const_int i32_t 0
-    | A.Id (hd, tl) -> L.build_load (lookup builder scope hd tl) hd builder
+    | A.Id n | A.Member (_, _, n) as e -> L.build_load (lexpr scope builder e) n builder
     | A.Binop (e1, op, t, e2) ->
       let e1' = expr scope builder e1
       and e2' = expr scope builder e2 in
@@ -400,8 +394,9 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
       (match op with
          A.Neg     -> if t=A.Int then L.build_neg else L.build_fneg
        | A.Not     -> L.build_not) e' "tmp" builder
-    | A.Assign ((hd, tl), e) -> let e' = expr scope builder e in
-      ignore (L.build_store e' (lookup builder scope hd tl) builder); e'
+    | A.Assign (l, r) ->
+      let l', r' = lexpr scope builder l, expr scope builder r in
+      ignore (L.build_store r' l' builder); r'
     | A.Call ("printstr", [e]) ->
       L.build_call printf_func
         [| fmt_str str_fmt_str builder; (expr scope builder e) |]
@@ -572,6 +567,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
       match gameobj with
       | Some obj ->
         let this, _ = StringMap.find "this" formal_scope in
+        let this = L.build_load this "thisref" builder in
         gameobj_members this obj builder
       | None -> StringMap.empty
     in

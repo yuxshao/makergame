@@ -23,10 +23,11 @@ type expr =
   | BoolLit of bool
   | FloatLit of float
   | StringLit of string
-  | Id of string * string list
+  | Id of string
   | Binop of expr * op * typ * expr
   | Unop of uop * typ * expr
-  | Assign of (string * string list) * expr
+  | Assign of expr * expr
+  | Member of expr * string * string
   | Call of string * expr list
   | Create of string
   | Destroy of expr * string
@@ -132,13 +133,14 @@ let rec string_of_expr = function
   | FloatLit(f) -> string_of_float f
   | BoolLit(true) -> "true"
   | BoolLit(false) -> "false"
-  | Id(s, c) -> String.concat "." (s :: c)
+  | Id s -> s
   | Binop(e1, o, _, e2) ->
       string_of_expr e1 ^ " " ^ string_of_op o ^ " " ^ string_of_expr e2
   | Unop(o, _, e) -> string_of_uop o ^ string_of_expr e
-  | Assign((v, c), e) -> (String.concat "." (v :: c)) ^ " = " ^ string_of_expr e
+  | Assign(l, r) -> string_of_expr l ^ " = " ^ string_of_expr r
   | Call(f, el) ->
       f ^ "(" ^ String.concat ", " (List.map string_of_expr el) ^ ")"
+  | Member(e, _, s) -> "(" ^ (string_of_expr e) ^ ")." ^ s
   | Create o -> "create " ^ o   (* TODO: precedence? parentheses? *)
   | Destroy (o, _) -> "destroy " ^ (string_of_expr o) (* TODO: ibid *)
   | Noexpr -> ""
