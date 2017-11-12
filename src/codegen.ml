@@ -448,6 +448,14 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
         match fdecl.A.typ with A.Void -> "" | _ -> f ^ "_result"
       in
       L.build_call fdef (Array.of_list actuals) result builder
+    | A.MemberCall (e, objname, f, act) ->
+      let (fdef, fdecl) = find_obj_fn_decl objname f in
+      let obj = expr scope builder e in
+      let actuals = List.map (expr scope builder) act in
+      let result =
+        match fdecl.A.typ with A.Void -> "" | _ -> f ^ "_result"
+      in
+      L.build_call fdef (Array.of_list (obj :: actuals)) result builder
     | A.Create objname ->
       let (objtype, _) = StringMap.find objname gameobj_types in
       let llobj = L.build_malloc objtype objname builder in

@@ -93,6 +93,13 @@ let check ((globals, functions, gameobjs) : Ast.program) =
     with Not_found -> failwith ("unrecognized game object " ^ s)
   in
 
+  let gameobj_functions o =
+    List.fold_left
+      (fun m fd -> add_to_scope ~loc:(o ^ " gameobj function declarations") fd.fname fd m)
+      StringMap.empty (gameobj_decl o).Gameobj.methods
+  in
+
+
   let new_gameobjs =
     if StringMap.mem "main" gameobj_decls
     then gameobjs
@@ -167,24 +174,38 @@ let check ((globals, functions, gameobjs) : Ast.program) =
       check_assign lt rt ("illegal assignment " ^ string_of_typ lt ^
                           " = " ^ string_of_typ rt ^ " in " ^
                           string_of_expr e), Assign(l', r')
-    | Call(fname, actuals) as call -> let fd = function_decl fname in
-      if List.length actuals != List.length fd.formals then
-        failwith ("expecting " ^
-                  string_of_int (List.length fd.formals) ^
-                  " arguments in " ^ string_of_expr call)
-      else
-        let actuals' = List.map2
-            (fun (ft, _) ex -> let (et, ex') = expr scope ex in
-              ignore (check_assign ft et
-                        ("illegal actual argument found " ^ string_of_typ et ^
-                         " expected " ^ string_of_typ ft ^ " in " ^ string_of_expr ex)); ex')
-            fd.formals actuals in
-        fd.typ, Call(fname, actuals')
+    | Call(fname, actuals) as call ->
+      let fd = function_decl fname in
+      let actuals' = check_call_actuals (string_of_expr call) actuals scope fd in
+      fd.typ, Call(fname, actuals')
+    | MemberCall(e, _, fname, actuals) as call ->
+      let fd, oname, e' = match expr scope e with
+        | Object s, e' ->
+          (try StringMap.find fname (gameobj_functions s), s, e'
+           with Not_found ->
+             failwith ("undefined member " ^ fname ^ " in " ^
+                       string_of_expr e ^ " of type " ^ s))
+        | _ -> failwith ("cannot get member of non-object " ^ (string_of_expr e))
+      in
+      let actuals' = check_call_actuals (string_of_expr call) actuals scope fd in
+      fd.typ, MemberCall(e', oname, fname, actuals')
     | Create(obj_type) -> Object((gameobj_decl obj_type).Gameobj.name), e
     | Destroy(e, _) ->
       match expr scope e with
       | Object n, e' -> Void, Destroy(e', n)
       | _ -> failwith ("cannot destroy non-object")
+  and check_call_actuals loc actuals scope fd =
+    if List.length actuals != List.length fd.formals then
+      failwith ("expecting " ^
+                string_of_int (List.length fd.formals) ^
+                " arguments in " ^ loc)
+    else
+      List.map2
+        (fun (ft, _) ex -> let (et, ex') = expr scope ex in
+          ignore (check_assign ft et
+                    ("illegal actual argument found " ^ string_of_typ et ^
+                     " expected " ^ string_of_typ ft ^ " in " ^ string_of_expr ex)); ex')
+        fd.formals actuals
   in
 
   let check_bool_expr scope e = let (t, e') = expr scope e in if t != Bool

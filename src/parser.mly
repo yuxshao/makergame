@@ -150,6 +150,7 @@ expr:
   | NOT expr         { Unop(Not, Void, $2) }
   | expr ASSIGN expr   { Assign($1, $3) }
   | ID LPAREN actuals_opt RPAREN { Call($1, $3) }
+  | expr PERIOD ID LPAREN actuals_opt RPAREN { MemberCall($1, "", $3, $5) }
   | CREATE ID { Create($2) }
   | DESTROY expr { Destroy($2, "") }
   | LPAREN expr RPAREN { $2 }

@@ -27,7 +27,10 @@ type expr =
   | Binop of expr * op * typ * expr
   | Unop of uop * typ * expr
   | Assign of expr * expr
+  (* (LHS before period, name of LHS object type, RHS) *)
   | Member of expr * string * string
+  (* (LHS before period, name of LHS object type, RHS function name, actuals) *)
+  | MemberCall of expr * string * string * expr list
   | Call of string * expr list
   | Create of string
   | Destroy of expr * string
@@ -134,6 +137,7 @@ let rec string_of_expr = function
   | Call(f, el) ->
       f ^ "(" ^ String.concat ", " (List.map string_of_expr el) ^ ")"
   | Member(e, _, s) -> "(" ^ (string_of_expr e) ^ ")." ^ s
+  | MemberCall(e, _, f, el) -> "(" ^ (string_of_expr e) ^ ")." ^ string_of_expr (Call(f, el))
   | Create o -> "create " ^ o   (* TODO: precedence? parentheses? *)
   | Destroy (o, _) -> "destroy " ^ (string_of_expr o) (* TODO: ibid *)
   | Noexpr -> ""
