@@ -118,12 +118,14 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     in
     List.fold_left var StringMap.empty globals
   in
-  let global_fn_to_llname name = "function." ^ name in
-  let global_fns = fn_decls functions None global_fn_to_llname in
+  let global_fns =
+    let global_fn_to_llname name = "function." ^ name in
+    fn_decls functions None global_fn_to_llname
+  in
 
   (* Define each function (arguments and return type) so we can call it *)
-  let event_to_llname gname ename = "object." ^ gname ^ ".event." ^ ename in
   let obj_events =
+    let event_to_llname gname ename = "object." ^ gname ^ ".event." ^ ename in
     let open A.Gameobj in
     let event_decls g =
       let add_decl m (f_name, _) =
@@ -138,9 +140,9 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
       StringMap.empty gameobjs
   in
 
-  let obj_fn_to_llname gname ename = "object." ^ gname ^ ".function." ^ ename in
   let obj_fns =
     let open A.Gameobj in
+    let obj_fn_to_llname gname ename = "object." ^ gname ^ ".function." ^ ename in
     let add_decls m g =
       let decls = fn_decls g.methods (Some g.name) (obj_fn_to_llname g.name) in
       StringMap.add g.name decls m
