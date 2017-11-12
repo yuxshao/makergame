@@ -359,6 +359,9 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     | A.Member(e, objname, n) ->
       let scope = gameobj_members (expr scope builder e) objname builder in
       lexpr scope builder (A.Id(n))
+    | A.Assign (l, r) ->
+      let l', r' = lexpr scope builder l, expr scope builder r in
+      ignore (L.build_store r' l' builder); l'
     | _ -> assert false (* Semant should catch other illegal attempts at assignment *)
   (* Construct code for an expression; return its value *)
   and expr scope builder = function
@@ -368,6 +371,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     | A.FloatLit f -> L.const_float float_t f
     | A.Noexpr -> L.const_int i32_t 0
     | A.Id n | A.Member (_, _, n) as e -> L.build_load (lexpr scope builder e) n builder
+    | A.Assign _ as e -> L.build_load (lexpr scope builder e) "" builder
     | A.Binop (e1, op, t, e2) ->
       let e1' = expr scope builder e1
       and e2' = expr scope builder e2 in
@@ -394,9 +398,6 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
       (match op with
          A.Neg     -> if t=A.Int then L.build_neg else L.build_fneg
        | A.Not     -> L.build_not) e' "tmp" builder
-    | A.Assign (l, r) ->
-      let l', r' = lexpr scope builder l, expr scope builder r in
-      ignore (L.build_store r' l' builder); r'
     | A.Call ("printstr", [e]) ->
       L.build_call printf_func
         [| fmt_str str_fmt_str builder; (expr scope builder e) |]

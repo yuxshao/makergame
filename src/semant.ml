@@ -161,7 +161,7 @@ let check ((globals, functions, gameobjs) : Ast.program) =
     | Assign(l, r) ->
       (match l with             (* Only allow identifiers and members to be assigned *)
       | Id("this") -> failwith ("'this' cannot be assigned in '" ^ string_of_expr e ^ "'")
-      | Id _ | Member _ -> ()
+      | Id _ | Member _ | Assign _ -> ()
       | _ -> failwith ("LHS ineligible for assignment in " ^ string_of_expr e));
       let (lt, l') = expr scope l and (rt, r') = expr scope r in
       check_assign lt rt ("illegal assignment " ^ string_of_typ lt ^
