@@ -5,7 +5,7 @@ open Ast
 %}
 
 %token SEMI LPAREN RPAREN LBRACK RBRACK LCURLY RCURLY COMMA PERIOD
-%token PLUS MINUS TIMES DIVIDE EXPONENT MODULO ASSIGN NOT
+%token PLUS MINUS TIMES DIVIDE EXPONENT MODULO ASSIGN NOT ADDASN
 %token EQ NEQ LT LEQ GT GEQ TRUE FALSE AND OR
 %token BREAK RETURN IF ELSE FOR WHILE FOREACH
 %token INT BOOL FLOAT STRING SPRITE SOUND VOID
@@ -19,7 +19,7 @@ open Ast
 
 %nonassoc NOELSE
 %nonassoc ELSE
-%right ASSIGN
+%right ASSIGN ADDASN
 %left OR
 %left AND
 %left EQ NEQ
@@ -141,6 +141,7 @@ expr:
   | expr EXPONENT expr { Binop($1, Expo, Void,  $3) }
   | expr MODULO expr { Binop($1, Modulo, Void,  $3) }
   | expr EQ     expr { Binop($1, Equal, Void,   $3) }
+  | expr ADDASN expr { Addasn($1, Void, $3) }
   | expr NEQ    expr { Binop($1, Neq, Void,  $3) }
   | expr LT     expr { Binop($1, Less, Void, $3) }
   | expr LEQ    expr { Binop($1, Leq, Void,  $3) }

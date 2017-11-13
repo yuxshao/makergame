@@ -103,7 +103,7 @@ let check ((globals, functions, gameobjs) : Ast.program) =
   (* Check that the expression can indeed be assigned to *)
   let check_lvalue loc = function
     | Id("this") -> failwith ("'this' cannot be assigned in '" ^ loc ^ "'")
-    | Id _ | Member _ | Assign _ -> ()
+    | Id _ | Member _ | Assign _ -> () | Addasn _ -> ()
     | _ -> failwith ("LHS ineligible for assignment in " ^ loc)
   in
   (* Return the type of an expression and the new expression or throw an exception *)
@@ -126,7 +126,8 @@ let check ((globals, functions, gameobjs) : Ast.program) =
          in
          t, Member(e', s, name)
        | _ -> failwith ("cannot get member of non-object " ^ (string_of_expr e)))
-    | Binop(e1, op, _, e2) -> let (t1, e1') = expr scope e1 and (t2, e2') = expr scope e2 in
+    | Binop(e1, op, _, e2) ->
+      let (t1, e1') = expr scope e1 and (t2, e2') = expr scope e2 in
       (match op with
          Add | Sub | Mult | Div when t1 = Int && t2 = Int -> Int, Binop(e1', op, Int, e2')
        | Add | Sub | Mult | Div when t1 = Float && t2 = Float -> Float, Binop(e1', op, Float, e2')
@@ -153,6 +154,13 @@ let check ((globals, functions, gameobjs) : Ast.program) =
       check_assign lt rt ("illegal assignment " ^ string_of_typ lt ^
                           " = " ^ string_of_typ rt ^ " in " ^
                           string_of_expr e), Assign(l', r')
+    | Addasn(e1, _, e2) ->
+      let (t1, e1') = expr scope e1 and (t2, e2') = expr scope e2 in
+      (match t1, t2 with
+      | Int, Int -> Int, Addasn(e1', Int, e2')
+      | Float, Float -> Float, Addasn(e1', Float, e2')
+      | _ -> failwith ("invalid add assign " ^ string_of_typ t1 ^
+                       " += " ^ string_of_typ t2 ^ " in " ^ string_of_expr e))
     | Call(fname, actuals) as call ->
       let fd =
         try let _, fscope = scope in StringMap.find fname fscope

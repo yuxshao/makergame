@@ -25,6 +25,7 @@ type expr =
   | StringLit of string
   | Id of string
   | Binop of expr * op * typ * expr
+  | Addasn of expr * typ * expr
   | Unop of uop * typ * expr
   | Assign of expr * expr
   (* (LHS before period, name of LHS object type, RHS) *)
@@ -133,6 +134,7 @@ let rec string_of_expr = function
   | BoolLit(true) -> "true"
   | BoolLit(false) -> "false"
   | Id s -> s
+  | Addasn(l, _, r) -> string_of_expr l ^ " += " ^ string_of_expr r
   | Binop(e1, o, _, e2) ->
       string_of_expr e1 ^ " " ^ string_of_op o ^ " " ^ string_of_expr e2
   | Unop(o, _, e) -> string_of_uop o ^ string_of_expr e

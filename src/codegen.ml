@@ -391,6 +391,17 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     | A.Assign (l, r) ->
       let l', r' = lexpr (vscope, fscope) builder l, expr (vscope, fscope) builder r in
       ignore (L.build_store r' l' builder); l'
+    | A.Addasn (l, t, r) ->
+      let lp = lexpr (vscope, fscope) builder l in
+      let le = L.build_load lp "le" builder in
+      let re = expr(vscope, fscope) builder r in
+      let sum =
+        match t with
+        | A.Int | A.Bool -> L.build_add le re "addAsn" builder
+        | A.Float -> L.build_fadd le re "addAsn" builder
+        | _ -> assert false
+      in
+      ignore (L.build_store sum lp builder); lp
     | _ -> assert false (* Semant should catch other illegal attempts at assignment *)
   (* Construct code for an expression; return its value *)
   and expr scope builder = function
@@ -401,6 +412,12 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     | A.Noexpr -> L.const_int i32_t 0
     | A.Id n | A.Member (_, _, n) as e -> L.build_load (lexpr scope builder e) n builder
     | A.Assign _ as e -> L.build_load (lexpr scope builder e) "" builder
+    | A.Addasn (e1, _ ,e2) as e -> L.build_load (lexpr scope builder e) "" builder
+  (*      let e1' = expr scope builder e1
+      and e2' = expr scope builder e2 in
+      let (iadd, fadd) = L.build_add, L.build_fadd in
+      let sum = (match t with A.Int | A.Bool -> iadd | A.Float -> fadd | _ -> assert false) e1' e2' "" builder in
+  *)
     | A.Binop (e1, op, t, e2) ->
       let e1' = expr scope builder e1
       and e2' = expr scope builder e2 in
