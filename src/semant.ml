@@ -103,7 +103,7 @@ let check ((globals, functions, gameobjs) : Ast.program) =
   (* Check that the expression can indeed be assigned to *)
   let check_lvalue loc = function
     | Id("this") -> failwith ("'this' cannot be assigned in '" ^ loc ^ "'")
-    | Id _ | Member _ | Assign _ -> () | Addasn _ -> ()
+    | Id _ | Member _ | Assign _ -> () | Asnop _ -> ()
     | _ -> failwith ("LHS ineligible for assignment in " ^ loc)
   in
   (* Return the type of an expression and the new expression or throw an exception *)
@@ -118,7 +118,7 @@ let check ((globals, functions, gameobjs) : Ast.program) =
     | Member(e, _, name) ->
       (match expr scope e with
        | Object s, e' ->
-         let t =
+         let t=
            try StringMap.find name (gameobj_scope (gameobj_decl s))
            with Not_found ->
              failwith ("undefined member " ^ name ^ " in " ^
@@ -154,13 +154,20 @@ let check ((globals, functions, gameobjs) : Ast.program) =
       check_assign lt rt ("illegal assignment " ^ string_of_typ lt ^
                           " = " ^ string_of_typ rt ^ " in " ^
                           string_of_expr e), Assign(l', r')
-    | Addasn(e1, _, e2) ->
+    | Asnop(e1, opasn, _, e2) ->
       let (t1, e1') = expr scope e1 and (t2, e2') = expr scope e2 in
-      (match t1, t2 with
-      | Int, Int -> Int, Addasn(e1', Int, e2')
-      | Float, Float -> Float, Addasn(e1', Float, e2')
+      (match opasn with
+        Addasn | Minusasn | Timeasn | Divasn when t1 = Int && t2 = Int -> Int, Asnop(e1', opasn, Int, e2')
+       | Addasn | Minusasn | Timeasn | Divasn when t1 = Float && t2 = Float -> Float, Asnop(e1', opasn, Float, e2')
+       | _ -> failwith ("illegal assign operator " ^
+                        string_of_typ t1 ^ " " ^ string_of_asnop opasn ^ " " ^
+                        string_of_typ t2 ^ " in " ^ string_of_expr e)
+      )
+ (*     (match t1, t2 with
+      | Int, Int -> Int, Asnop(e1', asnop, Int, e2')
+      | Float, Float -> Float, Asnop(e1', asnop, Float, e2')
       | _ -> failwith ("invalid add assign " ^ string_of_typ t1 ^
-                       " += " ^ string_of_typ t2 ^ " in " ^ string_of_expr e))
+                       " += " ^ string_of_typ t2 ^ " in " ^ string_of_expr e)) *)
     | Call(fname, actuals) as call ->
       let fd =
         try let _, fscope = scope in StringMap.find fname fscope

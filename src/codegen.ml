@@ -391,16 +391,28 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     | A.Assign (l, r) ->
       let l', r' = lexpr (vscope, fscope) builder l, expr (vscope, fscope) builder r in
       ignore (L.build_store r' l' builder); l'
-    | A.Addasn (l, t, r) ->
+    | A.Asnop (l, asnop ,t, r) ->
       let lp = lexpr (vscope, fscope) builder l in
       let le = L.build_load lp "le" builder in
       let re = expr(vscope, fscope) builder r in
       let sum =
+        (match t, asnop with
+        | A.Int, A.Addasn ->  L.build_add le re "Asn" builder
+        | A.Float, A.Addasn -> L.build_fadd le re "Asn" builder
+        | A.Int, A.Minusasn -> L.build_sub le re "Asn" builder
+        | A.Float, A.Minusasn -> L.build_fsub le re "Asn" builder
+        | A.Int, A.Timeasn -> L.build_mul le re "Asn" builder
+        | A.Float, A.Timeasn -> L.build_fmul le re "Asn" builder
+        | A.Int, A.Divasn -> L.build_sdiv le re "Asn" builder
+        | A.Float, A.Divasn -> L.build_fdiv le re "Asn" builder
+        | _ -> assert false )
+        in
+        (*
         match t with
         | A.Int | A.Bool -> L.build_add le re "addAsn" builder
         | A.Float -> L.build_fadd le re "addAsn" builder
         | _ -> assert false
-      in
+      in *)
       ignore (L.build_store sum lp builder); lp
     | _ -> assert false (* Semant should catch other illegal attempts at assignment *)
   (* Construct code for an expression; return its value *)
@@ -412,7 +424,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     | A.Noexpr -> L.const_int i32_t 0
     | A.Id n | A.Member (_, _, n) as e -> L.build_load (lexpr scope builder e) n builder
     | A.Assign _ as e -> L.build_load (lexpr scope builder e) "" builder
-    | A.Addasn (e1, _ ,e2) as e -> L.build_load (lexpr scope builder e) "" builder
+    | A.Asnop  _ as e -> L.build_load (lexpr scope builder e) "" builder
   (*      let e1' = expr scope builder e1
       and e2' = expr scope builder e2 in
       let (iadd, fadd) = L.build_add, L.build_fadd in

@@ -26,6 +26,9 @@ rule token = parse
   | '%'      { MODULO }
   | '='      { ASSIGN }
   | "+="     { ADDASN }
+  | "-="     { MINUSASN }
+  | "*="     { TIMEASN }
+  | "/="     { DIVASN }
   | "=="     { EQ }
   | "!="     { NEQ }
   | '<'      { LT }
