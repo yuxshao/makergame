@@ -323,6 +323,7 @@ let rec check_namespace (nname, { Namespace.variables = globals;
       (Gameobj.make "main" ([], [], [Gameobj.Create, block])) :: gameobjs
   in
 
+  (* TODO: ensure no duplicates in namespaces *)
   let namespaces = List.map check_namespace namespaces in
 
   nname, { Namespace.variables = globals; functions; gameobjs; namespaces }

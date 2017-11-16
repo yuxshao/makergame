@@ -16,7 +16,7 @@ type gameobj = {
 }
 
 type namespace = {
-  variables: L.llvalue StringMap.t;
+  variables: (L.llvalue * Ast.typ) StringMap.t;
   functions: func StringMap.t;
   gameobjs: gameobj StringMap.t;
   namespaces: namespace StringMap.t;
