@@ -17,7 +17,7 @@ module A = Ast
 
 module StringMap = Map.Make(String)
 
-let translate ((globals, functions, gameobjs) : Ast.program) =
+let translate { A.Namespace.variables = globals ; functions ; gameobjs ; namespaces = _ } =
   let context = L.global_context () in
   let the_module = L.create_module context "MicroC"
   and i64_t    = L.i64_type    context

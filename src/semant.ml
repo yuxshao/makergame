@@ -9,7 +9,7 @@ module StringMap = Map.Make(String)
 
    Check each global variable, then check each function *)
 
-let check ((globals, functions, gameobjs) : Ast.program) =
+let check { Namespace.variables = globals ; functions ; gameobjs; namespaces } =
 
   (* Raise an exception if the given list has a duplicate *)
   let report_duplicate exceptf list =
@@ -327,4 +327,4 @@ let check ((globals, functions, gameobjs) : Ast.program) =
       (Gameobj.make "main" ([], [], [Gameobj.Create, block])) :: gameobjs'
   in
 
-  (globals, functions', gameobjs')
+  { Namespace.variables = globals; functions = functions'; gameobjs = gameobjs'; namespaces }

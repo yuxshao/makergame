@@ -37,7 +37,7 @@ open Ast
 %%
 
 program:
-  decls EOF { $1 }
+  decls EOF { Namespace.make $1 }
 
 decls:
    /* nothing */ { [], [], [] }

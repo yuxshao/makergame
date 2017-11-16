@@ -100,7 +100,20 @@ let add_fdecl (vdecls, fdecls, odecls) fdecl =
 let add_odecl (vdecls, fdecls, odecls) odecl =
   (vdecls, fdecls, odecl :: odecls)
 
-type program = bind list * func_decl list * Gameobj.decl list
+module Namespace = struct
+  type t = {
+    namespaces : decl list;
+    variables : bind list;
+    functions : func_decl list;
+    gameobjs : Gameobj.decl list;
+  }
+  and decl = string * t
+
+  let make (variables, functions, gameobjs) =
+    { variables; functions; gameobjs; namespaces = [] }
+end
+
+type program = Namespace.t
 
 
 
@@ -196,7 +209,12 @@ let string_of_gameobj (name, obj) =
   "DRAW " ^ (string_of_block obj.draw) ^ "\n" ^
   "}\n"
 
-let string_of_program (vars, funcs, objs) =
-  String.concat "" (List.map string_of_vdecl vars) ^ "\n" ^
-  String.concat "\n" (List.map string_of_fdecl funcs) ^
-  String.concat "\n" (List.map string_of_gameobj objs)
+let rec string_of_namespace { Namespace.variables; functions; gameobjs; namespaces } =
+  String.concat "" (List.map string_of_vdecl variables) ^ "\n" ^
+  String.concat "\n" (List.map string_of_fdecl functions) ^
+  String.concat "\n" (List.map string_of_gameobj gameobjs) ^
+  String.concat "\n" (List.map string_of_ns_decl namespaces)
+and string_of_ns_decl (name, ns) =
+  "namespace " ^ name ^ " {\n" ^ string_of_namespace ns ^ "\n}\n"
+
+let string_of_program = string_of_namespace
