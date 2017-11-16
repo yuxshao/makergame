@@ -63,9 +63,7 @@ let check ((globals, functions, gameobjs) : Ast.program) =
   in
 
   report_duplicate (fun n -> "duplicate function " ^ n) (List.map fst functions);
-
-  report_duplicate (fun n -> "duplicate gameobj " ^ n)
-    (List.map (fun fd -> fd.Gameobj.name) gameobjs);
+  report_duplicate (fun n -> "duplicate gameobj " ^ n) (List.map fst gameobjs);
 
   let global_functions =
     List.fold_left (add_to_scope ~loc:"function declarations")
@@ -73,8 +71,7 @@ let check ((globals, functions, gameobjs) : Ast.program) =
   in
 
   let gameobj_decls =
-    List.fold_left
-      (fun m obj -> add_to_scope ~loc:"gameobj declarations" m (obj.Gameobj.name, obj))
+    List.fold_left (add_to_scope ~loc:"gameobj declarations")
       StringMap.empty gameobjs
   in
 
@@ -88,9 +85,9 @@ let check ((globals, functions, gameobjs) : Ast.program) =
       StringMap.empty (gameobj_decl o).Gameobj.methods
   in
 
-  let gameobj_scope o =
-    List.fold_left (add_to_scope ~loc:(o.Gameobj.name ^ " members"))
-      StringMap.empty o.Gameobj.members
+  let gameobj_scope name =
+    List.fold_left (add_to_scope ~loc:(name ^ " members"))
+      StringMap.empty (gameobj_decl name).Gameobj.members
   in
 
   (* Check that the expression can indeed be assigned to *)
@@ -112,7 +109,7 @@ let check ((globals, functions, gameobjs) : Ast.program) =
       (match expr scope e with
        | Object s, e' ->
          let t =
-           try StringMap.find name (gameobj_scope (gameobj_decl s))
+           try StringMap.find name (gameobj_scope s)
            with Not_found ->
              failwith ("undefined member " ^ name ^ " in " ^
                        string_of_expr e ^ " of type " ^ s)
@@ -164,7 +161,7 @@ let check ((globals, functions, gameobjs) : Ast.program) =
       in
       let actuals' = check_call_actuals (string_of_expr call) actuals scope fd in
       fd.typ, MemberCall(e', oname, fname, actuals')
-    | Create(obj_type) -> Object((gameobj_decl obj_type).Gameobj.name), e
+    | Create(obj_type) -> ignore(gameobj_decl obj_type); Object(obj_type), e
     | Destroy(e, _) ->
       match expr scope e with
       | Object n, e' -> Void, Destroy(e', n)
@@ -269,7 +266,7 @@ let check ((globals, functions, gameobjs) : Ast.program) =
     name, { func with block = block }
   in
 
-  let check_gameobj ~scope obj =
+  let check_gameobj ~scope (name, obj) =
     let open Gameobj in
     let obj_fn_list obj =
       [("create", Gameobj.Create, obj.create);
@@ -279,29 +276,29 @@ let check ((globals, functions, gameobjs) : Ast.program) =
     in
 
     report_duplicate
-      (fun n -> "duplicate members " ^ n ^ " in " ^ obj.name)
+      (fun n -> "duplicate members " ^ n ^ " in " ^ name)
       (List.map fst obj.members);
 
     (* Add "this" and gameobj members to scope *)
     (* gameobj_scope also checks that no members are named 'this' *)
     let scope =
       let vscope, fscope = scope in
-      StringMap.fold StringMap.add vscope (gameobj_scope obj)
-      |> StringMap.add "this" (Object(obj.name)),
-      StringMap.fold StringMap.add fscope (gameobj_functions obj.name)
+      StringMap.fold StringMap.add vscope (gameobj_scope name)
+      |> StringMap.add "this" (Object(name)),
+      StringMap.fold StringMap.add fscope (gameobj_functions name)
     in
     let check_obj_fn (fname, func) =
       match func.block with
       | Some _ -> check_function ~scope (fname, func)
-      | _ -> failwith ("illegal extern function " ^ obj.name ^ "::" ^ fname)
+      | _ -> failwith ("illegal extern function " ^ name ^ "::" ^ fname)
     in
-    let check_event (name, eventtype, block) =
+    let check_event (fname, eventtype, block) =
       eventtype,
-      check_block ~scope ~name:(obj.name ^ "::" ^ name) ~return:Void block
+      check_block ~scope ~name:(name ^ "::" ^ fname) ~return:Void block
     in
     let methods' = List.map check_obj_fn obj.methods in
     let blocks' = List.map check_event (obj_fn_list obj) in
-    make obj.name (obj.members, methods', blocks')
+    make name (obj.members, methods', blocks')
   in
 
   let scope =

@@ -61,7 +61,6 @@ module Gameobj = struct
 
   (* consider using this for the AST post-semant *)
   type t = {
-    name : string;
     members : bind list;
     methods : func_decl list;
     create : block;
@@ -69,12 +68,13 @@ module Gameobj = struct
     destroy : block;
     draw : block;
   }
+  type decl = string * t
 
   let make name (members, methods, events) =
     (* Tag each method with this object name *)
     let methods = List.map (fun (n, x) -> n, { x with gameobj = Some name }) methods in
     let initial_obj =
-      { name; members; methods; create = []; step = []; destroy = []; draw = [] }
+      { members; methods; create = []; step = []; destroy = []; draw = [] }
     in
     let fail n = failwith (n ^ " defined multiple times in " ^ name) in
     (* TODO: someone can still duplicate by defining the first as empty *)
@@ -88,7 +88,7 @@ module Gameobj = struct
       | (Draw, block) ->
         if o.draw != [] then fail "draw" else { o with draw = block }
     in
-    List.fold_left add_event initial_obj events
+    name, List.fold_left add_event initial_obj events
 end
 
 let add_vdecl (vdecls, fdecls, odecls) vdecl =
@@ -100,7 +100,7 @@ let add_fdecl (vdecls, fdecls, odecls) fdecl =
 let add_odecl (vdecls, fdecls, odecls) odecl =
   (vdecls, fdecls, odecl :: odecls)
 
-type program = bind list * func_decl list * Gameobj.t list
+type program = bind list * func_decl list * Gameobj.decl list
 
 
 
@@ -186,9 +186,9 @@ let string_of_fdecl (name, func) =
   prefix ^ string_of_typ func.typ ^ " " ^ name ^ "(" ^
   String.concat ", " (List.map fst func.formals) ^ ")\n" ^ suffix
 
-let string_of_gameobj obj =
+let string_of_gameobj (name, obj) =
   let open Gameobj in
-  obj.name ^ " {\n" ^
+  name ^ " {\n" ^
   String.concat "" (List.map string_of_vdecl obj.members) ^ "\n" ^
   "CREATE " ^ (string_of_block obj.create) ^ "\n" ^
   "DESTROY " ^ (string_of_block obj.destroy) ^ "\n" ^

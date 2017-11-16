@@ -32,9 +32,8 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
 
   (* Declare types for each object type *)
   let gameobj_types =
-    let lltype_of m gdecl =
-      let name = gdecl.A.Gameobj.name in
-      StringMap.add name (L.named_struct_type context name, gdecl) m
+    let lltype_of m (name, gobj) =
+      StringMap.add name (L.named_struct_type context name, gobj) m
     in
     List.fold_left lltype_of StringMap.empty gameobjs
   in
@@ -55,14 +54,14 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
   (* Define linked list heads *)
   let (gameobj_end, obj_ends) =
     let make_end name =
-      let h = L.declare_global node_t (name ^ "_head") the_module in
-      let t = L.declare_global node_t (name ^ "_tail") the_module in
+      let h = L.declare_global node_t ("node." ^ name ^ ".head") the_module in
+      let t = L.declare_global node_t ("node." ^ name ^ ".tail") the_module in
       L.set_initializer (L.const_named_struct node_t [|t; t|]) h;
       L.set_initializer (L.const_named_struct node_t [|h; h|]) t;
       h, t
     in
-    let add_end map name = StringMap.add name (make_end name) map in
-    let names = List.map (fun x -> x.A.Gameobj.name) gameobjs in
+    let add_end map name = StringMap.add name (make_end ("gameobj." ^ name)) map in
+    let names = List.map fst gameobjs in
     make_end "gameobj", List.fold_left add_end StringMap.empty names
   in
   let obj_end n = StringMap.find n obj_ends in
@@ -126,25 +125,25 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
   let obj_events =
     let event_to_llname gname ename = "object." ^ gname ^ ".event." ^ ename in
     let open A.Gameobj in
-    let event_decls g =
+    let event_decls (gname, g) =
       let add_decl m (f_name, _) =
-        let name = event_to_llname g.name f_name in
-        let llfn_t = L.function_type void_t [|ltype_of_typ (A.Object(g.name))|] in
+        let name = event_to_llname gname f_name in
+        let llfn_t = L.function_type void_t [|ltype_of_typ (A.Object(gname))|] in
         StringMap.add f_name (L.define_function name llfn_t the_module) m
       in
       List.fold_left add_decl StringMap.empty
         [("create", g.create); ("step", g.step); ("destroy", g.destroy); ("draw", g.draw)]
     in
-    List.fold_left (fun m g -> StringMap.add g.name (event_decls g) m)
+    List.fold_left (fun m (gname, g) -> StringMap.add gname (event_decls (gname, g)) m)
       StringMap.empty gameobjs
   in
 
   let obj_fns =
     let open A.Gameobj in
     let obj_fn_to_llname gname ename = "object." ^ gname ^ ".function." ^ ename in
-    let add_decls m g =
-      let decls = fn_decls g.methods (Some g.name) (obj_fn_to_llname g.name) in
-      StringMap.add g.name decls m
+    let add_decls m (gname, g) =
+      let decls = fn_decls g.methods (Some gname) (obj_fn_to_llname gname) in
+      StringMap.add gname decls m
     in
     List.fold_left add_decls StringMap.empty gameobjs
   in
@@ -642,23 +641,23 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
   in
   List.iter build_function functions;
 
-  let build_obj_functions g =
+  let build_obj_functions (gname, g) =
     let open A.Gameobj in
     let build_fn (fname, { A.typ; formals; block; gameobj = _ }) =
-      let llfn, _ = find_obj_fn_decl g.name fname in
+      let llfn, _ = find_obj_fn_decl gname fname in
       match block with
-      | Some block -> build_function_body llfn formals block typ ~gameobj:g.name
+      | Some block -> build_function_body llfn formals block typ ~gameobj:gname
       | None -> assert false    (* Semant ensures obj fns are not external *)
     in
     List.iter build_fn g.methods
   in
   List.iter build_obj_functions gameobjs;
 
-  let build_obj_events g =
+  let build_obj_events (gname, g) =
     let open A.Gameobj in
     let build_fn (f_name, block) =
-      let llfn = find_obj_event_decl g.name f_name in
-      build_function_body llfn [] block A.Void ~gameobj:g.name
+      let llfn = find_obj_event_decl gname f_name in
+      build_function_body llfn [] block A.Void ~gameobj:gname
     in
     List.iter build_fn [("create", g.create); ("step", g.step); ("destroy", g.destroy); ("draw", g.draw)]
   in
