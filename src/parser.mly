@@ -50,17 +50,9 @@ code_block:
 
 fdecl:
  | EXTERN typ ID LPAREN formals_opt RPAREN SEMI
-     { { typ = $2
-       ; fname = $3
-       ; formals = $5
-       ; gameobj = None
-       ; block = None } }
+     { $3, { typ = $2 ; formals = $5 ; gameobj = None ; block = None } }
  | typ ID LPAREN formals_opt RPAREN code_block
-     { { typ = $1
-       ; fname = $2
-       ; formals = $4
-       ; gameobj = None
-       ; block = Some $6 } }
+     { $2, { typ = $1 ; formals = $4 ; gameobj = None ; block = Some $6 } }
 
 event:
   | EVENT CREATE code_block { (Gameobj.Create, $3) }

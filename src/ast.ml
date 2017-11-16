@@ -48,13 +48,13 @@ type stmt =
   | While of expr * stmt
 and block = stmt list
 
-type func_decl = {
+type func = {
   typ : typ;
-  fname : string;
   formals : bind list;
   gameobj : string option;
   block : block option;
 }
+type func_decl = string * func
 
 module Gameobj = struct
   type event_t = Create | Destroy | Step | Draw
@@ -72,7 +72,7 @@ module Gameobj = struct
 
   let make name (members, methods, events) =
     (* Tag each method with this object name *)
-    let methods = List.map (fun x -> { x with gameobj = Some name }) methods in
+    let methods = List.map (fun (n, x) -> n, { x with gameobj = Some name }) methods in
     let initial_obj =
       { name; members; methods; create = []; step = []; destroy = []; draw = [] }
     in
@@ -177,14 +177,14 @@ let rec string_of_stmt = function
 and string_of_block block =
   "{\n" ^ String.concat "" (List.map string_of_stmt block) ^ "}\n"
 
-let string_of_fdecl fdecl =
+let string_of_fdecl (name, func) =
   let prefix, suffix =
-    match fdecl.block with
+    match func.block with
     | None -> "extern ", ""
     | Some block -> "", string_of_block block
   in
-  prefix ^ string_of_typ fdecl.typ ^ " " ^ fdecl.fname ^ "(" ^
-  String.concat ", " (List.map snd fdecl.formals) ^ ")\n" ^ suffix
+  prefix ^ string_of_typ func.typ ^ " " ^ name ^ "(" ^
+  String.concat ", " (List.map snd func.formals) ^ ")\n" ^ suffix
 
 let string_of_gameobj obj =
   let open Gameobj in

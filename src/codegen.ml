@@ -92,21 +92,20 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     gameobj_types;
 
   let fn_decls functions obj to_llname =
-    let function_decl m fdecl =
-      let name = fdecl.A.fname in
+    let function_decl m (name, func) =
       let formals =
         match obj with
-        | Some o -> (A.Object(o), "this") :: fdecl.A.formals
-        | None -> fdecl.A.formals
+        | Some o -> (A.Object(o), "this") :: func.A.formals
+        | None -> func.A.formals
       in
       let formal_types = Array.of_list (List.map (fun (t,_) -> ltype_of_typ t) formals) in
-      let ftype = L.function_type (ltype_of_typ fdecl.A.typ) formal_types in
+      let ftype = L.function_type (ltype_of_typ func.A.typ) formal_types in
       let d_function name =
-        match fdecl.A.block with
+        match func.A.block with
         | Some _ -> L.define_function (to_llname name)
         | None -> L.declare_function name
       in
-      StringMap.add name (d_function name ftype the_module, fdecl) m in
+      StringMap.add name (d_function name ftype the_module, func) m in
     List.fold_left function_decl StringMap.empty functions
   in
 
@@ -634,7 +633,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
         | t -> L.build_ret (L.const_null (ltype_of_typ t)) builder)
   in
 
-  let build_function { A.block; fname; formals; typ; gameobj = _ } =
+  let build_function (fname, { A.block; formals; typ; gameobj = _ }) =
     match block with
     | Some block ->
       let llfn, _ = find_function_decl fname in
@@ -645,7 +644,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
 
   let build_obj_functions g =
     let open A.Gameobj in
-    let build_fn { A.typ; fname; formals; block; gameobj = _ } =
+    let build_fn (fname, { A.typ; formals; block; gameobj = _ }) =
       let llfn, _ = find_obj_fn_decl g.name fname in
       match block with
       | Some block -> build_function_body llfn formals block typ ~gameobj:g.name

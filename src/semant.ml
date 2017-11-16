@@ -28,7 +28,7 @@ let check ((globals, functions, gameobjs) : Ast.program) =
 
   (* Add to the scope. But only if we're not using the identifier 'this' *)
   (* TODO: mention where 'this' can be used. anywhere but assignment but declaration as a regular obj identifier *)
-  let add_to_scope ?loc n t m =
+  let add_to_scope ?loc m (n, t) =
     let failstr = "cannot shadow or overwrite identifier 'this'" in
     match loc, n with
     | None, "this" -> failwith failstr
@@ -50,13 +50,10 @@ let check ((globals, functions, gameobjs) : Ast.program) =
 
   (**** Checking Functions ****)
 
-  if List.mem "print" (List.map (fun fd -> fd.fname) functions)
-  then failwith "function print may not be defined" else ();
-
   (* Add built-in function declarations *)
   let functions =
     let add ~fname ~arg_type list =
-      { typ = Void; fname; formals = [(arg_type, "x")]; block = None; gameobj = None } :: list
+      (fname, { typ = Void; formals = [(arg_type, "x")]; block = None; gameobj = None }) :: list
     in
     functions
     |> add ~fname:"print"       ~arg_type:Int
@@ -65,21 +62,19 @@ let check ((globals, functions, gameobjs) : Ast.program) =
     |> add ~fname:"printstr"    ~arg_type:String
   in
 
-  report_duplicate (fun n -> "duplicate function " ^ n)
-    (List.map (fun fd -> fd.fname) functions);
+  report_duplicate (fun n -> "duplicate function " ^ n) (List.map fst functions);
 
   report_duplicate (fun n -> "duplicate gameobj " ^ n)
     (List.map (fun fd -> fd.Gameobj.name) gameobjs);
 
   let global_functions =
-    List.fold_left
-      (fun m fd -> add_to_scope ~loc:"function declarations" fd.fname fd m)
+    List.fold_left (add_to_scope ~loc:"function declarations")
       StringMap.empty functions
   in
 
   let gameobj_decls =
     List.fold_left
-      (fun m obj -> add_to_scope ~loc:"gameobj declarations" obj.Gameobj.name obj m)
+      (fun m obj -> add_to_scope ~loc:"gameobj declarations" m (obj.Gameobj.name, obj))
       StringMap.empty gameobjs
   in
 
@@ -89,14 +84,13 @@ let check ((globals, functions, gameobjs) : Ast.program) =
   in
 
   let gameobj_functions o =
-    List.fold_left
-      (fun m fd -> add_to_scope ~loc:(o ^ " gameobj function declarations") fd.fname fd m)
+    List.fold_left (add_to_scope ~loc:(o ^ " gameobj function declarations"))
       StringMap.empty (gameobj_decl o).Gameobj.methods
   in
 
   let gameobj_scope o =
     List.fold_left
-      (fun m (t, n) -> add_to_scope ~loc:(o.Gameobj.name ^ " members") n t m)
+      (fun m (t, n) -> add_to_scope ~loc:(o.Gameobj.name ^ " members") m (n, t))
       StringMap.empty o.Gameobj.members
   in
 
@@ -209,7 +203,7 @@ let check ((globals, functions, gameobjs) : Ast.program) =
       | Decl (t, n) as s ->
         let vscope, fscope = scope in
         check_not_void (fun n -> "illegal void local " ^ n ^ " in " ^ name) (t, n);
-        s, (add_to_scope ~loc:name n t vscope, fscope)
+        s, (add_to_scope ~loc:name vscope (n, t), fscope)
       | Break -> Break, scope
       | Block b -> Block (check_block b ~scope ~name ~return), scope
       | Expr e -> let (_, e') = expr scope e in Expr e', scope
@@ -250,31 +244,30 @@ let check ((globals, functions, gameobjs) : Ast.program) =
     check_block ~scope ~name ~return block
   in
 
-  let check_function ~scope func =
+  let check_function ~scope (name, func) =
     List.iter
-      (check_not_void (fun n -> "illegal void formal " ^ n ^ " in " ^ func.fname))
+      (check_not_void (fun n -> "illegal void formal " ^ n ^ " in " ^ name))
       func.formals;
 
     let scope =
       let vscope, fscope = scope in
-      List.fold_left
-        (fun m (t, n) -> add_to_scope ~loc:("formals of " ^ func.fname) n t m)
+      List.fold_left (fun m (t, n) -> add_to_scope ~loc:("formals of " ^ name) m (n, t))
         vscope func.formals, fscope
     in
 
     (* formals can have the same name as locals. is this okay? think about these
        edge cases *)
     report_duplicate
-      (fun n -> "duplicate formal " ^ n ^ " in " ^ func.fname)
+      (fun n -> "duplicate formal " ^ n ^ " in " ^ name)
       (List.map snd func.formals);
 
     let block =
       match func.block with
       | Some block ->
-        Some (check_block ~scope ~name:func.fname ~return:func.typ block)
+        Some (check_block ~scope ~name ~return:func.typ block)
       | None -> None
     in
-    { func with block = block }
+    name, { func with block = block }
   in
 
   let check_gameobj ~scope obj =
@@ -298,10 +291,10 @@ let check ((globals, functions, gameobjs) : Ast.program) =
       |> StringMap.add "this" (Object(obj.name)),
       StringMap.fold StringMap.add fscope (gameobj_functions obj.name)
     in
-    let check_obj_fn func =
+    let check_obj_fn (fname, func) =
       match func.block with
-      | Some _ -> check_function ~scope func
-      | _ -> failwith ("illegal extern function " ^ obj.name ^ "::" ^ func.fname)
+      | Some _ -> check_function ~scope (fname, func)
+      | _ -> failwith ("illegal extern function " ^ obj.name ^ "::" ^ fname)
     in
     let check_event (name, eventtype, block) =
       eventtype,
@@ -313,7 +306,7 @@ let check ((globals, functions, gameobjs) : Ast.program) =
   in
 
   let scope =
-    List.fold_left (fun m (t, n) -> add_to_scope ~loc:"globals" n t m)
+    List.fold_left (fun m (t, n) -> add_to_scope ~loc:"globals" m (n, t))
       StringMap.empty globals,
     global_functions
   in
@@ -328,8 +321,8 @@ let check ((globals, functions, gameobjs) : Ast.program) =
       let undef_err = "either main game object or function must be defined" in
       let not_void_err = "main function must return void" in
       let arg_err = "main function must take no arguments" in
-      let fn =
-        try check_function ~scope (StringMap.find "main" global_functions)
+      let _, fn =
+        try check_function ~scope ("main", (StringMap.find "main" global_functions))
         with Not_found -> failwith undef_err in
       let block =
         match fn.block with Some b -> b | None -> failwith undef_err
