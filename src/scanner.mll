@@ -51,6 +51,7 @@ rule token = parse
   | "sprite" { SPRITE }
   | "sound"  { SOUND }
   (* game keywords *)
+  | "namespace" { NAMESPACE }
   | "object" { OBJECT }
   | "event"  { EVENT }
   | "create" { CREATE }

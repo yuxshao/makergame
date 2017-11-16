@@ -9,7 +9,7 @@ open Ast
 %token EQ NEQ LT LEQ GT GEQ TRUE FALSE AND OR
 %token BREAK RETURN IF ELSE FOR WHILE FOREACH
 %token INT BOOL FLOAT STRING SPRITE SOUND VOID
-%token OBJECT EVENT CREATE DESTROY DRAW STEP
+%token NAMESPACE OBJECT EVENT CREATE DESTROY DRAW STEP
 %token EXTERN
 %token <int> LITERAL
 %token <string> ID
@@ -36,14 +36,17 @@ open Ast
 
 %%
 
-program:
-  decls EOF { Namespace.make $1 }
+program: decls EOF { Namespace.make $1 }
+
+ndecl:
+  NAMESPACE ID LCURLY decls RCURLY { $2, Namespace.make $4 }
 
 decls:
-   /* nothing */ { [], [], [] }
- | decls vdecl { add_vdecl $1 $2 }
- | decls fdecl { add_fdecl $1 $2 }
- | decls odecl { add_odecl $1 $2 }
+   /* nothing */ { [],[],[],[] }
+ | decls vdecl { Namespace.add_vdecl $1 $2 }
+ | decls fdecl { Namespace.add_fdecl $1 $2 }
+ | decls odecl { Namespace.add_odecl $1 $2 }
+ | decls ndecl { Namespace.add_ndecl $1 $2 }
 
 code_block:
    LCURLY stmt_list RCURLY { $2 }
@@ -66,9 +69,9 @@ odecl:
 
 odecl_body:
     /* nothing */ { [], [], [] }
-  | odecl_body vdecl { add_vdecl $1 $2 }
-  | odecl_body fdecl { add_fdecl $1 $2 }
-  | odecl_body event { add_odecl $1 $2 }
+  | odecl_body vdecl { Gameobj.add_vdecl $1 $2 }
+  | odecl_body fdecl { Gameobj.add_fdecl $1 $2 }
+  | odecl_body event { Gameobj.add_edecl $1 $2 }
 
 
 formals_opt:

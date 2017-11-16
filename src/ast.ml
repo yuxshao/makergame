@@ -89,16 +89,16 @@ module Gameobj = struct
         if o.draw != [] then fail "draw" else { o with draw = block }
     in
     name, List.fold_left add_event initial_obj events
+
+  let add_vdecl (vdecls, fdecls, edecls) vdecl =
+    (vdecl :: vdecls, fdecls, edecls)
+
+  let add_fdecl (vdecls, fdecls, edecls) fdecl =
+    (vdecls, fdecl :: fdecls, edecls)
+
+  let add_edecl (vdecls, fdecls, edecls) edecl =
+    (vdecls, fdecls, edecl :: edecls)
 end
-
-let add_vdecl (vdecls, fdecls, odecls) vdecl =
-  (vdecl :: vdecls, fdecls, odecls)
-
-let add_fdecl (vdecls, fdecls, odecls) fdecl =
-  (vdecls, fdecl :: fdecls, odecls)
-
-let add_odecl (vdecls, fdecls, odecls) odecl =
-  (vdecls, fdecls, odecl :: odecls)
 
 module Namespace = struct
   type t = {
@@ -109,8 +109,21 @@ module Namespace = struct
   }
   and decl = string * t
 
-  let make (variables, functions, gameobjs) =
-    { variables; functions; gameobjs; namespaces = [] }
+  let make (variables, functions, gameobjs, namespaces) =
+    { variables; functions; gameobjs; namespaces }
+
+  let add_vdecl (vdecls, fdecls, odecls, ndecls) vdecl =
+    (vdecl :: vdecls, fdecls, odecls, ndecls)
+
+  let add_fdecl (vdecls, fdecls, odecls, ndecls) fdecl =
+    (vdecls, fdecl :: fdecls, odecls, ndecls)
+
+  let add_odecl (vdecls, fdecls, odecls, ndecls) odecl =
+    (vdecls, fdecls, odecl :: odecls, ndecls)
+
+  let add_ndecl (vdecls, fdecls, odecls, ndecls) ndecl =
+    (vdecls, fdecls, odecls, ndecl :: ndecls)
+
 end
 
 type program = Namespace.t
