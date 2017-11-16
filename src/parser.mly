@@ -76,8 +76,8 @@ formals_opt:
   | formal_list   { $1 }
 
 formal_list:
-    typ ID                   { [($1,$2)] }
-  | typ ID COMMA formal_list { ($1,$2) :: $4 }
+    typ ID                   { [($2,$1)] }
+  | typ ID COMMA formal_list { ($2,$1) :: $4 }
 
 typ:
     INT { Int }
@@ -95,7 +95,7 @@ typ:
    initializer.I think vdecl, vdecldef, expr_opt can go in for
    initializer, while only vdecldef and exprs can go in conditions. */
 vdecl:
-  | typ ID SEMI { ($1, $2) }
+  | typ ID SEMI { ($2, $1) }
 
 stmt_list:
     /* nothing */  { [] }

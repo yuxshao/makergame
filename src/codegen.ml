@@ -87,7 +87,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
   StringMap.iter
     (fun _ (t, gdecl) ->
        let members = gdecl.A.Gameobj.members in
-       let ll_members = List.map (fun (typ, _) -> ltype_of_typ typ) members in
+       let ll_members = List.map (fun (_, typ) -> ltype_of_typ typ) members in
        L.struct_set_body t (Array.of_list (gameobj_t :: node_t :: ll_members)) false)
     gameobj_types;
 
@@ -95,10 +95,10 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     let function_decl m (name, func) =
       let formals =
         match obj with
-        | Some o -> (A.Object(o), "this") :: func.A.formals
+        | Some o -> ("this", A.Object(o)) :: func.A.formals
         | None -> func.A.formals
       in
-      let formal_types = Array.of_list (List.map (fun (t,_) -> ltype_of_typ t) formals) in
+      let formal_types = Array.of_list (List.map (fun (_, t) -> ltype_of_typ t) formals) in
       let ftype = L.function_type (ltype_of_typ func.A.typ) formal_types in
       let d_function name =
         match func.A.block with
@@ -111,7 +111,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
 
   (* Declare each global variable; remember its value in a map *)
   let global_vars =
-    let var m (t, n) =
+    let var m (n, t) =
       let init = L.const_null (ltype_of_typ t)
       in StringMap.add n (L.define_global n init the_module, t) m
     in
@@ -171,7 +171,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
       L.build_bitcast node (L.pointer_type obj_type) objname builder
     in
     let (_, objtype) = StringMap.find objname gameobj_types in
-    let add_member (map, ind) (typ, name) =
+    let add_member (map, ind) (name, typ) =
       let member_var = L.build_struct_gep llobj ind name builder in
       (StringMap.add name (member_var, typ) map, ind + 1)
     in
@@ -534,7 +534,7 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
      Returns the builder for the statement's successor. Builder is
      guaranteed to point to a block without a terminator. *)
   let rec stmt fn break_bb ret_t (builder, scope) = function
-    | A.Decl (typ, name) ->
+    | A.Decl (name, typ) ->
       let vscope, fscope = scope in
       let local_var = L.build_alloca (ltype_of_typ typ) name builder in
       builder, (StringMap.add name (local_var, typ) vscope, fscope)
@@ -595,11 +595,11 @@ let translate ((globals, functions, gameobjs) : Ast.program) =
     (* If this is a function in a gameobj, add 'this' to the arguments *)
     let formals =
       match gameobj with
-      | Some obj -> (A.Object(obj), "this") :: formals
+      | Some obj -> ("this", A.Object(obj)) :: formals
       | None -> formals
     in
     let formal_scope =
-      let add_formal m (t, n) p =
+      let add_formal m (n, t) p =
         L.set_value_name n p;
         let local = L.build_alloca (ltype_of_typ t) n builder in
         ignore (L.build_store p local builder);

@@ -22,7 +22,7 @@ let check ((globals, functions, gameobjs) : Ast.program) =
 
   (* Raise an exception if a given binding is to a void type *)
   let check_not_void exceptf = function
-    | (Void, n) -> failwith (exceptf n)
+    | (n, Void) -> failwith (exceptf n)
     | _ -> ()
   in
 
@@ -46,14 +46,14 @@ let check ((globals, functions, gameobjs) : Ast.program) =
 
   List.iter (check_not_void (fun n -> "illegal void global " ^ n)) globals;
 
-  report_duplicate (fun n -> "duplicate global " ^ n) (List.map snd globals);
+  report_duplicate (fun n -> "duplicate global " ^ n) (List.map fst globals);
 
   (**** Checking Functions ****)
 
   (* Add built-in function declarations *)
   let functions =
     let add ~fname ~arg_type list =
-      (fname, { typ = Void; formals = [(arg_type, "x")]; block = None; gameobj = None }) :: list
+      (fname, { typ = Void; formals = [("x", arg_type)]; block = None; gameobj = None }) :: list
     in
     functions
     |> add ~fname:"print"       ~arg_type:Int
@@ -89,8 +89,7 @@ let check ((globals, functions, gameobjs) : Ast.program) =
   in
 
   let gameobj_scope o =
-    List.fold_left
-      (fun m (t, n) -> add_to_scope ~loc:(o.Gameobj.name ^ " members") m (n, t))
+    List.fold_left (add_to_scope ~loc:(o.Gameobj.name ^ " members"))
       StringMap.empty o.Gameobj.members
   in
 
@@ -177,7 +176,7 @@ let check ((globals, functions, gameobjs) : Ast.program) =
                 " arguments in " ^ loc)
     else
       List.map2
-        (fun (ft, _) ex -> let (et, ex') = expr scope ex in
+        (fun (_, ft) ex -> let (et, ex') = expr scope ex in
           ignore (check_assign ft et
                     ("illegal actual argument found " ^ string_of_typ et ^
                      " expected " ^ string_of_typ ft ^ " in " ^ string_of_expr ex)); ex')
@@ -194,16 +193,16 @@ let check ((globals, functions, gameobjs) : Ast.program) =
 
     (* Check duplicate locals *)
     List.fold_left
-      (fun a n -> match n with Decl (_, n) -> n :: a | _ -> a) [] block
+      (fun a n -> match n with Decl (n, _) -> n :: a | _ -> a) [] block
     |> report_duplicate
       (fun n -> "duplicate local '" ^ n ^ "' in single block of " ^ name);
 
     (* Verify a statement or throw an exception *)
     let rec stmt scope = function
-      | Decl (t, n) as s ->
+      | Decl d as s ->
         let vscope, fscope = scope in
-        check_not_void (fun n -> "illegal void local " ^ n ^ " in " ^ name) (t, n);
-        s, (add_to_scope ~loc:name vscope (n, t), fscope)
+        check_not_void (fun n -> "illegal void local " ^ n ^ " in " ^ name) d;
+        s, (add_to_scope ~loc:name vscope d, fscope)
       | Break -> Break, scope
       | Block b -> Block (check_block b ~scope ~name ~return), scope
       | Expr e -> let (_, e') = expr scope e in Expr e', scope
@@ -251,7 +250,7 @@ let check ((globals, functions, gameobjs) : Ast.program) =
 
     let scope =
       let vscope, fscope = scope in
-      List.fold_left (fun m (t, n) -> add_to_scope ~loc:("formals of " ^ name) m (n, t))
+      List.fold_left (add_to_scope ~loc:("formals of " ^ name))
         vscope func.formals, fscope
     in
 
@@ -259,7 +258,7 @@ let check ((globals, functions, gameobjs) : Ast.program) =
        edge cases *)
     report_duplicate
       (fun n -> "duplicate formal " ^ n ^ " in " ^ name)
-      (List.map snd func.formals);
+      (List.map fst func.formals);
 
     let block =
       match func.block with
@@ -281,7 +280,7 @@ let check ((globals, functions, gameobjs) : Ast.program) =
 
     report_duplicate
       (fun n -> "duplicate members " ^ n ^ " in " ^ obj.name)
-      (List.map snd obj.members);
+      (List.map fst obj.members);
 
     (* Add "this" and gameobj members to scope *)
     (* gameobj_scope also checks that no members are named 'this' *)
@@ -306,8 +305,7 @@ let check ((globals, functions, gameobjs) : Ast.program) =
   in
 
   let scope =
-    List.fold_left (fun m (t, n) -> add_to_scope ~loc:"globals" m (n, t))
-      StringMap.empty globals,
+    List.fold_left (add_to_scope ~loc:"globals") StringMap.empty globals,
     global_functions
   in
   let functions' = List.map (check_function ~scope) functions in

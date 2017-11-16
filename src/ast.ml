@@ -16,7 +16,7 @@ type typ =
   | Object of string (* lexer prevents object names from overlapping with type names *)
   | Arr of typ * int
 
-type bind = typ * string
+type bind = string * typ
 
 type expr =
     Literal of int
@@ -156,7 +156,7 @@ let rec string_of_typ = function
   | Arr(typ, len) -> (string_of_typ typ) ^ "[" ^ (string_of_int len) ^ "]"
   | String -> "string"
 
-let string_of_vdecl (t, id) = string_of_typ t ^ " " ^ id ^ ";\n"
+let string_of_vdecl (id, t) = string_of_typ t ^ " " ^ id ^ ";\n"
 
 let rec string_of_stmt = function
   | Decl d -> string_of_vdecl d
@@ -184,7 +184,7 @@ let string_of_fdecl (name, func) =
     | Some block -> "", string_of_block block
   in
   prefix ^ string_of_typ func.typ ^ " " ^ name ^ "(" ^
-  String.concat ", " (List.map snd func.formals) ^ ")\n" ^ suffix
+  String.concat ", " (List.map fst func.formals) ^ ")\n" ^ suffix
 
 let string_of_gameobj obj =
   let open Gameobj in
