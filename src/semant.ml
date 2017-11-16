@@ -36,8 +36,8 @@ let check_assign lvaluet rvaluet err =
 
    Check each global variable, then check each function *)
 
-let check { Namespace.variables = globals ; functions ; gameobjs; namespaces } =
-
+let rec check_namespace (nname, { Namespace.variables = globals;
+                                  functions ; gameobjs; namespaces }) =
   (**** Checking Global Variables ****)
 
   List.iter (check_not_void (fun n -> "illegal void global " ^ n)) globals;
@@ -301,13 +301,13 @@ let check { Namespace.variables = globals ; functions ; gameobjs; namespaces } =
     List.fold_left (add_to_scope ~loc:"globals") StringMap.empty globals,
     global_functions
   in
-  let functions' = List.map (check_function ~scope) functions in
-  let gameobjs' = List.map (check_gameobj ~scope) gameobjs in
+  let functions = List.map (check_function ~scope) functions in
+  let gameobjs = List.map (check_gameobj ~scope) gameobjs in
 
   (* add gameobj main if it doesn't exist but a void main() function does *)
-  let gameobjs' =
+  let gameobjs =
     if StringMap.mem "main" gameobj_decls
-    then gameobjs'
+    then gameobjs
     else
       let undef_err = "either main game object or function must be defined" in
       let not_void_err = "main function must return void" in
@@ -320,7 +320,9 @@ let check { Namespace.variables = globals ; functions ; gameobjs; namespaces } =
       in
       (match fn.typ with Void -> () | _ -> failwith not_void_err);
       (match fn.formals with [] -> () | _ -> failwith arg_err);
-      (Gameobj.make "main" ([], [], [Gameobj.Create, block])) :: gameobjs'
+      (Gameobj.make "main" ([], [], [Gameobj.Create, block])) :: gameobjs
   in
 
-  { Namespace.variables = globals; functions = functions'; gameobjs = gameobjs'; namespaces }
+  let namespaces = List.map check_namespace namespaces in
+
+  nname, { Namespace.variables = globals; functions; gameobjs; namespaces }
