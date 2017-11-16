@@ -4,43 +4,39 @@ open Ast
 
 module StringMap = Map.Make(String)
 
+(* Raise an exception if the given list has a duplicate *)
+let report_duplicate exceptf list =
+  let rec helper = function
+    | n1 :: n2 :: _ when n1 = n2 -> failwith (exceptf n1)
+    | _ :: t -> helper t
+    | [] -> ()
+  in helper (List.sort compare list)
+
+(* Raise an exception if a given binding is to a void type *)
+let check_not_void exceptf = function
+  | (n, Void) -> failwith (exceptf n)
+  | _ -> ()
+
+(* Add to the scope. But only if we're not using the identifier 'this' *)
+(* TODO: mention where 'this' can be used. anywhere but assignment but declaration as a regular obj identifier *)
+let add_to_scope ?loc m (n, t) =
+  let failstr = "cannot shadow or overwrite identifier 'this'" in
+  match loc, n with
+  | None, "this" -> failwith failstr
+  | Some l, "this" -> failwith (failstr ^ " in " ^ l)
+  | _ -> StringMap.add n t m
+
+(* Raise an exception of the given rvalue type cannot be assigned to
+   the given lvalue type *)
+let check_assign lvaluet rvaluet err =
+  if lvaluet = rvaluet then lvaluet else failwith err
+
 (* Semantic checking of a program. Returns void if successful,
    throws an exception if something is wrong.
 
    Check each global variable, then check each function *)
 
 let check { Namespace.variables = globals ; functions ; gameobjs; namespaces } =
-
-  (* Raise an exception if the given list has a duplicate *)
-  let report_duplicate exceptf list =
-    let rec helper = function
-      | n1 :: n2 :: _ when n1 = n2 -> failwith (exceptf n1)
-      | _ :: t -> helper t
-      | [] -> ()
-    in helper (List.sort compare list)
-  in
-
-  (* Raise an exception if a given binding is to a void type *)
-  let check_not_void exceptf = function
-    | (n, Void) -> failwith (exceptf n)
-    | _ -> ()
-  in
-
-  (* Add to the scope. But only if we're not using the identifier 'this' *)
-  (* TODO: mention where 'this' can be used. anywhere but assignment but declaration as a regular obj identifier *)
-  let add_to_scope ?loc m (n, t) =
-    let failstr = "cannot shadow or overwrite identifier 'this'" in
-    match loc, n with
-    | None, "this" -> failwith failstr
-    | Some l, "this" -> failwith (failstr ^ " in " ^ l)
-    | _ -> StringMap.add n t m
-  in
-
-  (* Raise an exception of the given rvalue type cannot be assigned to
-     the given lvalue type *)
-  let check_assign lvaluet rvaluet err =
-    if lvaluet = rvaluet then lvaluet else failwith err
-  in
 
   (**** Checking Global Variables ****)
 
