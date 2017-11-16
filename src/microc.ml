@@ -15,10 +15,10 @@ let _ =
   match action with
     Ast -> print_string (Ast.string_of_program ast)
   | LLVM_IR ->
-    let _, sast = Semant.check_namespace ("", ast) in
+    let sast = Semant.check ast in
     print_string (Llvm.string_of_llmodule (Codegen.translate sast))
   | Compile ->
-    let _, sast = Semant.check_namespace ("", ast) in
+    let sast = Semant.check ast in
     let m = Codegen.translate sast in
     Llvm_analysis.assert_valid_module m;
     print_string (Llvm.string_of_llmodule m)

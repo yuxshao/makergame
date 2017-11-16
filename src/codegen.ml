@@ -270,7 +270,7 @@ let translate the_program =
     let llns =
       let llvars =
         let var m (n, t) =
-          let llname = "variable." ^ n in
+          let llname = "variable." ^ nname ^ "::" ^ n in
           let init = L.const_null (ltype_of_typ t)
           in StringMap.add n (L.define_global llname init the_module, t) m
         in
@@ -278,7 +278,7 @@ let translate the_program =
       in
 
       let llfns =
-        let to_llname name = "function." ^ name in
+        let to_llname name = "function." ^ nname ^ "::" ^ name in
         fn_decls functions None to_llname
       in
 
@@ -286,7 +286,7 @@ let translate the_program =
         let open A.Gameobj in
 
         let event_decls (gname, g) =
-          let event_to_llname gname ename = "object." ^ gname ^ ".event." ^ ename in
+          let event_to_llname gname ename = "object." ^ nname ^ "::" ^ gname ^ ".event." ^ ename in
           let add_decl m (f_name, _) =
             let name = event_to_llname gname f_name in
             let llfn_t = L.function_type void_t [|ltype_of_typ (A.Object(gname))|] in
@@ -298,7 +298,7 @@ let translate the_program =
 
         let make_llgameobj (gname, g) =
           (* Declare the struct type *)
-          let obj_fn_to_llname gname ename = "object." ^ gname ^ ".function." ^ ename in
+          let obj_fn_to_llname gname ename = "object." ^ nname ^ "::" ^ gname ^ ".function." ^ ename in
           let gt = L.named_struct_type context gname in
 
           (* Set its body *)
@@ -307,7 +307,7 @@ let translate the_program =
           L.struct_set_body gt (Array.of_list (gameobj_t :: node_t :: ll_members)) false;
 
           (* Define linked list heads for each object type *)
-          let ends = make_node_end ("gameobj." ^ gname) in
+          let ends = make_node_end ("object." ^ nname ^ "::" ^ gname) in
 
           { B.gtyp = gt; events = event_decls (gname, g); ends;
             methods = fn_decls g.methods (Some gname) (obj_fn_to_llname gname) }
@@ -317,7 +317,7 @@ let translate the_program =
       in
 
       let llnamespaces =
-        List.fold_left (fun m (n, ns) -> StringMap.add n (namespace (n, ns)) m)
+        List.fold_left (fun m (n, ns) -> StringMap.add (nname ^ "::" ^ n) (namespace (n, ns)) m)
           StringMap.empty namespaces
       in
       { B.variables = llvars; functions = llfns; gameobjs = llgameobjs; namespaces = llnamespaces }

@@ -304,17 +304,25 @@ let rec check_namespace (nname, { Namespace.variables = globals;
   let functions = List.map (check_function ~scope) functions in
   let gameobjs = List.map (check_gameobj ~scope) gameobjs in
 
+  (* TODO: ensure no duplicates in namespaces *)
+  let namespaces = List.map check_namespace namespaces in
+
+  nname, { Namespace.variables = globals; functions; gameobjs; namespaces }
+
+let check program =
+  let _, program = check_namespace ("", program) in
+
   (* add gameobj main if it doesn't exist but a void main() function does *)
+  let { Namespace.gameobjs; functions ; _ } = program in
   let gameobjs =
-    if StringMap.mem "main" gameobj_decls
+    if List.mem_assoc "main" gameobjs
     then gameobjs
     else
       let undef_err = "either main game object or function must be defined" in
       let not_void_err = "main function must return void" in
       let arg_err = "main function must take no arguments" in
-      let _, fn =
-        try check_function ~scope ("main", (StringMap.find "main" global_functions))
-        with Not_found -> failwith undef_err in
+      let fn =
+        try List.assoc "main" functions with Not_found -> failwith undef_err in
       let block =
         match fn.block with Some b -> b | None -> failwith undef_err
       in
@@ -322,8 +330,4 @@ let rec check_namespace (nname, { Namespace.variables = globals;
       (match fn.formals with [] -> () | _ -> failwith arg_err);
       (Gameobj.make "main" ([], [], [Gameobj.Create, block])) :: gameobjs
   in
-
-  (* TODO: ensure no duplicates in namespaces *)
-  let namespaces = List.map check_namespace namespaces in
-
-  nname, { Namespace.variables = globals; functions; gameobjs; namespaces }
+  { program with Namespace.gameobjs }
