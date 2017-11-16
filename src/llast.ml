@@ -11,6 +11,7 @@ type func = {
 
 type gameobj = {
   gtyp: L.lltype;
+  ends: L.llvalue * L.llvalue;
   methods: func StringMap.t;
   events: L.llvalue StringMap.t;
 }

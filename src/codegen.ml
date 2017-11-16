@@ -306,7 +306,10 @@ let translate the_program =
           let ll_members = List.map (fun (_, typ) -> ltype_of_typ typ) members in
           L.struct_set_body gt (Array.of_list (gameobj_t :: node_t :: ll_members)) false;
 
-          { B.gtyp = gt; events = event_decls (gname, g);
+          (* Define linked list heads for each object type *)
+          let ends = make_node_end ("gameobj." ^ gname) in
+
+          { B.gtyp = gt; events = event_decls (gname, g); ends;
             methods = fn_decls g.methods (Some gname) (obj_fn_to_llname gname) }
         in
         let add_llgameobj m (gname, g) = StringMap.add gname (make_llgameobj (gname, g)) m in
@@ -319,15 +322,6 @@ let translate the_program =
       in
       { B.variables = llvars; functions = llfns; gameobjs = llgameobjs; namespaces = llnamespaces }
     in
-
-    (* Define linked list heads for each object type *)
-    let obj_ends =
-      let add_end map name = StringMap.add name (make_node_end ("gameobj." ^ name)) map in
-      let names = List.map fst gameobjs in
-      List.fold_left add_end StringMap.empty names
-    in
-    let obj_end n = StringMap.find n obj_ends in
-    (* TODO: test case for order where i destroy myself and create a thing *)
 
     let find_function_decl name =
       try StringMap.find name (llns.B.functions)
@@ -345,6 +339,11 @@ let translate the_program =
         StringMap.find event (g.B.events)
       with Not_found -> failwith ("event " ^ oname ^ "." ^ event)
     in
+    let obj_end oname =
+      try (StringMap.find oname (llns.B.gameobjs)).B.ends
+      with Not_found -> failwith ("end " ^ oname)
+    in
+    (* TODO: test case for order where i destroy myself and create a thing *)
 
     (* Given value ll for an object of type objname, builds and returns scope of
        that object in StringMap. *)
