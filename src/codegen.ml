@@ -269,6 +269,18 @@ let translate the_program =
 
     let llgameobjs =
       let open A.Gameobj in
+
+      let event_decls (gname, g) =
+        let event_to_llname gname ename = "object." ^ gname ^ ".event." ^ ename in
+        let add_decl m (f_name, _) =
+          let name = event_to_llname gname f_name in
+          let llfn_t = L.function_type void_t [|ltype_of_typ (A.Object(gname))|] in
+          StringMap.add f_name (L.define_function name llfn_t the_module) m
+        in
+        List.fold_left add_decl StringMap.empty
+          [("create", g.create); ("step", g.step); ("destroy", g.destroy); ("draw", g.draw)]
+      in
+
       let make_llgameobj (gname, g) =
         (* Declare the struct type *)
         let obj_fn_to_llname gname ename = "object." ^ gname ^ ".function." ^ ename in
@@ -279,7 +291,8 @@ let translate the_program =
         let ll_members = List.map (fun (_, typ) -> ltype_of_typ typ) members in
         L.struct_set_body gt (Array.of_list (gameobj_t :: node_t :: ll_members)) false;
 
-        gt, fn_decls g.methods (Some gname) (obj_fn_to_llname gname)
+        { B.gtyp = gt; events = event_decls (gname, g);
+          methods = fn_decls g.methods (Some gname) (obj_fn_to_llname gname) }
       in
       let add_llgameobj m (gname, g) = StringMap.add gname (make_llgameobj (gname, g)) m in
       List.fold_left add_llgameobj StringMap.empty gameobjs
@@ -307,35 +320,20 @@ let translate the_program =
       fn_decls functions None global_fn_to_llname
     in
 
-    (* Define each function (arguments and return type) so we can call it *)
-    let obj_events =
-      let event_to_llname gname ename = "object." ^ gname ^ ".event." ^ ename in
-      let open A.Gameobj in
-      let event_decls (gname, g) =
-        let add_decl m (f_name, _) =
-          let name = event_to_llname gname f_name in
-          let llfn_t = L.function_type void_t [|ltype_of_typ (A.Object(gname))|] in
-          StringMap.add f_name (L.define_function name llfn_t the_module) m
-        in
-        List.fold_left add_decl StringMap.empty
-          [("create", g.create); ("step", g.step); ("destroy", g.destroy); ("draw", g.draw)]
-      in
-      List.fold_left (fun m (gname, g) -> StringMap.add gname (event_decls (gname, g)) m)
-        StringMap.empty gameobjs
-    in
-
     let find_function_decl name =
       try StringMap.find name global_fns
       with Not_found -> failwith ("global " ^ name)
     in
     let find_obj_fn_decl oname fname =
       try
-        let _, fns = StringMap.find oname llgameobjs in
-        StringMap.find fname fns
+        let g = StringMap.find oname llgameobjs in
+        StringMap.find fname (g.B.methods)
       with Not_found -> failwith ("obj " ^ oname ^ "." ^ fname)
     in
     let find_obj_event_decl oname event =
-      try StringMap.find event (StringMap.find oname obj_events)
+      try
+        let g = StringMap.find oname llgameobjs in
+        StringMap.find event (g.B.events)
       with Not_found -> failwith ("event " ^ oname ^ "." ^ event)
     in
 
@@ -344,8 +342,8 @@ let translate the_program =
     let gameobj_members objref objname builder =
       let llobj =
         let node = L.build_extractvalue objref 1 (objname ^ "_node") builder in
-        let (obj_type, _) = StringMap.find objname llgameobjs in
-        L.build_bitcast node (L.pointer_type obj_type) objname builder
+        let g = StringMap.find objname llgameobjs in
+        L.build_bitcast node (L.pointer_type g.B.gtyp) objname builder
       in
       let members = (List.assoc objname gameobjs).A.Gameobj.members in
       let add_member (map, ind) (name, typ) =
@@ -362,10 +360,10 @@ let translate the_program =
     let add_to_scope to_add scope = StringMap.fold StringMap.add scope to_add in
 
     let build_object_loop builder the_function ~objname ~body =
-      let objtype, _ = StringMap.find objname llgameobjs in
+      let g = StringMap.find objname llgameobjs in
       let body builder break_bb node =
         (* Calculating offsets to get the object pointer *)
-        let obj = build_container_of objtype 1 node objname context builder ~cast:node_t in
+        let obj = build_container_of (g.B.gtyp) 1 node objname context builder ~cast:node_t in
 
         let pred builder _ =
           (* Get values for the removal check *)
@@ -461,8 +459,8 @@ let translate the_program =
         in
         L.build_call fn.B.value (Array.of_list (obj :: actuals)) result builder
       | A.Create objname ->
-        let (objtype, _) = StringMap.find objname llgameobjs in
-        let llobj = L.build_malloc objtype objname builder in
+        let g = StringMap.find objname llgameobjs in
+        let llobj = L.build_malloc g.B.gtyp objname builder in
         let llnode = L.build_bitcast llobj nodeptr_t (objname ^ "_node") builder in
         let llobjnode =
           L.build_bitcast (L.build_struct_gep llobj 1 "" builder)
@@ -516,8 +514,8 @@ let translate the_program =
           ignore (L.build_store (L.const_int i64_t 0) idptr builder)
         in
         (* Find the list node connecting objects of this particular type *)
-        let llobjt, _ = StringMap.find objtype llgameobjs in
-        let obj = L.build_bitcast node (L.pointer_type llobjt) objtype builder in
+        let llg = StringMap.find objtype llgameobjs in
+        let obj = L.build_bitcast node (L.pointer_type llg.B.gtyp) objtype builder in
         (* Disconnect particular object neighbours' node links. *)
         let objnode = L.build_struct_gep obj 1 (objtype ^ "_node") builder in
         ignore (L.build_call list_rem_func [|objnode|] "" builder);
@@ -619,8 +617,8 @@ let translate the_program =
         global_vars |> add_to_scope member_scope |> add_to_scope formal_scope,
         match gameobj with
         | Some obj ->
-          let _, obj_fns = StringMap.find obj llgameobjs in
-          StringMap.fold StringMap.add obj_fns global_fns
+          let g = StringMap.find obj llgameobjs in
+          StringMap.fold StringMap.add g.B.methods global_fns
         | _ -> global_fns
       in
 

@@ -8,7 +8,12 @@ type func = {
   return: Ast.typ;
   gameobj: string option;
 }
-type gameobj = L.lltype * (func StringMap.t)
+
+type gameobj = {
+  gtyp: L.lltype;
+  methods: func StringMap.t;
+  events: L.llvalue StringMap.t;
+}
 
 type namespace = {
   variables: L.llvalue StringMap.t;
