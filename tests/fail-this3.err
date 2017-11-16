@@ -1,1 +1,1 @@
-Fatal error: exception Failure("cannot shadow or overwrite identifier 'this' in formals of compute")
+Fatal error: exception Failure("cannot shadow or overwrite identifier 'this' in formals of ::compute")

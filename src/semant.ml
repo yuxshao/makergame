@@ -40,9 +40,9 @@ let rec check_namespace (nname, { Namespace.variables = globals;
                                   functions ; gameobjs; namespaces }) =
   (**** Checking Global Variables ****)
 
-  List.iter (check_not_void (fun n -> "illegal void global " ^ n)) globals;
+  List.iter (check_not_void (fun n -> "illegal void global " ^ nname ^ "::" ^ n)) globals;
 
-  report_duplicate (fun n -> "duplicate global " ^ n) (List.map fst globals);
+  report_duplicate (fun n -> "duplicate global " ^ nname ^ "::" ^ n) (List.map fst globals);
 
   (**** Checking Functions ****)
 
@@ -58,31 +58,31 @@ let rec check_namespace (nname, { Namespace.variables = globals;
     |> add ~fname:"printstr"    ~arg_type:String
   in
 
-  report_duplicate (fun n -> "duplicate function " ^ n) (List.map fst functions);
-  report_duplicate (fun n -> "duplicate gameobj " ^ n) (List.map fst gameobjs);
+  report_duplicate (fun n -> "duplicate function " ^ nname ^ "::" ^ n) (List.map fst functions);
+  report_duplicate (fun n -> "duplicate gameobj " ^ nname ^ "::" ^ n) (List.map fst gameobjs);
 
   let global_functions =
-    List.fold_left (add_to_scope ~loc:"function declarations")
+    List.fold_left (add_to_scope ~loc:(nname ^ " function declarations"))
       StringMap.empty functions
   in
 
   let gameobj_decls =
-    List.fold_left (add_to_scope ~loc:"gameobj declarations")
+    List.fold_left (add_to_scope ~loc:(nname ^ "gameobj declarations"))
       StringMap.empty gameobjs
   in
 
   let gameobj_decl s =
     try StringMap.find s gameobj_decls
-    with Not_found -> failwith ("unrecognized game object " ^ s)
+    with Not_found -> failwith ("unrecognized game object " ^ nname ^ "::" ^ s)
   in
 
   let gameobj_functions o =
-    List.fold_left (add_to_scope ~loc:(o ^ " gameobj function declarations"))
+    List.fold_left (add_to_scope ~loc:(nname ^ "::" ^ o ^ " gameobj function declarations"))
       StringMap.empty (gameobj_decl o).Gameobj.methods
   in
 
   let gameobj_scope name =
-    List.fold_left (add_to_scope ~loc:(name ^ " members"))
+    List.fold_left (add_to_scope ~loc:(nname ^ "::" ^ name ^ " members"))
       StringMap.empty (gameobj_decl name).Gameobj.members
   in
 
@@ -238,25 +238,25 @@ let rec check_namespace (nname, { Namespace.variables = globals;
 
   let check_function ~scope (name, func) =
     List.iter
-      (check_not_void (fun n -> "illegal void formal " ^ n ^ " in " ^ name))
+      (check_not_void (fun n -> "illegal void formal " ^ n ^ " in " ^ nname ^ "::" ^ name))
       func.formals;
 
     let scope =
       let vscope, fscope = scope in
-      List.fold_left (add_to_scope ~loc:("formals of " ^ name))
+      List.fold_left (add_to_scope ~loc:("formals of " ^ nname ^ "::" ^ name))
         vscope func.formals, fscope
     in
 
     (* formals can have the same name as locals. is this okay? think about these
        edge cases *)
     report_duplicate
-      (fun n -> "duplicate formal " ^ n ^ " in " ^ name)
+      (fun n -> "duplicate formal " ^ n ^ " in " ^ nname ^ "::" ^ name)
       (List.map fst func.formals);
 
     let block =
       match func.block with
       | Some block ->
-        Some (check_block ~scope ~name ~return:func.typ block)
+        Some (check_block ~scope ~name:(nname ^ "::" ^ name) ~return:func.typ block)
       | None -> None
     in
     name, { func with block = block }
@@ -286,11 +286,11 @@ let rec check_namespace (nname, { Namespace.variables = globals;
     let check_obj_fn (fname, func) =
       match func.block with
       | Some _ -> check_function ~scope (fname, func)
-      | _ -> failwith ("illegal extern function " ^ name ^ "::" ^ fname)
+      | _ -> failwith ("illegal extern function " ^ nname ^ "::" ^ name ^ "::" ^ fname)
     in
     let check_event (fname, eventtype, block) =
       eventtype,
-      check_block ~scope ~name:(name ^ "::" ^ fname) ~return:Void block
+      check_block ~scope ~name:(nname ^ "::" ^ name ^ "::" ^ fname) ~return:Void block
     in
     let methods' = List.map check_obj_fn obj.methods in
     let blocks' = List.map check_event (obj_fn_list obj) in
@@ -298,7 +298,7 @@ let rec check_namespace (nname, { Namespace.variables = globals;
   in
 
   let scope =
-    List.fold_left (add_to_scope ~loc:"globals") StringMap.empty globals,
+    List.fold_left (add_to_scope ~loc:(nname ^ " globals")) StringMap.empty globals,
     global_functions
   in
   let functions = List.map (check_function ~scope) functions in
