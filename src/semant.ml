@@ -117,7 +117,6 @@ let rec check_namespace (nname, namespace) =
   in
   (* Return the type of an expression and the new expression or throw an exception *)
   let rec expr scope e = match e with
-    (* TODO: reorganize order *)
     | Literal _ -> Int, e
     | BoolLit _ -> Bool, e
     | FloatLit _ -> Float, e
@@ -125,22 +124,20 @@ let rec check_namespace (nname, namespace) =
     | Binop(e1, op, _, e2) ->
       let (t1, e1') = expr scope e1 and (t2, e2') = expr scope e2 in
       (match op with
-         Add | Sub | Mult | Div when t1 = Int && t2 = Int -> Int, Binop(e1', op, Int, e2')
+       | Add | Sub | Mult | Div when t1 = Int && t2 = Int -> Int, Binop(e1', op, Int, e2')
        | Add | Sub | Mult | Div when t1 = Float && t2 = Float -> Float, Binop(e1', op, Float, e2')
-       (* TODO: restrict allowed types for boolean comparison. e.g. should we support string equality? *)
-       | Equal | Neq when t1 = t2  -> Bool, Binop(e1', op, t1, e2')
+       (* TODO: string, obj equality *)
+       | Equal | Neq when t1 = t2 && (t1 = Float || t1 = Int) -> Bool, Binop(e1', op, t1, e2')
        | Less | Leq | Greater | Geq when t1 = Int && t2 = Int -> Bool, Binop(e1', op, Int, e2')
        | Less | Leq | Greater | Geq when t1 = Float && t2 = Float -> Bool, Binop(e1', op, Float, e2')
        | And | Or when t1 = Bool && t2 = Bool -> Bool, Binop(e1', op, Bool, e2')
        | _ -> failwith ("illegal binary operator " ^
                         string_of_typ t1 ^ " " ^ string_of_op op ^ " " ^
-                        string_of_typ t2 ^ " in " ^ string_of_expr e)
-      )
+                        string_of_typ t2 ^ " in " ^ string_of_expr e))
     | Unop(op, _, ex) -> let (t, ex') = expr scope ex in
-      (match op with
-         Neg when t = Int -> Int, Unop(op, Int, ex')
-       | Neg when t = Int -> Float, Unop(op, Float, ex')
-       | Not when t = Bool -> Bool, Unop(op, Bool, ex')
+      (match op, t with
+       | Neg, Int | Neg, Float -> t, Unop(op, t, ex')
+       | Not, Bool -> Bool, Unop(op, Bool, ex')
        | _ -> failwith ("illegal unary operator " ^ string_of_uop op ^
                         string_of_typ t ^ " in " ^ string_of_expr e))
     | Noexpr -> Void, e
@@ -152,13 +149,12 @@ let rec check_namespace (nname, namespace) =
                           string_of_expr e), Assign(l', r')
     | Asnop(e1, opasn, _, e2) ->
       let (t1, e1') = expr scope e1 and (t2, e2') = expr scope e2 in
-      (match opasn with
-        Addasn | Subasn | Multasn | Divasn when t1 = Int && t2 = Int -> Int, Asnop(e1', opasn, Int, e2')
-       | Addasn | Subasn | Multasn | Divasn when t1 = Float && t2 = Float -> Float, Asnop(e1', opasn, Float, e2')
+      (match t1, t2 with
+       | Int, Int     -> Int,   Asnop(e1', opasn, Int, e2')
+       | Float, Float -> Float, Asnop(e1', opasn, Float, e2')
        | _ -> failwith ("illegal assign operator " ^
                         string_of_typ t1 ^ " " ^ string_of_asnop opasn ^ " " ^
-                        string_of_typ t2 ^ " in " ^ string_of_expr e)
-      )
+                        string_of_typ t2 ^ " in " ^ string_of_expr e))
     | Id (chain, name) ->
       let t =
         try match chain with
