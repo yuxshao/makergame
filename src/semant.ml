@@ -40,7 +40,8 @@ let rec check_namespace (nname, namespace) =
   let { Namespace.variables = globals; functions ; gameobjs; namespaces } = namespace in
 
   (**** Checking Namespaces ****)
-  (* TODO: ensure no duplicates in namespaces *)
+  report_duplicate (fun n -> "duplicate namespace " ^ nname ^ "::" ^ n) (List.map fst namespaces);
+
   let namespaces = List.map check_namespace namespaces in
 
   (**** Checking Global Variables ****)
