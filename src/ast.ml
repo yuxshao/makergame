@@ -3,7 +3,7 @@
 type op = Add | Sub | Mult | Div | Expo | Modulo | Equal | Neq | Less | Leq |
           Greater | Geq | And | Or
 
-type asnop = Addasn | Minusasn | Timeasn | Divasn
+type asnop = Addasn | Subasn | Multasn | Divasn
 
 type uop = Neg | Not
 
@@ -21,7 +21,10 @@ type typ =
   | Object of id_chain          (* object type, in relative position of namespaces *)
   | Arr of typ * int
 
-type bind = string * typ
+module Var = struct
+  type t = typ
+  type decl = string * t
+end
 
 type expr =
     Literal of int
@@ -43,7 +46,7 @@ type expr =
   | Noexpr
 
 type stmt =
-  | Decl of bind
+  | Decl of Var.decl
   | Block of block
   | Expr of expr
   | Break
@@ -54,21 +57,23 @@ type stmt =
   | While of expr * stmt
 and block = stmt list
 
-type func = {
-  typ : typ;
-  formals : bind list;
-  gameobj : string option;
-  block : block option;
-}
-type func_decl = string * func
+module Func = struct
+  type t = {
+    typ : typ;
+    formals : Var.decl list;
+    gameobj : string option;
+    block : block option;
+  }
+  type decl = string * t
+end
 
 module Gameobj = struct
   type event_t = Create | Destroy | Step | Draw
 
   (* consider using this for the AST post-semant *)
   type t = {
-    members : bind list;
-    methods : func_decl list;
+    members : Var.decl list;
+    methods : Func.decl list;
     create : block;
     step : block;
     destroy : block;
@@ -78,7 +83,7 @@ module Gameobj = struct
 
   let make name (members, methods, events) =
     (* Tag each method with this object name *)
-    let methods = List.map (fun (n, x) -> n, { x with gameobj = Some name }) methods in
+    let methods = List.map (fun (n, x) -> n, { x with Func.gameobj = Some name }) methods in
     let initial_obj =
       { members; methods; create = []; step = []; destroy = []; draw = [] }
     in
@@ -106,12 +111,11 @@ module Gameobj = struct
     (vdecls, fdecls, edecl :: edecls)
 end
 
-(* TODO: really fix up these names. bind -> variable or modules, consistent naming *)
 module Namespace = struct
   type t = {
     namespaces : decl list;
-    variables : bind list;
-    functions : func_decl list;
+    variables : Var.decl list;
+    functions : Func.decl list;
     gameobjs : Gameobj.decl list;
   }
   and decl = string * t
@@ -163,8 +167,8 @@ let string_of_chain (c, e) = (List.fold_left (fun s x -> s ^ x ^ "::") "" c) ^ e
 
 let string_of_asnop = function
     Addasn -> "+="
-  | Minusasn -> "-="
-  | Timeasn -> "*="
+  | Subasn -> "-="
+  | Multasn -> "*="
   | Divasn -> "/="
 
 let rec string_of_expr = function
@@ -221,6 +225,7 @@ and string_of_block block =
   "{\n" ^ String.concat "" (List.map string_of_stmt block) ^ "}\n"
 
 let string_of_fdecl (name, func) =
+  let open Func in
   let prefix, suffix =
     match func.block with
     | None -> "extern ", ""

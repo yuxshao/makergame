@@ -55,9 +55,9 @@ code_block:
 
 fdecl:
  | EXTERN typ ID LPAREN formals_opt RPAREN SEMI
-     { $3, { typ = $2 ; formals = $5 ; gameobj = None ; block = None } }
+     { $3, { Func.typ = $2 ; formals = $5 ; gameobj = None ; block = None } }
  | typ ID LPAREN formals_opt RPAREN code_block
-     { $2, { typ = $1 ; formals = $4 ; gameobj = None ; block = Some $6 } }
+     { $2, { Func.typ = $1 ; formals = $4 ; gameobj = None ; block = Some $6 } }
 
 event:
   | EVENT CREATE code_block { (Gameobj.Create, $3) }
@@ -139,8 +139,8 @@ expr:
   | expr MODULO expr   { Binop($1, Modulo, Void,  $3) }
   | expr EQ     expr   { Binop($1, Equal, Void,   $3) }
   | expr ADDASN expr   { Asnop($1, Addasn, Void, $3) }
-  | expr MINUSASN expr { Asnop($1, Minusasn, Void, $3) }
-  | expr TIMEASN expr  { Asnop($1, Timeasn, Void, $3) }
+  | expr MINUSASN expr { Asnop($1, Subasn, Void, $3) }
+  | expr TIMEASN expr  { Asnop($1, Multasn, Void, $3) }
   | expr DIVASN expr   { Asnop($1, Divasn, Void, $3) }
   | expr NEQ    expr   { Binop($1, Neq, Void,  $3) }
   | expr LT     expr   { Binop($1, Less, Void, $3) }

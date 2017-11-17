@@ -247,22 +247,23 @@ let translate the_program =
     let { A.Namespace.variables = globals;
           functions ; gameobjs ; namespaces } = the_namespace in
     let fn_decls functions obj to_llname =
+      let open A.Func in
       let function_decl m (name, func) =
         let formals =
           match obj with
-          | Some o -> ("this", A.Object([], o)) :: func.A.formals
-          | None -> func.A.formals
+          | Some o -> ("this", A.Object([], o)) :: func.formals
+          | None -> func.formals
         in
         let formal_types = Array.of_list (List.map (fun (_, t) -> ltype_of_typ t) formals) in
-        let ftype = L.function_type (ltype_of_typ func.A.typ) formal_types in
+        let ftype = L.function_type (ltype_of_typ func.typ) formal_types in
         let d_function name =
-          match func.A.block with
+          match func.block with
           | Some _ -> L.define_function (to_llname name)
           | None -> L.declare_function name
         in
         let func = { B.value = d_function name ftype the_module;
-                     typ = ftype; return = func.A.typ;
-                     gameobj = func.A.gameobj } in
+                     typ = ftype; return = func.typ;
+                     gameobj = func.gameobj } in
         StringMap.add name func m
       in
       List.fold_left function_decl StringMap.empty functions
@@ -414,10 +415,10 @@ let translate the_program =
           (match t, asnop with
            | A.Int, A.Addasn ->  L.build_add le re "Asn" builder
            | A.Float, A.Addasn -> L.build_fadd le re "Asn" builder
-           | A.Int, A.Minusasn -> L.build_sub le re "Asn" builder
-           | A.Float, A.Minusasn -> L.build_fsub le re "Asn" builder
-           | A.Int, A.Timeasn -> L.build_mul le re "Asn" builder
-           | A.Float, A.Timeasn -> L.build_fmul le re "Asn" builder
+           | A.Int, A.Subasn -> L.build_sub le re "Asn" builder
+           | A.Float, A.Subasn -> L.build_fsub le re "Asn" builder
+           | A.Int, A.Multasn -> L.build_mul le re "Asn" builder
+           | A.Float, A.Multasn -> L.build_fmul le re "Asn" builder
            | A.Int, A.Divasn -> L.build_sdiv le re "Asn" builder
            | A.Float, A.Divasn -> L.build_fdiv le re "Asn" builder
            | _ -> assert false )
@@ -673,7 +674,7 @@ let translate the_program =
           | t -> L.build_ret (L.const_null (ltype_of_typ t)) builder)
     in
 
-    let build_function (fname, { A.block; formals; typ; gameobj = _ }) =
+    let build_function (fname, { A.Func.block; formals; typ; gameobj = _ }) =
       match block with
       | Some block ->
         let llfn = (find_function_decl fname).B.value in
@@ -684,7 +685,7 @@ let translate the_program =
 
     let build_obj_functions (gname, g) =
       let open A.Gameobj in
-      let build_fn (fname, { A.typ; formals; block; gameobj = _ }) =
+      let build_fn (fname, { A.Func.typ; formals; block; gameobj = _ }) =
         let llfn = (find_obj_fn_decl ([], gname) fname).B.value in
         match block with
         | Some block -> build_function_body llfn formals block typ ~gameobj:gname
