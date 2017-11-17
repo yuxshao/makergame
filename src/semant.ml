@@ -303,6 +303,10 @@ let rec check_namespace (nname, namespace) =
       (fun n -> "duplicate members " ^ n ^ " in " ^ name)
       (List.map fst obj.members);
 
+    report_duplicate
+      (fun n -> "duplicate methods " ^ n ^ " in " ^ name)
+      (List.map fst obj.methods);
+
     (* TODO: check duplicate functions *)
     (* Add "this" and gameobj members to scope *)
     (* gameobj_scope also checks that no members are named 'this' *)
