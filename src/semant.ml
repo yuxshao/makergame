@@ -36,8 +36,13 @@ let check_assign lvaluet rvaluet err =
 
    Check each global variable, then check each function *)
 
-let rec check_namespace (nname, { Namespace.variables = globals;
-                                  functions ; gameobjs; namespaces }) =
+let rec check_namespace (nname, namespace) =
+  let { Namespace.variables = globals; functions ; gameobjs; namespaces } = namespace in
+
+  (**** Checking Namespaces ****)
+  (* TODO: ensure no duplicates in namespaces *)
+  let namespaces = List.map check_namespace namespaces in
+
   (**** Checking Global Variables ****)
 
   List.iter (check_not_void (fun n -> "illegal void global " ^ nname ^ "::" ^ n)) globals;
@@ -66,41 +71,61 @@ let rec check_namespace (nname, { Namespace.variables = globals;
       StringMap.empty functions
   in
 
-  let gameobj_decls =
-    List.fold_left (add_to_scope ~loc:(nname ^ "gameobj declarations"))
-      StringMap.empty gameobjs
+  let namespace_of_chain chain =
+    let find ns n =
+      try List.assoc n ns.Namespace.namespaces
+      with Not_found -> failwith ("unrecognized namespace " ^ n ^ " in " ^ (String.concat "::" chain))
+    in
+    List.fold_left find namespace chain
   in
 
-  let gameobj_decl s =
-    try StringMap.find s gameobj_decls
+  (* TODO: stop using add_to_scope *)
+  (* Check each gameobj declaration *)
+  ignore (List.fold_left (add_to_scope ~loc:(nname ^ "gameobj declarations"))
+            StringMap.empty gameobjs);
+
+  let gameobj_decl (chain, s) =
+    try List.assoc s (namespace_of_chain chain).Namespace.gameobjs
     with Not_found -> failwith ("unrecognized game object " ^ nname ^ "::" ^ s)
   in
 
   let gameobj_functions o =
-    List.fold_left (add_to_scope ~loc:(nname ^ "::" ^ o ^ " gameobj function declarations"))
+    List.fold_left
+      (add_to_scope ~loc:(nname ^ "::" ^ string_of_chain o ^ " gameobj function declarations"))
       StringMap.empty (gameobj_decl o).Gameobj.methods
   in
 
   let gameobj_scope name =
-    List.fold_left (add_to_scope ~loc:(nname ^ "::" ^ name ^ " members"))
+    List.fold_left (add_to_scope ~loc:(nname ^ "::" ^ string_of_chain name ^ " members"))
       StringMap.empty (gameobj_decl name).Gameobj.members
   in
 
+  (* Object types from inner namespaces need to include the outer calling
+     namespace to remain valid references. *)
+  let add_typ_ns chain = function
+    | Object (c, n) -> Object (List.append chain c, n)
+    | _ as t -> t
+  in
   (* Check that the expression can indeed be assigned to *)
   let check_lvalue loc = function
-    | Id("this") -> failwith ("'this' cannot be assigned in '" ^ loc ^ "'")
+    | Id([], "this") -> failwith ("'this' cannot be assigned in '" ^ loc ^ "'")
     | Id _ | Member _ | Assign _ -> ()
     | _ -> failwith ("LHS ineligible for assignment in " ^ loc)
   in
   (* Return the type of an expression and the new expression or throw an exception *)
   let rec expr scope e = match e with
+    (* TODO: reorganize order *)
     | Literal _ -> Int, e
     | BoolLit _ -> Bool, e
     | FloatLit _ -> Float, e
     | StringLit _ -> String, e
-    | Id name ->
-      (try let vscope, _ = scope in StringMap.find name vscope, e
-      with Not_found -> failwith ("undeclared identifier " ^ name))
+    | Id (chain, name) ->
+      let t =
+        try match chain with
+          | [] -> let vscope, _ = scope in StringMap.find name vscope
+          | _ -> add_typ_ns chain (List.assoc name (namespace_of_chain chain).Namespace.variables)
+        with Not_found -> failwith ("undeclared identifier " ^ (string_of_chain (chain, name)))
+      in t, e
     | Member(e, _, name) ->
       (match expr scope e with
        | Object s, e' ->
@@ -108,9 +133,9 @@ let rec check_namespace (nname, { Namespace.variables = globals;
            try StringMap.find name (gameobj_scope s)
            with Not_found ->
              failwith ("undefined member " ^ name ^ " in " ^
-                       string_of_expr e ^ " of type " ^ s)
+                       string_of_expr e ^ " of type " ^ string_of_chain s)
          in
-         t, Member(e', s, name)
+         let ochain, _ = s in add_typ_ns ochain t, Member(e', s, name)
        | _ -> failwith ("cannot get member of non-object " ^ (string_of_expr e)))
     | Binop(e1, op, _, e2) -> let (t1, e1') = expr scope e1 and (t2, e2') = expr scope e2 in
       (match op with
@@ -139,24 +164,26 @@ let rec check_namespace (nname, { Namespace.variables = globals;
       check_assign lt rt ("illegal assignment " ^ string_of_typ lt ^
                           " = " ^ string_of_typ rt ^ " in " ^
                           string_of_expr e), Assign(l', r')
-    | Call(fname, actuals) as call ->
+    | Call((chain, fname), actuals) as call ->
       let fd =
-        try let _, fscope = scope in StringMap.find fname fscope
-        with Not_found -> failwith ("unrecognized function " ^ fname)
+        try match chain with
+          | [] -> let _, fscope = scope in StringMap.find fname fscope
+          | _ -> List.assoc fname (namespace_of_chain chain).Namespace.functions
+        with Not_found -> failwith ("unrecognized function " ^ (string_of_chain (chain, fname)))
       in
       let actuals' = check_call_actuals (string_of_expr call) actuals scope fd in
-      fd.typ, Call(fname, actuals')
+      add_typ_ns chain fd.typ, Call((chain, fname), actuals')
     | MemberCall(e, _, fname, actuals) as call ->
-      let fd, oname, e' = match expr scope e with
+      let fd, (ochain, oname), e' = match expr scope e with
         | Object s, e' ->
           (try StringMap.find fname (gameobj_functions s), s, e'
            with Not_found ->
              failwith ("undefined member " ^ fname ^ " in " ^
-                       string_of_expr e ^ " of type " ^ s))
+                       string_of_expr e ^ " of type " ^ string_of_chain s))
         | _ -> failwith ("cannot get member of non-object " ^ (string_of_expr e))
       in
       let actuals' = check_call_actuals (string_of_expr call) actuals scope fd in
-      fd.typ, MemberCall(e', oname, fname, actuals')
+      add_typ_ns ochain fd.typ, MemberCall(e', (ochain, oname), fname, actuals')
     | Create(obj_type) -> ignore(gameobj_decl obj_type); Object(obj_type), e
     | Destroy(e, _) ->
       match expr scope e with
@@ -275,13 +302,14 @@ let rec check_namespace (nname, { Namespace.variables = globals;
       (fun n -> "duplicate members " ^ n ^ " in " ^ name)
       (List.map fst obj.members);
 
+    (* TODO: check duplicate functions *)
     (* Add "this" and gameobj members to scope *)
     (* gameobj_scope also checks that no members are named 'this' *)
     let scope =
       let vscope, fscope = scope in
-      StringMap.fold StringMap.add vscope (gameobj_scope name)
-      |> StringMap.add "this" (Object(name)),
-      StringMap.fold StringMap.add fscope (gameobj_functions name)
+      StringMap.fold StringMap.add vscope (gameobj_scope ([], name))
+      |> StringMap.add "this" (Object([], name)),
+      StringMap.fold StringMap.add fscope (gameobj_functions ([], name))
     in
     let check_obj_fn (fname, func) =
       match func.block with
@@ -303,9 +331,6 @@ let rec check_namespace (nname, { Namespace.variables = globals;
   in
   let functions = List.map (check_function ~scope) functions in
   let gameobjs = List.map (check_gameobj ~scope) gameobjs in
-
-  (* TODO: ensure no duplicates in namespaces *)
-  let namespaces = List.map check_namespace namespaces in
 
   nname, { Namespace.variables = globals; functions; gameobjs; namespaces }
 

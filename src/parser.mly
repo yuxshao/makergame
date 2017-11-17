@@ -4,7 +4,7 @@
 open Ast
 %}
 
-%token SEMI LPAREN RPAREN LBRACK RBRACK LCURLY RCURLY COMMA PERIOD
+%token SEMI LPAREN RPAREN LBRACK RBRACK LCURLY RCURLY COMMA PERIOD DBCOLON
 %token PLUS MINUS TIMES DIVIDE EXPONENT MODULO ASSIGN NOT
 %token EQ NEQ LT LEQ GT GEQ TRUE FALSE AND OR
 %token BREAK RETURN IF ELSE FOR WHILE FOREACH
@@ -30,6 +30,7 @@ open Ast
 %left EXPONENT MODULO
 %right NOT NEG
 %left PERIOD
+%left DBCOLON
 
 %start program
 %type <Ast.program> program
@@ -90,7 +91,7 @@ typ:
   | VOID { Void }
   | FLOAT { Float }
   | STRING { String }
-  | ID { Object($1) }
+  | id_chain { Object($1) }
   | typ LBRACK LITERAL RBRACK { Arr($1, $3) }
 
 /* TODO: allow typ ID EQ EXPR (vdecldef) for function-local variables.
@@ -115,7 +116,7 @@ stmt:
   | FOR LPAREN expr_opt SEMI expr SEMI expr_opt RPAREN stmt
      { For($3, $5, $7, $9) }
   | WHILE LPAREN expr RPAREN stmt { While($3, $5) }
-  | FOREACH LPAREN ID ID RPAREN stmt { Foreach($3, $4, $6) }
+  | FOREACH LPAREN id_chain ID RPAREN stmt { Foreach($3, $4, $6) }
 
 expr_opt:
     /* nothing */ { Noexpr }
@@ -127,8 +128,8 @@ expr:
   | FLOATLIT         { FloatLit($1) }
   | TRUE             { BoolLit(true) }
   | FALSE            { BoolLit(false) }
-  | ID               { Id($1) }
-  | expr PERIOD ID   { Member($1, "", $3) }
+  | id_chain         { Id($1) }
+  | expr PERIOD ID   { Member($1, ([], ""), $3) }
   | expr PLUS   expr { Binop($1, Add, Void,  $3) }
   | expr MINUS  expr { Binop($1, Sub, Void,  $3) }
   | expr TIMES  expr { Binop($1, Mult, Void, $3) }
@@ -146,11 +147,15 @@ expr:
   | MINUS expr %prec NEG { Unop(Neg, Void,   $2) }
   | NOT expr         { Unop(Not, Void, $2) }
   | expr ASSIGN expr   { Assign($1, $3) }
-  | ID LPAREN actuals_opt RPAREN { Call($1, $3) }
-  | expr PERIOD ID LPAREN actuals_opt RPAREN { MemberCall($1, "", $3, $5) }
-  | CREATE ID { Create($2) }
-  | DESTROY expr { Destroy($2, "") }
+  | id_chain LPAREN actuals_opt RPAREN { Call($1, $3) }
+  | expr PERIOD ID LPAREN actuals_opt RPAREN { MemberCall($1, ([], ""), $3, $5) }
+  | CREATE id_chain { Create($2) }
+  | DESTROY expr { Destroy($2, ([], "")) }
   | LPAREN expr RPAREN { $2 }
+
+id_chain:
+  | ID { [], $1 }
+  | ID DBCOLON id_chain { let c, e = $3 in $1 :: c, e }
 
 actuals_opt:
     /* nothing */ { [] }

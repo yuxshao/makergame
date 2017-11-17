@@ -5,6 +5,9 @@ type op = Add | Sub | Mult | Div | Expo | Modulo | Equal | Neq | Less | Leq |
 
 type uop = Neg | Not
 
+(* Chain of namespaces, then ID *)
+type id_chain = string list * string
+
 type typ =
   | Void
   | Int
@@ -13,7 +16,7 @@ type typ =
   | String
   | Sprite
   | Sound
-  | Object of string (* lexer prevents object names from overlapping with type names *)
+  | Object of id_chain          (* object type, in relative position of namespaces *)
   | Arr of typ * int
 
 type bind = string * typ
@@ -23,17 +26,17 @@ type expr =
   | BoolLit of bool
   | FloatLit of float
   | StringLit of string
-  | Id of string
+  | Id of id_chain
   | Binop of expr * op * typ * expr
   | Unop of uop * typ * expr
   | Assign of expr * expr
   (* (LHS before period, name of LHS object type, RHS) *)
-  | Member of expr * string * string
+  | Member of expr * id_chain * string
   (* (LHS before period, name of LHS object type, RHS function name, actuals) *)
-  | MemberCall of expr * string * string * expr list
-  | Call of string * expr list
-  | Create of string
-  | Destroy of expr * string
+  | MemberCall of expr * id_chain * string * expr list
+  | Call of id_chain * expr list
+  | Create of id_chain
+  | Destroy of expr * id_chain
   | Noexpr
 
 type stmt =
@@ -44,7 +47,7 @@ type stmt =
   | Return of expr
   | If of expr * stmt * stmt
   | For of expr * expr * expr * stmt
-  | Foreach of string * string * stmt (* TODO: use an object bind type maybe *)
+  | Foreach of id_chain * string * stmt (* TODO: use an object bind type maybe *)
   | While of expr * stmt
 and block = stmt list
 
@@ -100,6 +103,7 @@ module Gameobj = struct
     (vdecls, fdecls, edecl :: edecls)
 end
 
+(* TODO: really fix up these names. bind -> variable or modules, consistent naming *)
 module Namespace = struct
   type t = {
     namespaces : decl list;
@@ -152,22 +156,23 @@ let string_of_uop = function
     Neg -> "-"
   | Not -> "!"
 
+let string_of_chain (c, e) = (List.fold_left (fun s x -> s ^ x ^ "::") "" c) ^ e
 let rec string_of_expr = function
     Literal(l) -> string_of_int l
   | StringLit(s) -> "\"" ^ s ^ "\""
   | FloatLit(f) -> string_of_float f
   | BoolLit(true) -> "true"
   | BoolLit(false) -> "false"
-  | Id s -> s
+  | Id c -> string_of_chain c
   | Binop(e1, o, _, e2) ->
       string_of_expr e1 ^ " " ^ string_of_op o ^ " " ^ string_of_expr e2
   | Unop(o, _, e) -> string_of_uop o ^ string_of_expr e
   | Assign(l, r) -> string_of_expr l ^ " = " ^ string_of_expr r
   | Call(f, el) ->
-      f ^ "(" ^ String.concat ", " (List.map string_of_expr el) ^ ")"
+      (string_of_chain f) ^ "(" ^ String.concat ", " (List.map string_of_expr el) ^ ")"
   | Member(e, _, s) -> "(" ^ (string_of_expr e) ^ ")." ^ s
-  | MemberCall(e, _, f, el) -> "(" ^ (string_of_expr e) ^ ")." ^ string_of_expr (Call(f, el))
-  | Create o -> "create " ^ o   (* TODO: precedence? parentheses? *)
+  | MemberCall(e, _, f, el) -> "(" ^ (string_of_expr e) ^ ")." ^ string_of_expr (Call(([], f), el))
+  | Create c -> "create " ^ (string_of_chain c)   (* TODO: precedence? parentheses? *)
   | Destroy (o, _) -> "destroy " ^ (string_of_expr o) (* TODO: ibid *)
   | Noexpr -> ""
 
@@ -178,7 +183,7 @@ let rec string_of_typ = function
   | Float -> "float"
   | Sprite -> "sprite"
   | Sound -> "sound"
-  | Object obj_t -> "object(" ^ obj_t ^ ")"
+  | Object obj_t -> "object(" ^ string_of_chain obj_t ^ ")"
   | Arr(typ, len) -> (string_of_typ typ) ^ "[" ^ (string_of_int len) ^ "]"
   | String -> "string"
 
@@ -199,7 +204,7 @@ let rec string_of_stmt = function
       string_of_expr e3  ^ ") " ^ string_of_stmt s
   | While(e, s) -> "while (" ^ string_of_expr e ^ ") " ^ string_of_stmt s
   | Foreach(obj_t, id, s) ->
-      "foreach (" ^ obj_t  ^ " " ^ id ^ ") " ^ string_of_stmt s
+      "foreach (" ^ string_of_chain obj_t  ^ " " ^ id ^ ") " ^ string_of_stmt s
 and string_of_block block =
   "{\n" ^ String.concat "" (List.map string_of_stmt block) ^ "}\n"
 

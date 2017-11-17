@@ -249,7 +249,7 @@ let translate the_program =
       let function_decl m (name, func) =
         let formals =
           match obj with
-          | Some o -> ("this", A.Object(o)) :: func.A.formals
+          | Some o -> ("this", A.Object([], o)) :: func.A.formals
           | None -> func.A.formals
         in
         let formal_types = Array.of_list (List.map (fun (_, t) -> ltype_of_typ t) formals) in
@@ -289,7 +289,7 @@ let translate the_program =
           let event_to_llname gname ename = "object." ^ nname ^ "::" ^ gname ^ ".event." ^ ename in
           let add_decl m (f_name, _) =
             let name = event_to_llname gname f_name in
-            let llfn_t = L.function_type void_t [|ltype_of_typ (A.Object(gname))|] in
+            let llfn_t = L.function_type void_t [|ltype_of_typ (A.Object([], gname))|] in
             StringMap.add f_name (L.define_function name llfn_t the_module) m
           in
           List.fold_left add_decl StringMap.empty
@@ -323,19 +323,23 @@ let translate the_program =
       { B.variables = llvars; functions = llfns; gameobjs = llgameobjs; namespaces = llnamespaces }
     in
 
+    let namespace_of_chain =
+      List.fold_left (fun ns n -> StringMap.find n ns.B.namespaces) llns
+    in
+
     let find_function_decl name =
       try StringMap.find name (llns.B.functions)
       with Not_found -> failwith ("global " ^ name)
     in
-    let find_obj_fn_decl oname fname =
+    let find_obj_fn_decl (chain, oname) fname =
       try
-        let g = StringMap.find oname (llns.B.gameobjs) in
+        let g = StringMap.find oname (namespace_of_chain chain).B.gameobjs in
         StringMap.find fname (g.B.methods)
       with Not_found -> failwith ("obj " ^ oname ^ "." ^ fname)
     in
-    let find_obj_event_decl oname event =
+    let find_obj_event_decl (chain, oname) event =
       try
-        let g = StringMap.find oname (llns.B.gameobjs) in
+        let g = StringMap.find oname (namespace_of_chain chain).B.gameobjs in
         StringMap.find event (g.B.events)
       with Not_found -> failwith ("event " ^ oname ^ "." ^ event)
     in
@@ -347,10 +351,10 @@ let translate the_program =
 
     (* Given value ll for an object of type objname, builds and returns scope of
        that object in StringMap. *)
-    let gameobj_members objref objname builder =
+    let gameobj_members objref (chain, objname) builder =
       let llobj =
         let node = L.build_extractvalue objref 1 (objname ^ "_node") builder in
-        let g = StringMap.find objname llns.B.gameobjs in
+        let g = StringMap.find objname (namespace_of_chain chain).B.gameobjs in
         L.build_bitcast node (L.pointer_type g.B.gtyp) objname builder
       in
       let members = (List.assoc objname gameobjs).A.Gameobj.members in
@@ -366,9 +370,8 @@ let translate the_program =
     in
 
     let add_to_scope to_add scope = StringMap.fold StringMap.add scope to_add in
-
-    let build_object_loop builder the_function ~objname ~body =
-      let g = StringMap.find objname llns.B.gameobjs in
+    let build_object_loop builder the_function (chain, objname) ~body =
+      let g = StringMap.find objname (namespace_of_chain chain).B.gameobjs in
       let body builder break_bb node =
         (* Calculating offsets to get the object pointer *)
         let obj = build_container_of (g.B.gtyp) 1 node objname context builder ~cast:node_t in
@@ -388,10 +391,13 @@ let translate the_program =
 
     (* Construct code for an expression used for assignment; return its value *)
     let rec lexpr (vscope, fscope) builder = function
-      | A.Id n -> let v, _ = StringMap.find n vscope in v
+      | A.Id (chain, n) ->
+        (match chain with
+         | [] -> let v, _ = StringMap.find n vscope in v
+         | _ -> let v, _ = StringMap.find n (namespace_of_chain chain).B.variables in v)
       | A.Member(e, objname, n) ->
         let vscope = gameobj_members (expr (vscope, fscope) builder e) objname builder in
-        lexpr (vscope, fscope) builder (A.Id(n))
+        lexpr (vscope, fscope) builder (A.Id([], n))
       | A.Assign (l, r) ->
         let l', r' = lexpr (vscope, fscope) builder l, expr (vscope, fscope) builder r in
         ignore (L.build_store r' l' builder); l'
@@ -403,7 +409,7 @@ let translate the_program =
       | A.StringLit l -> L.build_global_stringptr l "literal" builder
       | A.FloatLit f -> L.const_float float_t f
       | A.Noexpr -> L.const_int i32_t 0
-      | A.Id n | A.Member (_, _, n) as e -> L.build_load (lexpr scope builder e) n builder
+      | A.Id (_, n) | A.Member (_, _, n) as e -> L.build_load (lexpr scope builder e) n builder
       | A.Assign _ as e -> L.build_load (lexpr scope builder e) "" builder
       | A.Binop (e1, op, t, e2) ->
         let e1' = expr scope builder e1
@@ -431,27 +437,31 @@ let translate the_program =
         (match op with
            A.Neg     -> if t=A.Int then L.build_neg else L.build_fneg
          | A.Not     -> L.build_not) e' "tmp" builder
-      | A.Call ("printstr", [e]) ->
+      | A.Call (([], "printstr"), [e]) ->
         L.build_call printf_func
           [| fmt_str str_fmt_str builder; (expr scope builder e) |]
           "printf" builder
-      | A.Call ("print", [e]) | A.Call ("printb", [e]) ->
+      | A.Call (([], "print"), [e]) | A.Call (([], "printb"), [e]) ->
         L.build_call printf_func
           [| fmt_str int_fmt_str builder; (expr scope builder e) |]
           "printf" builder
-      | A.Call ("print_float", [e]) -> (* TODO: test this fn *)
+      | A.Call (([], "print_float"), [e]) -> (* TODO: test this fn *)
         L.build_call printf_func
           [| fmt_str float_fmt_str builder; (expr scope builder e) |]
           "printf" builder
       (* TODO: unify print names and their tests *)
-      | A.Call (f, act) ->
+      | A.Call ((chain, f), act) ->
         let _, fscope = scope in
-        let fn = StringMap.find f fscope in
+        let fn =
+          match chain with
+          | [] -> StringMap.find f fscope
+          | _ -> StringMap.find f (namespace_of_chain chain).B.functions
+        in
         (* TODO: can arguments have side effects? what's the order-currently LtR *)
         let actuals = List.map (expr scope builder) act in
         let actuals =             (* Add 'this' argument if member function *)
           match fn.B.gameobj with
-          | Some _ -> (expr scope builder (A.Id("this"))) :: actuals
+          | Some _ -> (expr scope builder (A.Id([], "this"))) :: actuals
           | None -> actuals
         in
         let result =
@@ -466,8 +476,8 @@ let translate the_program =
           match fn.B.return with A.Void -> "" | _ -> f ^ "_result"
         in
         L.build_call fn.B.value (Array.of_list (obj :: actuals)) result builder
-      | A.Create objname ->
-        let g = StringMap.find objname llns.B.gameobjs in
+      | A.Create (chain, objname) ->
+        let g = StringMap.find objname (namespace_of_chain chain).B.gameobjs in
         let llobj = L.build_malloc g.B.gtyp objname builder in
         let llnode = L.build_bitcast llobj nodeptr_t (objname ^ "_node") builder in
         let llobjnode =
@@ -483,7 +493,7 @@ let translate the_program =
         let events =
           ["create"; "step"; "destroy"; "draw"]
           |> List.map (fun event ->
-              Some (L.build_bitcast (find_obj_event_decl objname event)
+              Some (L.build_bitcast (find_obj_event_decl (chain, objname) event)
                       eventptr_t (objname ^ "_" ^ event) builder))
         in
         let llobj_gen = L.build_bitcast llobj objptr_t (objname ^ "_gen") builder in
@@ -493,7 +503,7 @@ let translate the_program =
         (* TODO: include something in LRM about non-initialized values *)
         ignore (L.build_call create_event [|objref|] "" builder);
         objref
-      | A.Destroy (e, objtype) ->
+      | A.Destroy (e, (chain, objtype)) ->
         (* Destruction is lazy in that it involves just removing the
            object-specific link from an node's neighbours (i.e. used for foreach)
            and setting id to 0. When the main event loop encounters an object with
@@ -522,7 +532,7 @@ let translate the_program =
           ignore (L.build_store (L.const_int i64_t 0) idptr builder)
         in
         (* Find the list node connecting objects of this particular type *)
-        let llg = StringMap.find objtype llns.B.gameobjs in
+        let llg = StringMap.find objtype (namespace_of_chain chain).B.gameobjs in
         let obj = L.build_bitcast node (L.pointer_type llg.B.gtyp) objtype builder in
         (* Disconnect particular object neighbours' node links. *)
         let objnode = L.build_struct_gep obj 1 (objtype ^ "_node") builder in
@@ -590,7 +600,7 @@ let translate the_program =
           in
           builder
         in
-        build_object_loop builder fn ~objname ~body, scope
+        build_object_loop builder fn objname ~body, scope
     in
 
     let build_function_body the_function formals block ?gameobj return_type =
@@ -600,7 +610,7 @@ let translate the_program =
       (* If this is a function in a gameobj, add 'this' to the arguments *)
       let formals =
         match gameobj with
-        | Some obj -> ("this", A.Object(obj)) :: formals
+        | Some obj -> ("this", A.Object([], obj)) :: formals
         | None -> formals
       in
       let formal_scope =
@@ -618,7 +628,7 @@ let translate the_program =
         | Some obj ->
           let this, _ = StringMap.find "this" formal_scope in
           let this = L.build_load this "thisref" builder in
-          gameobj_members this obj builder
+          gameobj_members this ([], obj) builder
         | None -> StringMap.empty
       in
       let scope =
@@ -652,7 +662,7 @@ let translate the_program =
     let build_obj_functions (gname, g) =
       let open A.Gameobj in
       let build_fn (fname, { A.typ; formals; block; gameobj = _ }) =
-        let llfn = (find_obj_fn_decl gname fname).B.value in
+        let llfn = (find_obj_fn_decl ([], gname) fname).B.value in
         match block with
         | Some block -> build_function_body llfn formals block typ ~gameobj:gname
         | None -> assert false    (* Semant ensures obj fns are not external *)
@@ -664,7 +674,7 @@ let translate the_program =
     let build_obj_events (gname, g) =
       let open A.Gameobj in
       let build_fn (f_name, block) =
-        let llfn = find_obj_event_decl gname f_name in
+        let llfn = find_obj_event_decl ([], gname) f_name in
         build_function_body llfn [] block A.Void ~gameobj:gname
       in
       List.iter build_fn [("create", g.create); ("step", g.step); ("destroy", g.destroy); ("draw", g.draw)]
@@ -674,7 +684,7 @@ let translate the_program =
     (* Build global_create from the global namespace *)
     if nname = "" then
       let create_gb = L.define_function "global_create" (L.function_type void_t [||]) the_module in
-      build_function_body create_gb [] [A.Expr (A.Create "main")] A.Void;
+      build_function_body create_gb [] [A.Expr (A.Create ([], "main"))] A.Void;
     else ();
 
     llns
