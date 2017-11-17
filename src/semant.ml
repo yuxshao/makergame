@@ -110,7 +110,7 @@ let rec check_namespace (nname, namespace) =
   (* Check that the expression can indeed be assigned to *)
   let check_lvalue loc = function
     | Id([], "this") -> failwith ("'this' cannot be assigned in '" ^ loc ^ "'")
-    | Id _ | Member _ | Assign _ -> ()
+    | Id _ | Member _ | Assign _ | Asnop _ -> ()
     | _ -> failwith ("LHS ineligible for assignment in " ^ loc)
   in
   (* Return the type of an expression and the new expression or throw an exception *)
@@ -138,7 +138,8 @@ let rec check_namespace (nname, namespace) =
          in
          let ochain, _ = s in add_typ_ns ochain t, Member(e', s, name)
        | _ -> failwith ("cannot get member of non-object " ^ (string_of_expr e)))
-    | Binop(e1, op, _, e2) -> let (t1, e1') = expr scope e1 and (t2, e2') = expr scope e2 in
+    | Binop(e1, op, _, e2) ->
+      let (t1, e1') = expr scope e1 and (t2, e2') = expr scope e2 in
       (match op with
          Add | Sub | Mult | Div when t1 = Int && t2 = Int -> Int, Binop(e1', op, Int, e2')
        | Add | Sub | Mult | Div when t1 = Float && t2 = Float -> Float, Binop(e1', op, Float, e2')
@@ -165,6 +166,15 @@ let rec check_namespace (nname, namespace) =
       check_assign lt rt ("illegal assignment " ^ string_of_typ lt ^
                           " = " ^ string_of_typ rt ^ " in " ^
                           string_of_expr e), Assign(l', r')
+    | Asnop(e1, opasn, _, e2) ->
+      let (t1, e1') = expr scope e1 and (t2, e2') = expr scope e2 in
+      (match opasn with
+        Addasn | Minusasn | Timeasn | Divasn when t1 = Int && t2 = Int -> Int, Asnop(e1', opasn, Int, e2')
+       | Addasn | Minusasn | Timeasn | Divasn when t1 = Float && t2 = Float -> Float, Asnop(e1', opasn, Float, e2')
+       | _ -> failwith ("illegal assign operator " ^
+                        string_of_typ t1 ^ " " ^ string_of_asnop opasn ^ " " ^
+                        string_of_typ t2 ^ " in " ^ string_of_expr e)
+      )
     | Call((chain, fname), actuals) as call ->
       let fd =
         try match chain with

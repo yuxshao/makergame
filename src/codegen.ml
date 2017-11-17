@@ -406,6 +406,23 @@ let translate the_program =
       | A.Assign (l, r) ->
         let l', r' = lexpr (vscope, fscope) builder l, expr (vscope, fscope) builder r in
         ignore (L.build_store r' l' builder); l'
+      | A.Asnop (l, asnop ,t, r) ->
+        let lp = lexpr (vscope, fscope) builder l in
+        let le = L.build_load lp "le" builder in
+        let re = expr(vscope, fscope) builder r in
+        let sum =
+          (match t, asnop with
+           | A.Int, A.Addasn ->  L.build_add le re "Asn" builder
+           | A.Float, A.Addasn -> L.build_fadd le re "Asn" builder
+           | A.Int, A.Minusasn -> L.build_sub le re "Asn" builder
+           | A.Float, A.Minusasn -> L.build_fsub le re "Asn" builder
+           | A.Int, A.Timeasn -> L.build_mul le re "Asn" builder
+           | A.Float, A.Timeasn -> L.build_fmul le re "Asn" builder
+           | A.Int, A.Divasn -> L.build_sdiv le re "Asn" builder
+           | A.Float, A.Divasn -> L.build_fdiv le re "Asn" builder
+           | _ -> assert false )
+        in
+        ignore (L.build_store sum lp builder); lp
       | _ -> assert false (* Semant should catch other illegal attempts at assignment *)
     (* Construct code for an expression; return its value *)
     and expr scope builder = function
@@ -416,6 +433,7 @@ let translate the_program =
       | A.Noexpr -> L.const_int i32_t 0
       | A.Id (_, n) | A.Member (_, _, n) as e -> L.build_load (lexpr scope builder e) n builder
       | A.Assign _ as e -> L.build_load (lexpr scope builder e) "" builder
+      | A.Asnop  _ as e -> L.build_load (lexpr scope builder e) "" builder
       | A.Binop (e1, op, t, e2) ->
         let e1' = expr scope builder e1
         and e2' = expr scope builder e2 in

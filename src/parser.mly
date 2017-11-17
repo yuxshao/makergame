@@ -6,6 +6,7 @@ open Ast
 
 %token SEMI LPAREN RPAREN LBRACK RBRACK LCURLY RCURLY COMMA PERIOD DBCOLON
 %token PLUS MINUS TIMES DIVIDE EXPONENT MODULO ASSIGN NOT
+%token ADDASN MINUSASN TIMEASN DIVASN
 %token EQ NEQ LT LEQ GT GEQ TRUE FALSE AND OR
 %token BREAK RETURN IF ELSE FOR WHILE FOREACH
 %token INT BOOL FLOAT STRING SPRITE SOUND VOID
@@ -19,7 +20,7 @@ open Ast
 
 %nonassoc NOELSE
 %nonassoc ELSE
-%right ASSIGN
+%right ASSIGN ADDASN MINUSASN TIMEASN DIVASN
 %left OR
 %left AND
 %left EQ NEQ
@@ -123,34 +124,38 @@ expr_opt:
   | expr          { $1 }
 
 expr:
-  | LITERAL          { Literal($1) }
-  | STRLIT           { StringLit($1) }
-  | FLOATLIT         { FloatLit($1) }
-  | TRUE             { BoolLit(true) }
-  | FALSE            { BoolLit(false) }
-  | id_chain         { Id($1) }
-  | expr PERIOD ID   { Member($1, ([], ""), $3) }
-  | expr PLUS   expr { Binop($1, Add, Void,  $3) }
-  | expr MINUS  expr { Binop($1, Sub, Void,  $3) }
-  | expr TIMES  expr { Binop($1, Mult, Void, $3) }
-  | expr DIVIDE expr { Binop($1, Div, Void,  $3) }
+  | LITERAL            { Literal($1) }
+  | STRLIT             { StringLit($1) }
+  | FLOATLIT           { FloatLit($1) }
+  | TRUE               { BoolLit(true) }
+  | FALSE              { BoolLit(false) }
+  | id_chain           { Id($1) }
+  | expr PERIOD ID     { Member($1, ([], ""), $3) }
+  | expr PLUS   expr   { Binop($1, Add, Void,  $3) }
+  | expr MINUS  expr   { Binop($1, Sub, Void,  $3) }
+  | expr TIMES  expr   { Binop($1, Mult, Void, $3) }
+  | expr DIVIDE expr   { Binop($1, Div, Void,  $3) }
   | expr EXPONENT expr { Binop($1, Expo, Void,  $3) }
-  | expr MODULO expr { Binop($1, Modulo, Void,  $3) }
-  | expr EQ     expr { Binop($1, Equal, Void,   $3) }
-  | expr NEQ    expr { Binop($1, Neq, Void,  $3) }
-  | expr LT     expr { Binop($1, Less, Void, $3) }
-  | expr LEQ    expr { Binop($1, Leq, Void,  $3) }
-  | expr GT     expr { Binop($1, Greater, Void, $3) }
-  | expr GEQ    expr { Binop($1, Geq, Void,  $3) }
-  | expr AND    expr { Binop($1, And, Void,  $3) }
-  | expr OR     expr { Binop($1, Or, Void,   $3) }
+  | expr MODULO expr   { Binop($1, Modulo, Void,  $3) }
+  | expr EQ     expr   { Binop($1, Equal, Void,   $3) }
+  | expr ADDASN expr   { Asnop($1, Addasn, Void, $3) }
+  | expr MINUSASN expr { Asnop($1, Minusasn, Void, $3) }
+  | expr TIMEASN expr  { Asnop($1, Timeasn, Void, $3) }
+  | expr DIVASN expr   { Asnop($1, Divasn, Void, $3) }
+  | expr NEQ    expr   { Binop($1, Neq, Void,  $3) }
+  | expr LT     expr   { Binop($1, Less, Void, $3) }
+  | expr LEQ    expr   { Binop($1, Leq, Void,  $3) }
+  | expr GT     expr   { Binop($1, Greater, Void, $3) }
+  | expr GEQ    expr   { Binop($1, Geq, Void,  $3) }
+  | expr AND    expr   { Binop($1, And, Void,  $3) }
+  | expr OR     expr   { Binop($1, Or, Void,   $3) }
   | MINUS expr %prec NEG { Unop(Neg, Void,   $2) }
-  | NOT expr         { Unop(Not, Void, $2) }
+  | NOT expr           { Unop(Not, Void, $2) }
   | expr ASSIGN expr   { Assign($1, $3) }
   | id_chain LPAREN actuals_opt RPAREN { Call($1, $3) }
   | expr PERIOD ID LPAREN actuals_opt RPAREN { MemberCall($1, ([], ""), $3, $5) }
-  | CREATE id_chain { Create($2) }
-  | DESTROY expr { Destroy($2, ([], "")) }
+  | CREATE id_chain    { Create($2) }
+  | DESTROY expr       { Destroy($2, ([], "")) }
   | LPAREN expr RPAREN { $2 }
 
 id_chain:

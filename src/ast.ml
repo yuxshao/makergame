@@ -3,6 +3,8 @@
 type op = Add | Sub | Mult | Div | Expo | Modulo | Equal | Neq | Less | Leq |
           Greater | Geq | And | Or
 
+type asnop = Addasn | Minusasn | Timeasn | Divasn
+
 type uop = Neg | Not
 
 (* Chain of namespaces, then ID *)
@@ -28,6 +30,7 @@ type expr =
   | StringLit of string
   | Id of id_chain
   | Binop of expr * op * typ * expr
+  | Asnop of expr * asnop * typ * expr
   | Unop of uop * typ * expr
   | Assign of expr * expr
   (* (LHS before period, name of LHS object type, RHS) *)
@@ -157,6 +160,13 @@ let string_of_uop = function
   | Not -> "!"
 
 let string_of_chain (c, e) = (List.fold_left (fun s x -> s ^ x ^ "::") "" c) ^ e
+
+let string_of_asnop = function
+    Addasn -> "+="
+  | Minusasn -> "-="
+  | Timeasn -> "*="
+  | Divasn -> "/="
+
 let rec string_of_expr = function
     Literal(l) -> string_of_int l
   | StringLit(s) -> "\"" ^ s ^ "\""
@@ -164,6 +174,8 @@ let rec string_of_expr = function
   | BoolLit(true) -> "true"
   | BoolLit(false) -> "false"
   | Id c -> string_of_chain c
+  | Asnop(l, o, _, r) ->
+       string_of_expr l ^ " " ^ string_of_asnop o ^ " " ^ string_of_expr r
   | Binop(e1, o, _, e2) ->
       string_of_expr e1 ^ " " ^ string_of_op o ^ " " ^ string_of_expr e2
   | Unop(o, _, e) -> string_of_uop o ^ string_of_expr e
