@@ -53,7 +53,7 @@ type stmt =
   | Return of expr
   | If of expr * stmt * stmt
   | For of expr * expr * expr * stmt
-  | Foreach of id_chain * string * stmt (* TODO: use an object bind type maybe *)
+  | Foreach of id_chain * string * stmt
   | While of expr * stmt
 and block = stmt list
 
@@ -188,8 +188,8 @@ let rec string_of_expr = function
       (string_of_chain f) ^ "(" ^ String.concat ", " (List.map string_of_expr el) ^ ")"
   | Member(e, _, s) -> "(" ^ (string_of_expr e) ^ ")." ^ s
   | MemberCall(e, _, f, el) -> "(" ^ (string_of_expr e) ^ ")." ^ string_of_expr (Call(([], f), el))
-  | Create c -> "create " ^ (string_of_chain c)   (* TODO: precedence? parentheses? *)
-  | Destroy (o, _) -> "destroy " ^ (string_of_expr o) (* TODO: ibid *)
+  | Create c -> "create " ^ (string_of_chain c)
+  | Destroy (o, _) -> "destroy " ^ (string_of_expr o)
   | Noexpr -> ""
 
 let rec string_of_typ = function
