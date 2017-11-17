@@ -86,7 +86,6 @@ let translate the_program =
   and i32_t    = L.i32_type    context
   and i8_t     = L.i8_type     context
   and i1_t     = L.i1_type     context
-  (* TODO: tests for floating point parsing/scanning, printing *)
   and float_t  = L.double_type context (* TODO: fix LRM to say double precision *)
   and sprite_t = L.pointer_type (L.named_struct_type context "sfSprite")
   and sound_t  = L.pointer_type (L.named_struct_type context "sfSound")
@@ -142,7 +141,6 @@ let translate the_program =
       let t = L.function_type void_t [|nodeptr_t; nodeptr_t|] in
       L.define_function "list_add" t the_module
     in
-    (* TODO: add to front so not skipped in lookahead (think of as circular + marker) *)
     let builder = L.builder_at_end context (L.entry_block f) in
     let node, head = L.param f 0, L.param f 1 in
     let following_prev_ptr = L.build_struct_gep head 0 "prev_ptr" builder in
@@ -349,7 +347,6 @@ let translate the_program =
       try (StringMap.find oname (llns.B.gameobjs)).B.ends
       with Not_found -> failwith ("end " ^ oname)
     in
-    (* TODO: test case for order where i destroy myself and create a thing *)
 
     (* Given value ll for an object of type objname, builds and returns scope of
        that object in StringMap. *)
@@ -469,7 +466,7 @@ let translate the_program =
         L.build_call printf_func
           [| fmt_str int_fmt_str builder; (expr scope builder e) |]
           "printf" builder
-      | A.Call (([], "print_float"), [e]) -> (* TODO: test this fn *)
+      | A.Call (([], "print_float"), [e]) ->
         L.build_call printf_func
           [| fmt_str float_fmt_str builder; (expr scope builder e) |]
           "printf" builder
@@ -713,7 +710,6 @@ let translate the_program =
 
     llns
   in
-  (* TODO: test destroy self, next. destroy in foreach *)
   let global_event (name, offset) =
     let fn = L.define_function ("global_" ^ name) (L.function_type void_t [||]) the_module in
     let builder = L.builder_at_end context (L.entry_block fn) in
