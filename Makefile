@@ -5,9 +5,9 @@
 # Easiest way to build: using ocamlbuild, which in turn uses ocamlfind
 
 .PHONY : all
-all : microc.native lib/libmakergame.o lib/libtestergame.o
+all : makergame.native lib/libmakergame.o lib/libtestergame.o
 
-test : microc.native lib/libtestergame.o testall.sh
+test : makergame.native lib/libtestergame.o testall.sh
 	./testall.sh
 
 lib/libmakergame.o:
@@ -16,9 +16,9 @@ lib/libmakergame.o:
 lib/libtestergame.o:
 	gcc -c lib/libtestergame.cpp -o lib/libtestergame.o -std=c++11
 
-microc.native : src/*.ml src/*.mly src/*.mll clean
+makergame.native : src/*.ml src/*.mly src/*.mll clean
 	ocamlbuild -use-ocamlfind -pkgs llvm,llvm.analysis -cflags -w,+a-4 \
-		src/microc.native
+		src/makergame.native
 
 # "make clean" removes all generated files
 
@@ -26,17 +26,17 @@ microc.native : src/*.ml src/*.mly src/*.mll clean
 clean :
 	ocamlbuild -clean
 	rm -rf vgcore.*
-	rm -rf testall.log *.diff microc scanner.ml parser.ml parser.mli
+	rm -rf testall.log *.diff makergame scanner.ml parser.ml parser.mli
 	rm -rf lib/libmakergame.o
 	rm -rf lib/libtestergame.o
 	rm -rf *.cmx *.cmi *.cmo *.cmx *.o *.s *.ll *.out *.exe *.err
 
 # More detailed: build using ocamlc/ocamlopt + ocamlfind to locate LLVM
 
-OBJS = ast.cmx llast.cmx codegen.cmx parser.cmx scanner.cmx semant.cmx microc.cmx
+OBJS = ast.cmx llast.cmx codegen.cmx parser.cmx scanner.cmx semant.cmx makergame.cmx
 
-microc : $(OBJS)
-	ocamlfind ocamlopt -linkpkg -package llvm -package llvm.analysis $(OBJS) -o microc
+makergame : $(OBJS)
+	ocamlfind ocamlopt -linkpkg -package llvm -package llvm.analysis $(OBJS) -o makergame
 
 scanner.ml : scanner.mll
 	ocamllex scanner.mll
@@ -60,8 +60,8 @@ ast.cmo :
 ast.cmx :
 codegen.cmo : ast.cmo llast.cmo
 codegen.cmx : ast.cmx llast.cmx
-microc.cmo : semant.cmo scanner.cmo parser.cmi codegen.cmo ast.cmo llast.cmo
-microc.cmx : semant.cmx scanner.cmx parser.cmx codegen.cmx ast.cmx llast.cmx
+makergame.cmo : semant.cmo scanner.cmo parser.cmi codegen.cmo ast.cmo llast.cmo
+makergame.cmx : semant.cmx scanner.cmx parser.cmx codegen.cmx ast.cmx llast.cmx
 parser.cmo : ast.cmo parser.cmi
 parser.cmx : ast.cmx parser.cmi
 scanner.cmo : parser.cmi
