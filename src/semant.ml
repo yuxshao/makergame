@@ -51,22 +51,30 @@ let rec check_namespace (nname, namespace) =
     in
     List.fold_left find top chain
   in
+  let namespace_of_chain chain = namespace_of_chain namespace chain in
 
   (* Ensure aliases only refer to previously defined namespaces *)
   (* TODO: mention this in LRM *)
   let namespaces =
     let open Namespace in
-    let attach ns accum = { accum with namespaces = ns :: accum.namespaces } in
-    let check_ns accum = function
-      | n, Concrete ns -> let (n, ns) = check_namespace (n, ns) in
-        attach (n, Concrete ns) accum
-      | n, Alias chain -> ignore (namespace_of_chain accum chain);
-        attach (n, Alias chain) accum
+    (* Check for loops in alias references by redirecting at most {#aliases} times *)
+    let aliases =
+      List.fold_left (fun a (n, x) -> match x with Alias _ -> n :: a | _ -> a) []
+        namespace.namespaces
     in
-    List.fold_left check_ns { namespace with namespaces = [] } namespaces
-    |> (fun n -> n.namespaces) |> List.rev
+    let rec check_loop num name =
+      match List.assoc name namespace.namespaces with
+      | Concrete _ | Alias [] -> ()
+      | Alias _ when num = 0 -> failwith ("namespace alias " ^ name ^ " never resolves")
+      | Alias (hd :: _) -> check_loop (num - 1) hd
+    in
+    List.iter (check_loop (List.length aliases)) aliases;
+    let check_ns = function
+      | n, Concrete ns -> let (n, ns) = check_namespace (n, ns) in (n, Concrete ns)
+      | n, Alias chain -> ignore (namespace_of_chain chain); (n, Alias chain)
+    in
+    List.map check_ns namespaces
   in
-  let namespace_of_chain chain = namespace_of_chain namespace chain in
 
   (**** Checking Global Variables ****)
 
