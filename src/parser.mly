@@ -42,7 +42,7 @@ program: decls EOF { Namespace.make $1 }
 
 ndecl:
  | NAMESPACE ID LCURLY decls RCURLY { $2, Namespace.Concrete (Namespace.make $4) }
- | NAMESPACE ID ASSIGN id_chain SEMI { $2, Namespace.Alias $4 }
+ | NAMESPACE ID ASSIGN id_chain SEMI { $2, Namespace.Alias (fst $4 @ [snd $4]) }
 
 decls:
    /* nothing */ { [],[],[],[] }

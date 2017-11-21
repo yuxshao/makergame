@@ -330,7 +330,7 @@ let translate the_program =
     let rec namespace_of_chain top chain =
       let search ns n = match StringMap.find n ns.B.namespaces with
         | B.Concrete c -> c
-        | B.Alias (chain, e) -> namespace_of_chain ns (List.append chain [e])
+        | B.Alias chain -> namespace_of_chain ns chain
       in
       List.fold_left search top chain
     in
@@ -340,7 +340,7 @@ let translate the_program =
       let open A.Namespace in
       let search ns n = match List.assoc n ns.A.Namespace.namespaces with
         | Concrete c -> c
-        | Alias (chain, e) -> ast_namespace_of_chain top (List.append chain [e])
+        | Alias chain -> ast_namespace_of_chain top chain
       in
       List.fold_left search top chain
     in

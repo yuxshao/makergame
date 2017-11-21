@@ -119,7 +119,7 @@ module Namespace = struct
     gameobjs : Gameobj.decl list;
   }
   (* a namespace could be an alias for another in the tree, with the same values *)
-  and t = Concrete of concrete | Alias of id_chain
+  and t = Concrete of concrete | Alias of string list
   and decl = string * t
 
   let make (variables, functions, gameobjs, namespaces) =
@@ -254,7 +254,7 @@ let rec string_of_concrete_ns { Namespace.variables; functions; gameobjs; namesp
 and string_of_ns_decl (name, ns) =
   let open Namespace in
   match ns with
-  | Alias chain -> "namespace " ^ name ^ " = " ^ string_of_chain chain ^";\n"
+  | Alias chain -> "namespace " ^ name ^ " = " ^ String.concat "::" chain ^";\n"
   | Concrete n -> "namespace " ^ name ^ " {\n" ^ string_of_concrete_ns n ^ "\n}\n"
 
 let string_of_program = string_of_concrete_ns

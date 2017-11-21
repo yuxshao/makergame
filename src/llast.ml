@@ -22,4 +22,4 @@ type concrete = {
   gameobjs: gameobj StringMap.t;
   namespaces: namespace StringMap.t;
 }
-and namespace = Concrete of concrete | Alias of Ast.id_chain
+and namespace = Concrete of concrete | Alias of string list
