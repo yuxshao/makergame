@@ -42,7 +42,31 @@ let rec check_namespace (nname, namespace) =
   (**** Checking Namespaces ****)
   report_duplicate (fun n -> "duplicate namespace " ^ nname ^ "::" ^ n) (List.map fst namespaces);
 
-  let namespaces = List.map check_namespace namespaces in
+  let rec namespace_of_chain top chain =
+    let find ns n =
+      try match List.assoc n ns.Namespace.namespaces with
+        | Namespace.Concrete c -> c
+        | Namespace.Alias (chain, e) -> namespace_of_chain ns (List.append chain [e])
+      with Not_found -> failwith ("unrecognized namespace " ^ n ^ " in " ^ (String.concat "::" chain))
+    in
+    List.fold_left find top chain
+  in
+
+  (* Ensure aliases only refer to previously defined namespaces *)
+  (* TODO: mention this in LRM *)
+  let namespaces =
+    let open Namespace in
+    let attach ns accum = { accum with namespaces = ns :: accum.namespaces } in
+    let check_ns accum = function
+      | n, Concrete ns -> let (n, ns) = check_namespace (n, ns) in
+        attach (n, Concrete ns) accum
+      | n, Alias (chain, e) -> ignore (namespace_of_chain accum (chain @ [e]));
+        attach (n, Alias (chain, e)) accum
+    in
+    List.fold_left check_ns { namespace with namespaces = [] } namespaces
+    |> (fun n -> n.namespaces) |> List.rev
+  in
+  let namespace_of_chain chain = namespace_of_chain namespace chain in
 
   (**** Checking Global Variables ****)
 
@@ -71,14 +95,6 @@ let rec check_namespace (nname, namespace) =
   let global_functions =
     List.fold_left (add_to_scope ~loc:(nname ^ " function declarations"))
       StringMap.empty functions
-  in
-
-  let namespace_of_chain chain =
-    let find ns n =
-      try List.assoc n ns.Namespace.namespaces
-      with Not_found -> failwith ("unrecognized namespace " ^ n ^ " in " ^ (String.concat "::" chain))
-    in
-    List.fold_left find namespace chain
   in
 
   (* TODO: stop using add_to_scope *)

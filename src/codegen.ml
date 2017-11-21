@@ -317,15 +317,34 @@ let translate the_program =
       in
 
       let llnamespaces =
-        List.fold_left (fun m (n, ns) -> StringMap.add n (namespace (nname ^ "::" ^ n, ns)) m)
-          StringMap.empty namespaces
+        let open A.Namespace in
+        let add_ns m (n, ns) = match ns with
+          | Concrete ns -> StringMap.add n (B.Concrete (namespace (nname ^ "::" ^ n, ns))) m
+          | Alias chain -> StringMap.add n (B.Alias chain) m
+        in
+        List.fold_left add_ns StringMap.empty namespaces
       in
       { B.variables = llvars; functions = llfns; gameobjs = llgameobjs; namespaces = llnamespaces }
     in
 
-    let namespace_of_chain =
-      List.fold_left (fun ns n -> StringMap.find n ns.B.namespaces) llns
+    let rec namespace_of_chain top chain =
+      let search ns n = match StringMap.find n ns.B.namespaces with
+        | B.Concrete c -> c
+        | B.Alias (chain, e) -> namespace_of_chain ns (List.append chain [e])
+      in
+      List.fold_left search top chain
     in
+    let namespace_of_chain = namespace_of_chain llns in
+
+    let rec ast_namespace_of_chain top chain =
+      let open A.Namespace in
+      let search ns n = match List.assoc n ns.A.Namespace.namespaces with
+        | Concrete c -> c
+        | Alias (chain, e) -> ast_namespace_of_chain top (List.append chain [e])
+      in
+      List.fold_left search top chain
+    in
+    let ast_namespace_of_chain = ast_namespace_of_chain the_namespace in
 
     let find_function_decl name =
       try StringMap.find name (llns.B.functions)
@@ -356,10 +375,7 @@ let translate the_program =
         let g = StringMap.find objname (namespace_of_chain chain).B.gameobjs in
         L.build_bitcast node (L.pointer_type g.B.gtyp) objname builder
       in
-      let ast_ns =
-        List.fold_left (fun ns n -> List.assoc n ns.A.Namespace.namespaces)
-          the_namespace chain
-      in
+      let ast_ns = ast_namespace_of_chain chain in
       let members = (List.assoc objname ast_ns.A.Namespace.gameobjs).A.Gameobj.members in
       let add_member (map, ind) (name, typ) =
         let member_var = L.build_struct_gep llobj ind name builder in

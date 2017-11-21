@@ -41,14 +41,15 @@ open Ast
 program: decls EOF { Namespace.make $1 }
 
 ndecl:
-  NAMESPACE ID LCURLY decls RCURLY { $2, Namespace.make $4 }
+ | NAMESPACE ID LCURLY decls RCURLY { $2, Namespace.Concrete (Namespace.make $4) }
+ | NAMESPACE ID ASSIGN id_chain SEMI { $2, Namespace.Alias $4 }
 
 decls:
    /* nothing */ { [],[],[],[] }
- | decls vdecl { Namespace.add_vdecl $1 $2 }
- | decls fdecl { Namespace.add_fdecl $1 $2 }
- | decls odecl { Namespace.add_odecl $1 $2 }
- | decls ndecl { Namespace.add_ndecl $1 $2 }
+ | vdecl decls { Namespace.add_vdecl $2 $1 }
+ | fdecl decls { Namespace.add_fdecl $2 $1 }
+ | odecl decls { Namespace.add_odecl $2 $1 }
+ | ndecl decls { Namespace.add_ndecl $2 $1 }
 
 code_block:
    LCURLY stmt_list RCURLY { $2 }

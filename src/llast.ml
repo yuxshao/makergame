@@ -16,9 +16,10 @@ type gameobj = {
   events: L.llvalue StringMap.t;
 }
 
-type namespace = {
+type concrete = {
   variables: (L.llvalue * Ast.typ) StringMap.t;
   functions: func StringMap.t;
   gameobjs: gameobj StringMap.t;
   namespaces: namespace StringMap.t;
 }
+and namespace = Concrete of concrete | Alias of Ast.id_chain

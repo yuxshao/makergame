@@ -112,12 +112,14 @@ module Gameobj = struct
 end
 
 module Namespace = struct
-  type t = {
+  type concrete = {
     namespaces : decl list;
     variables : Var.decl list;
     functions : Func.decl list;
     gameobjs : Gameobj.decl list;
   }
+  (* a namespace could be an alias for another in the tree, with the same values *)
+  and t = Concrete of concrete | Alias of id_chain
   and decl = string * t
 
   let make (variables, functions, gameobjs, namespaces) =
@@ -137,7 +139,7 @@ module Namespace = struct
 
 end
 
-type program = Namespace.t
+type program = Namespace.concrete
 
 
 
@@ -244,12 +246,15 @@ let string_of_gameobj (name, obj) =
   "DRAW " ^ (string_of_block obj.draw) ^ "\n" ^
   "}\n"
 
-let rec string_of_namespace { Namespace.variables; functions; gameobjs; namespaces } =
+let rec string_of_concrete_ns { Namespace.variables; functions; gameobjs; namespaces } =
   String.concat "" (List.map string_of_vdecl variables) ^ "\n" ^
   String.concat "\n" (List.map string_of_fdecl functions) ^
   String.concat "\n" (List.map string_of_gameobj gameobjs) ^
   String.concat "\n" (List.map string_of_ns_decl namespaces)
 and string_of_ns_decl (name, ns) =
-  "namespace " ^ name ^ " {\n" ^ string_of_namespace ns ^ "\n}\n"
+  let open Namespace in
+  match ns with
+  | Alias chain -> "namespace " ^ name ^ " = " ^ string_of_chain chain ^";\n"
+  | Concrete n -> "namespace " ^ name ^ " {\n" ^ string_of_concrete_ns n ^ "\n}\n"
 
-let string_of_program = string_of_namespace
+let string_of_program = string_of_concrete_ns
