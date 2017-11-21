@@ -46,7 +46,7 @@ let rec check_namespace (nname, namespace) =
     let find ns n =
       try match List.assoc n ns.Namespace.namespaces with
         | Namespace.Concrete c -> c
-        | Namespace.Alias (chain, e) -> namespace_of_chain ns (List.append chain [e])
+        | Namespace.Alias chain -> namespace_of_chain ns chain
       with Not_found -> failwith ("unrecognized namespace " ^ n ^ " in " ^ (String.concat "::" chain))
     in
     List.fold_left find top chain
@@ -60,8 +60,8 @@ let rec check_namespace (nname, namespace) =
     let check_ns accum = function
       | n, Concrete ns -> let (n, ns) = check_namespace (n, ns) in
         attach (n, Concrete ns) accum
-      | n, Alias (chain, e) -> ignore (namespace_of_chain accum (chain @ [e]));
-        attach (n, Alias (chain, e)) accum
+      | n, Alias chain -> ignore (namespace_of_chain accum chain);
+        attach (n, Alias chain) accum
     in
     List.fold_left check_ns { namespace with namespaces = [] } namespaces
     |> (fun n -> n.namespaces) |> List.rev
