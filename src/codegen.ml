@@ -334,7 +334,7 @@ let translate the_program files =
   let llprogram = define_llns ("", the_program) in
 
   let rec define_ns_contents llns (nname, the_namespace) =
-    let { A.Namespace.variables = globals;
+    let { A.Namespace.variables = _;
           functions ; gameobjs ; namespaces } = the_namespace in
     let () = (* Recursively check inner namespaces *)
       let check_inner_ns (nname, ns) = match ns with

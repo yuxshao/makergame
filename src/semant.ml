@@ -70,17 +70,23 @@ let rec check_namespace (nname, namespace) files =
   let namespaces, files =
     let open Namespace in
     (* Check for loops in alias references by redirecting at most {#aliases} times *)
-    let aliases =
-      List.fold_left (fun a (n, x) -> match x with Alias _ -> n :: a | _ -> a) []
-        namespace.namespaces
+    let () =
+      let aliases =
+        List.fold_left (fun a (n, x) -> match x with Alias _ -> n :: a | _ -> a) []
+          namespace.namespaces
+      in
+      let rec check_loop num name =
+        let ns =
+          try List.assoc name namespace.namespaces
+          with Not_found -> failwith ("alias " ^ name ^ " does not exist")
+        in
+        match ns with
+        | Alias _ when num = 0 -> failwith ("namespace alias " ^ name ^ " never resolves")
+        | Alias (hd :: _) -> check_loop (num - 1) hd
+        | _ -> ()
+      in
+      List.iter (check_loop (List.length aliases)) aliases
     in
-    let rec check_loop num name =
-      match List.assoc name namespace.namespaces with
-      | Alias _ when num = 0 -> failwith ("namespace alias " ^ name ^ " never resolves")
-      | Alias (hd :: _) -> check_loop (num - 1) hd
-      | _ -> ()
-    in
-    List.iter (check_loop (List.length aliases)) aliases;
     (* Update list of file-namespace associations by opening each file namespace *)
     let check_file_ns accum = function
       | _, File f when not (List.mem_assoc f accum) ->
