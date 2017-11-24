@@ -12,7 +12,7 @@ open Ast
 %token BREAK RETURN IF ELSE FOR WHILE FOREACH
 %token INT BOOL FLOAT STRING SPRITE SOUND VOID
 %token OBJECT EVENT CREATE DESTROY DRAW STEP
-%token NAMESPACE EXTERN OPEN
+%token PRIVATE PUBLIC NAMESPACE EXTERN OPEN
 %token <int> LITERAL
 %token <string> ID
 %token <string> STRLIT
@@ -43,6 +43,11 @@ open Ast
 program: decls EOF { { main = Namespace.make $1; files = [] } }
 
 ndecl:
+ | PUBLIC ndecl_base  { let n, ns = $2 in n, (false, ns) }
+ | ndecl_base         { let n, ns = $1 in n, (false, ns) }
+ | PRIVATE ndecl_base { let n, ns = $2 in n, (true, ns) }
+
+ndecl_base:
  | NAMESPACE ID LCURLY decls RCURLY { $2, Namespace.Concrete (Namespace.make $4) }
  | NAMESPACE ID ASSIGN id_chain SEMI { $2, Namespace.Alias (fst $4 @ [snd $4]) }
  | NAMESPACE ID ASSIGN OPEN STRLIT SEMI { $2, Namespace.File $5 }

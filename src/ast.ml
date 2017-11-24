@@ -123,7 +123,7 @@ module Namespace = struct
   }
   (* a namespace could be an alias for another in the tree, with the same values *)
   and t = Concrete of concrete | Alias of string list | File of string
-  and decl = string * t
+  and decl = string * (bool * t)
 
   let make (variables, functions, gameobjs, namespaces) =
     { variables; functions; gameobjs; namespaces }
@@ -263,11 +263,12 @@ let rec string_of_concrete_ns { Namespace.variables; functions; gameobjs; namesp
   String.concat "\n" (List.map string_of_fdecl functions) ^
   String.concat "\n" (List.map string_of_gameobj gameobjs) ^
   String.concat "\n" (List.map string_of_ns_decl namespaces)
-and string_of_ns_decl (name, ns) =
+and string_of_ns_decl (name, (is_private, ns)) =
   let open Namespace in
+  let pref = if is_private then "private namespace " else "namespace " in
   match ns with
-  | Alias chain -> "namespace " ^ name ^ " = " ^ String.concat "::" chain ^";\n"
-  | File f      -> "namespace " ^ name ^ " = open \"" ^ f ^"\";\n"
-  | Concrete n  -> "namespace " ^ name ^ " {\n" ^ string_of_concrete_ns n ^ "\n}\n"
+  | Alias chain -> pref ^ name ^ " = " ^ String.concat "::" chain ^";\n"
+  | File f      -> pref ^ name ^ " = open \"" ^ f ^"\";\n"
+  | Concrete n  -> pref ^ name ^ " {\n" ^ string_of_concrete_ns n ^ "\n}\n"
 
 let string_of_program { main; files = _ } = string_of_concrete_ns main
