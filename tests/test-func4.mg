@@ -1,4 +1,3 @@
-extern void end_game();
 int add(int a, int b)
 {
   int c;
@@ -10,7 +9,7 @@ void main()
 {
   int d;
   d = add(52, 10);
-  print(d);
-  end_game();
+  std::print(d);
+  std::end_game();
   return;
 }

@@ -1,4 +1,3 @@
-extern void end_game();
 
 object helper {
   event create { destroy this; }
@@ -10,7 +9,7 @@ object main {
     int i;
     i = 0; /* count # helpers */
     foreach (helper h) { i = i + 1; }
-    print(i);
-    end_game();
+    std::print(i);
+    std::end_game();
   }
 }

@@ -1,20 +1,19 @@
-extern void end_game();
 
 void main () {
   int x;
   x = 3;
-  print (x);
+  std::print (x);
 
   int y;
   y = 4;
-  print (y);
+  std::print (y);
 
   if (x == 3) {
-    print (x);
+    std::print (x);
     int x; // OK: can redeclare in different block
     x = 5;
-    print (x);
+    std::print (x);
   }
-  print (x);
-  end_game();
+  std::print (x);
+  std::end_game();
 }

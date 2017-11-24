@@ -1,4 +1,3 @@
-extern void end_game();
 
 namespace a {
   namespace b { int x; }
@@ -18,14 +17,14 @@ namespace DD = a::D; // alias to alias of inner ns
 object main {
   event create {
     a::b::x = 1;
-    print(B::x);
-    print(BB::x);
+    std::print(B::x);
+    std::print(BB::x);
     a::c::x = 2;
-    print(C::x);
+    std::print(C::x);
     a::c::d::x = 3;
-    print(a::D::x);
-    print(D::x);
-    print(DD::x);
-    end_game();
+    std::print(a::D::x);
+    std::print(D::x);
+    std::print(DD::x);
+    std::end_game();
   }
 }

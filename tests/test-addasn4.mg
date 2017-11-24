@@ -1,14 +1,8 @@
-extern void end_game();
-
-int addAsn(int x)
-{
-  return (x += 2) += 2;
-}
-
 void main()
 {
-  print( addAsn(0) );
-
-  end_game();
-  return;
+  int x;
+  x = 0;
+  std::print((x += 2) += 2);
+  std::print(x);
+  std::end_game();
 }

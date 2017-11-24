@@ -1,4 +1,3 @@
-extern void end_game();
 
 object main {
   int x;
@@ -6,18 +5,18 @@ object main {
   event create {
     x = 0;
     this.y = 1;
-    print(this.x);
-    print(y);
+    std::print(this.x);
+    std::print(y);
 
     int y;
     y = 2;
-    print(y);
-    print(this.y);
+    std::print(y);
+    std::print(this.y);
 
     this.y = 3;
-    print(y);
-    print(this.y);
+    std::print(y);
+    std::print(this.y);
 
-    end_game();
+    std::end_game();
   }
 }

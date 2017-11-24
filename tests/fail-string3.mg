@@ -1,3 +1,3 @@
 void main () {
-  printstr(4);
+  std::printstr(4);
 }

@@ -1,5 +1,3 @@
-extern void end_game();
-
 main m; 
 object main {
   event create {

@@ -1,4 +1,3 @@
-extern void end_game();
 
 int compute () { return 1; }
 
@@ -25,18 +24,18 @@ namespace a {
 object main {
   event create {
     // no namespace specified gives regular fn
-    print(compute());
+    std::print(compute());
     // appropriate outer namespace call
-    print(a::compute());
+    std::print(a::compute());
     // returning an object defined in the namespace of the call
-    print(a::b.make().compute());
+    std::print(a::b.make().compute());
     // member call from namespace
-    print(a::b.compute());
+    std::print(a::b.compute());
     // member variable from namespace
-    print(a::b.make().x);
+    std::print(a::b.make().x);
     // returning an object defined inside a ns inside the ns of the call
-    print(a::b.inner().x);
-    print(a::b.inner().compute());
-    end_game();
+    std::print(a::b.inner().x);
+    std::print(a::b.inner().compute());
+    std::end_game();
   }
 }

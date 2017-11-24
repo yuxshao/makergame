@@ -1,4 +1,3 @@
-extern void end_game();
 
 object helper {
   int i;
@@ -11,9 +10,9 @@ object main {
     h = create helper;
     destroy h;
     /* destroyed objects are immediately invisible to loops */
-    foreach (helper h) { printstr("still exists!"); }
+    foreach (helper h) { std::printstr("still exists!"); }
     /* refs to destroyed objects still work until at least end of event */
-    print(h.i);
-    end_game();
+    std::print(h.i);
+    std::end_game();
   }
 }

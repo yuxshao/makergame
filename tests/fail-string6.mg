@@ -1,3 +1,3 @@
 void main () {
-  printstr('yesterday');
+  std::printstr('yesterday');
 }

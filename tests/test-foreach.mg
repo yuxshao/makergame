@@ -1,4 +1,3 @@
-extern void end_game();
 
 int y;
 object helper {
@@ -10,16 +9,16 @@ object helper {
 object main {
   int y;
   event create {
-    this.y = 3; /* this is not printed since it's not a helper */
+    this.y = 3; /* this is not std::printed since it's not a helper */
 
     int x;
     for (x = 0; x < 5; x = x + 1)
       create helper;
 
     foreach (helper h) {
-      print(h.y);
+      std::print(h.y);
     }
 
-    end_game();
+    std::end_game();
   }
 }

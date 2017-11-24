@@ -1,5 +1,3 @@
-extern void end_game();
-
 void main() {
   int x;
   x = 3;
@@ -7,7 +5,6 @@ void main() {
     int y;
     y = 4;
   }
-  print(x);
-  print(y); /* error: y not in outer scope */
-  end_game();
+  std::print(x);
+  std::print(y); /* error: y not in outer scope */
 }

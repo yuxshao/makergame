@@ -50,6 +50,11 @@ let rec check_namespace (nname, namespace) files =
   let { Namespace.variables = globals; functions ; gameobjs; namespaces } = namespace in
 
   (**** Checking Namespaces ****)
+  (* TODO: report in LRM why each namespace has its own std *)
+  (* Add the standard namespace *)
+  let namespaces = ("std", Namespace.File "std.mg") :: namespaces in
+  let namespace = { namespace with Namespace.namespaces } in
+
   report_duplicate (fun n -> "duplicate namespace " ^ nname ^ "::" ^ n) (List.map fst namespaces);
 
   let rec namespace_of_chain top files chain =
@@ -113,19 +118,6 @@ let rec check_namespace (nname, namespace) files =
   report_duplicate (fun n -> "duplicate global " ^ nname ^ "::" ^ n) (List.map fst globals);
 
   (**** Checking Functions ****)
-
-  (* Add built-in function declarations *)
-  let functions =
-    let open Func in
-    let add ~fname ~arg_type list =
-      (fname, { typ = Void; formals = [("x", arg_type)]; block = None; gameobj = None }) :: list
-    in
-    functions
-    |> add ~fname:"print"       ~arg_type:Int
-    |> add ~fname:"printb"      ~arg_type:Bool
-    |> add ~fname:"print_float" ~arg_type:Float
-    |> add ~fname:"printstr"    ~arg_type:String
-  in
 
   report_duplicate (fun n -> "duplicate function " ^ nname ^ "::" ^ n) (List.map fst functions);
   report_duplicate (fun n -> "duplicate gameobj " ^ nname ^ "::" ^ n) (List.map fst gameobjs);

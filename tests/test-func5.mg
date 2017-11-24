@@ -1,4 +1,3 @@
-extern void end_game();
 int foo(int a)
 {
   return a;
@@ -6,6 +5,6 @@ int foo(int a)
 
 void main()
 {
-  end_game();
+  std::end_game();
   return;
 }

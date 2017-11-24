@@ -1,15 +1,14 @@
-extern void end_game();
 int a;
 int b;
 
 void printA()
 {
-  print(a);
+  std::print(a);
 }
 
 void printB()
 {
-  print(b);
+  std::print(b);
 }
 
 void incab()
@@ -27,6 +26,6 @@ void main()
   incab();
   printA();
   printB();
-  end_game();
+  std::end_game();
   return;
 }
