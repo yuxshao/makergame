@@ -8,10 +8,12 @@ int cond(bool b)
   return x;
 }
 
-void main()
+object main {
+event create
 {
  std::print(cond(true));
  std::print(cond(false));
  std::end_game();
  return;
+}
 }

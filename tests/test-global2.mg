@@ -1,6 +1,7 @@
 bool i;
 
-void main()
+object main {
+event create
 {
   int i; /* Should hide the global i */
 
@@ -8,4 +9,5 @@ void main()
   std::print(i + i);
   std::end_game();
   return;
+}
 }

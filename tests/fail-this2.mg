@@ -1,5 +1,7 @@
-void main() {
-  int this; /* error: this cannot be declared */
+object main {
+  event create {
+    int this; /* error: this cannot be declared */
 
-  this = 3;
+    this = 3;
+  }
 }

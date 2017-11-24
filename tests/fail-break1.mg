@@ -1,4 +1,5 @@
-void main () {
-  break; // error: cannot break in outermost block
-  std::end_game();
+object main {
+  event create {
+    break; // error: cannot break in outermost block
+  }
 }

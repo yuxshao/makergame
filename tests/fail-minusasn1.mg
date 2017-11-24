@@ -3,9 +3,11 @@ int minusAsn(int x)
   return x -= "hello";
 }
 
-void main()
+object main {
+event create
 {
   std::print( minusAsn(1) );
 
   std::end_game();
+}
 }

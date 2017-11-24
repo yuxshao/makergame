@@ -1,4 +1,5 @@
-void main () {
+object main {
+event create {
   int i;
   i = 0;
   while (i < 5) {
@@ -7,4 +8,5 @@ void main () {
     i = i + 1;
   }
   std::end_game();
+}
 }

@@ -403,24 +403,8 @@ let rec check_namespace (nname, namespace) files =
   (nname, { Namespace.variables = globals; functions; gameobjs; namespaces }), files
 
 let check_program program =
-  let (_, program), files = check_namespace ("", program.main) program.files in
+  let (_, main), files = check_namespace ("", program.main) program.files in
 
-  (* add gameobj main if it doesn't exist but a void main() function does *)
-  let { Namespace.gameobjs; functions ; _ } = program in
-  let gameobjs =
-    if List.mem_assoc "main" gameobjs
-    then gameobjs
-    else
-      let undef_err = "either main game object or function must be defined" in
-      let not_void_err = "main function must return void" in
-      let arg_err = "main function must take no arguments" in
-      let fn =
-        try List.assoc "main" functions with Not_found -> failwith undef_err in
-      let block =
-        match fn.Func.block with Some b -> b | None -> failwith undef_err
-      in
-      (match fn.Func.typ with Void -> () | _ -> failwith not_void_err);
-      (match fn.Func.formals with [] -> () | _ -> failwith arg_err);
-      (Gameobj.make "main" ([], [], [Gameobj.Create, block])) :: gameobjs
-  in
-  { main = { program with Namespace.gameobjs }; files }
+  if not (List.mem_assoc "main" main.Namespace.gameobjs)
+  then failwith "main game object must be defined"
+  else { main; files }

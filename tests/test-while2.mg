@@ -9,9 +9,11 @@ int foo(int a)
   return j;
 }
 
-void main()
+object main {
+event create
 {
   std::print(foo(7));
   std::end_game();
   return;
+}
 }

@@ -5,7 +5,8 @@ int fun(int x, int y)
   return 0;
 }
 
-void main()
+object main {
+event create
 {
   int i;
   i = 1;
@@ -15,5 +16,6 @@ void main()
   std::print(i);
   std::end_game();
   return;
+}
 }
 

@@ -6,4 +6,4 @@ int baz() {}
 
 void bar() {} /* Error: duplicate function bar */
 
-void main() {}
+object main { }

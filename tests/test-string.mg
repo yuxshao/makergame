@@ -1,4 +1,5 @@
-void main () {
+object main {
+event create {
   string c;
   c = "hello world";
   std::printstr(c);
@@ -8,4 +9,5 @@ void main () {
   std::printstr("multiple\nlines");
   std::end_game();
   return;
+}
 }

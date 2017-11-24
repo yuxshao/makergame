@@ -6,9 +6,11 @@ void printem(int a, int b, int c, int d)
   std::print(d);
 }
 
-void main()
+object main {
+event create
 {
   printem(42,17,192,8);
   std::end_game();
   return;
+}
 }
