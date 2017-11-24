@@ -136,7 +136,7 @@ let rec check_namespace (nname, namespace) =
   (* Check that the expression can indeed be assigned to *)
   let check_lvalue loc = function
     | Id([], "this") -> failwith ("'this' cannot be assigned in '" ^ loc ^ "'")
-    | Id _ | Member _ | Assign _ | Asnop _ -> ()
+    | Id _ | Member _ | Assign _ | Asnop _ | Idop _ -> ()
     | _ as e -> failwith ("lvalue " ^ string_of_expr e ^ " expected in " ^ loc)
   in
   (* Return the type of an expression and the new expression or throw an exception *)

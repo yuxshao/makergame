@@ -465,9 +465,7 @@ let translate the_program =
       | A.FloatLit f -> L.const_float float_t f
       | A.Noexpr -> L.const_int i32_t 0
       | A.Id (_, n) | A.Member (_, _, n) as e -> L.build_load (lexpr scope builder e) n builder
-      | A.Assign _ as e -> L.build_load (lexpr scope builder e) "" builder
-      | A.Asnop  _ as e -> L.build_load (lexpr scope builder e) "" builder
-      | A.Idop   _ as e -> L.build_load (lexpr scope builder e) "" builder
+      | A.Assign _ | A.Asnop _ | A.Idop _ as e -> L.build_load (lexpr scope builder e) "" builder
       | A.Binop (e1, op, t, e2) ->
         let e1' = expr scope builder e1
         and e2' = expr scope builder e2 in
