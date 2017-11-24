@@ -1,12 +1,12 @@
-extern void end_game();
-void main()
-{
-  int a;
-  a = 42;
-  print(++a);
-  ++a = 3;
-  print(a);
-  print(--a);
-  print(--a + 5);
-  end_game();
+object main {
+  event create {
+    int a;
+    a = 42;
+    std::print(++a);
+    ++a = 3;
+    std::print(a);
+    std::print(--a);
+    std::print(--a + 5);
+    std::end_game();
+  }
 }
