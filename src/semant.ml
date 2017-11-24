@@ -172,6 +172,7 @@ let rec check_namespace (nname, namespace) =
                           " = " ^ string_of_typ rt ^ " in " ^
                           string_of_expr e), Assign(l', r')
     | Asnop(e1, opasn, _, e2) ->
+      check_lvalue (string_of_expr e1) e1;
       let (t1, e1') = expr scope e1 and (t2, e2') = expr scope e2 in
       (match t1, t2 with
        | Int, Int     -> Int,   Asnop(e1', opasn, Int, e2')
