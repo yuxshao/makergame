@@ -41,21 +41,23 @@ let ast_of_file f =
   with Parsing.Parse_error -> failwith ("failed to parse file " ^ f)
 ;;
 
-(* Semantic checking of a program. Returns void if successful,
-   throws an exception if something is wrong.
+(* Semantic checking of a namespace. Returns checked AST if successful, throws
+   an exception if something is wrong.
 
-   Check each global variable, then check each function *)
+   Check each inner namespace, global variable, function, and then gameobj. *)
 
 let rec check_namespace (nname, namespace) files =
-  let { Namespace.variables = globals; functions ; gameobjs; namespaces } = namespace in
+  let { Namespace.variables = globals; functions ; gameobjs; namespaces = _ } = namespace in
 
   (**** Checking Namespaces ****)
-  (* TODO: report in LRM why each namespace has its own std *)
-  (* Add the standard namespace *)
-  let namespaces = ("std", (true, Namespace.File "std.mg")) :: namespaces in
-  let namespace = { namespace with Namespace.namespaces } in
+  (* Add the standard namespace and mark private *)
+  let namespace =
+    let namespaces = ("std", (true, Namespace.File "std.mg")) :: namespace.Namespace.namespaces in
+    { namespace with Namespace.namespaces }
+  in
 
-  report_duplicate (fun n -> "duplicate namespace " ^ nname ^ "::" ^ n) (List.map fst namespaces);
+  report_duplicate (fun n -> "duplicate namespace " ^ nname ^ "::" ^ n)
+    (List.map fst namespace.Namespace.namespaces);
 
   (* Access an inner namespace in a chain. Prevent access to private namespaces. *)
   let rec namespace_of_chain top files chain =
@@ -78,17 +80,36 @@ let rec check_namespace (nname, namespace) files =
     let ns, _ = List.fold_left find (top, true) chain in ns
   in
 
-  (* Ensure aliases only refer to previously defined namespaces *)
-  (* TODO: mention this in LRM *)
-  let namespaces, files =
+  (* Check inner namespaces and populate list of files *)
+  let namespace, files =
     let open Namespace in
-    (* Check for loops in alias references by redirecting at most {#aliases} times *)
+    (* Check and update nested concrete namespaces *)
+    let namespaces =
+      let check_concrete = function
+        | n, (p, Concrete ns) ->
+          let (n, ns), _ = check_namespace (n, ns) files in (n, (p, Concrete ns))
+        | _ as ns -> ns
+      in
+      List.map check_concrete namespace.namespaces
+    in
+    let namespace = { namespace with namespaces } in
+    (* Update list of file-namespace associations by opening each file namespace *)
+    let check_file_ns accum = function
+      | _, (_is_private, File f) when not (List.mem_assoc f accum) ->
+        let { main = file_prog; files = _ } = ast_of_file f in
+        let _, files = check_namespace ("file-" ^ f, file_prog) ((f, file_prog) :: accum) in
+        files
+      | _ -> accum
+    in
+    let files = List.fold_left check_file_ns files namespaces in
+    (* Check namespace aliases *)
     let () =
       let aliases =
         List.fold_left
-          (fun a (n, (_, x)) -> match x with Alias _ -> n :: a | _ -> a) []
+          (fun a (n, (_, x)) -> match x with Alias chain -> (n, chain) :: a | _ -> a) []
           namespace.namespaces
       in
+      (* Check for loops in alias references by redirecting at most {#aliases} times *)
       let rec check_loop num name =
         let ns =
           try let _is_private, ns = List.assoc name namespace.namespaces in ns
@@ -99,26 +120,15 @@ let rec check_namespace (nname, namespace) files =
         | Alias (hd :: _) -> check_loop (num - 1) hd
         | _ -> ()
       in
-      List.iter (check_loop (List.length aliases)) aliases
+      (* Also verify that each alias indeed resolves to a namespace *)
+      let check_resolve chain =
+        ignore (namespace_of_chain namespace files chain)
+      in
+      List.iter
+        (fun (name, chain) -> check_loop (List.length aliases) name; check_resolve chain)
+        aliases
     in
-    (* Update list of file-namespace associations by opening each file namespace *)
-    let check_file_ns accum = function
-      | _, (_is_private, File f) when not (List.mem_assoc f accum) ->
-        let { main = file_prog; files = _ } = ast_of_file f in
-        let _, files = check_namespace ("file-" ^ f, file_prog) ((f, file_prog) :: accum) in
-        files
-      | _ -> accum
-    in
-    let files = List.fold_left check_file_ns files namespaces in
-    (* Check validity of concretes and aliases *)
-    let check_ns = function
-      | n, (p, Concrete ns) ->
-        let (n, ns), _ = check_namespace (n, ns) files in (n, (p, Concrete ns))
-      | n, (p, Alias chain) ->
-        ignore (namespace_of_chain namespace files chain); (n, (p, Alias chain))
-      | _, (_, File _) as ns -> ns
-    in
-    List.map check_ns namespaces, files
+    namespace, files
   in
   let namespace_of_chain = namespace_of_chain namespace files in
 
@@ -410,6 +420,7 @@ let rec check_namespace (nname, namespace) files =
   in
   let functions = List.map (check_function ~scope) functions in
   let gameobjs = List.map (check_gameobj ~scope) gameobjs in
+  let namespaces = namespace.Namespace.namespaces in
 
   (nname, { Namespace.variables = globals; functions; gameobjs; namespaces }), files
 
