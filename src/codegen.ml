@@ -304,7 +304,7 @@ let translate the_program files =
 
     let llnamespaces =
       let open A.Namespace in
-      let add_ns m (n, ns) = match ns with
+      let add_ns m (n, (_private, ns)) = match ns with
         | Concrete ns -> StringMap.add n (B.Concrete (define_llns (nname ^ "::" ^ n, ns))) m
         | Alias chain -> StringMap.add n (B.Alias chain) m
         | File f      -> StringMap.add n (B.File f) m
@@ -324,7 +324,7 @@ let translate the_program files =
     let { A.Namespace.variables = _;
           functions ; gameobjs ; namespaces } = the_namespace in
     let () = (* Recursively check inner namespaces *)
-      let check_inner_ns (nname, ns) = match ns with
+      let check_inner_ns (nname, (_, ns)) = match ns with
         | A.Namespace.Concrete c ->
           (match StringMap.find nname llns.B.namespaces with
            | B.Concrete llc -> define_ns_contents llc (nname, c)
@@ -346,9 +346,9 @@ let translate the_program files =
     let rec ast_namespace_of_chain top chain =
       let open A.Namespace in
       let search ns n = match List.assoc n ns.A.Namespace.namespaces with
-        | Concrete c -> c
-        | Alias chain -> ast_namespace_of_chain ns chain
-        | File f -> List.assoc f files
+        | _, Concrete c -> c
+        | _, Alias chain -> ast_namespace_of_chain ns chain
+        | _, File f -> List.assoc f files
       in
       List.fold_left search top chain
     in

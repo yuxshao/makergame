@@ -66,6 +66,8 @@ rule token = parse
   | "step"   { STEP }
   (* misc keywords *)
   | "namespace" { NAMESPACE }
+  | "private" { PRIVATE }
+  | "public" { PUBLIC }
   | "extern" { EXTERN }
   | "open"   { OPEN }
   (* literals *)
