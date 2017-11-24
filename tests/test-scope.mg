@@ -1,5 +1,6 @@
 
-void main () {
+object main {
+event create {
   int x;
   x = 3;
   std::print (x);
@@ -16,4 +17,5 @@ void main () {
   }
   std::print (x);
   std::end_game();
+}
 }

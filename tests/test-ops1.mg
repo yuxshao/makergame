@@ -1,4 +1,5 @@
-void main()
+object main {
+event create
 {
   std::print(1 + 2);
   std::print(1 - 2);
@@ -25,4 +26,5 @@ void main()
   std::printb(1 >= 1);
   std::printb(2 >= 1); 
   std::end_game();
+}
 }

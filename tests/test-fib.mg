@@ -4,7 +4,8 @@ int fib(int x)
   return fib(x-1) + fib(x-2);
 }
 
-void main()
+object main {
+event create
 {
   std::print(fib(0));
   std::print(fib(1));
@@ -14,4 +15,5 @@ void main()
   std::print(fib(5));
   std::end_game();
   return;
+}
 }

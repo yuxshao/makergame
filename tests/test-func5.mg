@@ -3,8 +3,10 @@ int foo(int a)
   return a;
 }
 
-void main()
+object main {
+event create
 {
   std::end_game();
   return;
+}
 }

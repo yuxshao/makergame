@@ -17,7 +17,8 @@ void incab()
   b = b + 1;
 }
 
-void main()
+object main {
+event create
 {
   a = 42;
   b = 21;
@@ -28,4 +29,5 @@ void main()
   printB();
   std::end_game();
   return;
+}
 }

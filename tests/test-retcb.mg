@@ -10,8 +10,10 @@ int compute() {
   std::print(i);
   return i;
 }
-void main()
+object main {
+event create
 {
   compute();
   std::end_game();
+}
 }

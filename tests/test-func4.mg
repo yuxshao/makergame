@@ -5,11 +5,13 @@ int add(int a, int b)
   return c;
 }
 
-void main()
+object main {
+event create
 {
   int d;
   d = add(52, 10);
   std::print(d);
   std::end_game();
   return;
+}
 }

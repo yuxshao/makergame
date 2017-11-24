@@ -1,4 +1,5 @@
-void main () {
+object main {
+event create {
   float f1;
   f1 = 3.5;
   float f2;
@@ -7,4 +8,5 @@ void main () {
   sum = f1 + f2;
   std::print_float(sum);
   std::end_game();
+}
 }

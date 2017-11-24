@@ -6,9 +6,11 @@ void foo(bool i)
   std::print(i + i);
 }
 
-void main()
+object main {
+event create
 {
   foo(true);
   std::end_game();
   return;
+}
 }

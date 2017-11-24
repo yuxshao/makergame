@@ -8,8 +8,10 @@ int foo(int a, bool b)
   return c + 10;
 }
 
-void main() {
+object main {
+event create {
  std::print(foo(37, false));
  std::end_game();
  return;
+}
 }

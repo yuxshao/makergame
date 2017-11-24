@@ -6,11 +6,13 @@ int gcd(int a, int b) {
   return a;
 }
 
-void main()
+object main {
+event create
 {
   std::print(gcd(2,14));
   std::print(gcd(3,15));
   std::print(gcd(99,121));
   std::end_game();
   return;
+}
 }
