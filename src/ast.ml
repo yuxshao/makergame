@@ -3,6 +3,8 @@
 type op = Add | Sub | Mult | Div | Expo | Modulo | Equal | Neq | Less | Leq |
           Greater | Geq | And | Or
 
+type idop = Inc | Dec
+
 type asnop = Addasn | Subasn | Multasn | Divasn
 
 type uop = Neg | Not
@@ -35,6 +37,7 @@ type expr =
   | Binop of expr * op * typ * expr
   | Asnop of expr * asnop * typ * expr
   | Unop of uop * typ * expr
+  | Idop of idop * typ * expr
   | Assign of expr * expr
   (* (LHS before period, name of LHS object type, RHS) *)
   | Member of expr * id_chain * string
@@ -161,6 +164,10 @@ let string_of_op = function
   | And -> "&&"
   | Or -> "||"
 
+let string_of_idop = function
+    Inc -> "++"
+  | Dec -> "--"
+
 let string_of_uop = function
     Neg -> "-"
   | Not -> "!"
@@ -184,6 +191,7 @@ let rec string_of_expr = function
        string_of_expr l ^ " " ^ string_of_asnop o ^ " " ^ string_of_expr r
   | Binop(e1, o, _, e2) ->
       string_of_expr e1 ^ " " ^ string_of_op o ^ " " ^ string_of_expr e2
+  | Idop(o, _, e) -> string_of_idop o ^ string_of_expr e
   | Unop(o, _, e) -> string_of_uop o ^ string_of_expr e
   | Assign(l, r) -> string_of_expr l ^ " = " ^ string_of_expr r
   | Call(f, el) ->

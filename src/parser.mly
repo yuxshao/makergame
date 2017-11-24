@@ -6,6 +6,7 @@ open Ast
 
 %token SEMI LPAREN RPAREN LBRACK RBRACK LCURLY RCURLY COMMA PERIOD DBCOLON
 %token PLUS MINUS TIMES DIVIDE EXPONENT MODULO ASSIGN NOT
+%token INCREMENT DECREMENT
 %token ADDASN MINUSASN TIMEASN DIVASN
 %token EQ NEQ LT LEQ GT GEQ TRUE FALSE AND OR
 %token BREAK RETURN IF ELSE FOR WHILE FOREACH
@@ -30,6 +31,7 @@ open Ast
 %left TIMES DIVIDE
 %left EXPONENT MODULO
 %right NOT NEG
+%left INCREMENT DECREMENT
 %left PERIOD
 %left DBCOLON
 
@@ -139,6 +141,8 @@ expr:
   | expr EXPONENT expr { Binop($1, Expo, Void,  $3) }
   | expr MODULO expr   { Binop($1, Modulo, Void,  $3) }
   | expr EQ     expr   { Binop($1, Equal, Void,   $3) }
+  | INCREMENT   expr   { Idop(Inc, Void, $2) }
+  | DECREMENT   expr   { Idop(Dec, Void, $2)}
   | expr ADDASN expr   { Asnop($1, Addasn, Void, $3) }
   | expr MINUSASN expr { Asnop($1, Subasn, Void, $3) }
   | expr TIMEASN expr  { Asnop($1, Multasn, Void, $3) }

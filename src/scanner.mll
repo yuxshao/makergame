@@ -25,6 +25,8 @@ rule token = parse
   | '/'      { DIVIDE }
   | '^'      { EXPONENT }
   | '%'      { MODULO }
+  | "++"     { INCREMENT }
+  | "--"     { DECREMENT }
   | '='      { ASSIGN }
   | "+="     { ADDASN }
   | "-="     { MINUSASN }

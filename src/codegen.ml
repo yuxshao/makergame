@@ -449,6 +449,13 @@ let translate the_program =
            | _ -> assert false )
         in
         ignore (L.build_store sum lp builder); lp
+      | A.Idop (idop, t, l) ->
+        (match t, idop with
+         | A.Int, A.Inc -> lexpr (vscope, fscope) builder (A.Asnop (l, A.Addasn, A.Int, A.Literal 1))
+         | A.Int, A.Dec -> lexpr (vscope, fscope) builder (A.Asnop (l, A.Subasn, A.Int, A.Literal 1))
+         | A.Float, A.Inc -> lexpr (vscope, fscope) builder (A.Asnop(l, A.Addasn, A.Float, A.FloatLit 1.0))
+         | A.Float, A.Dec -> lexpr (vscope, fscope) builder (A.Asnop(l, A.Subasn, A.Float, A.FloatLit 1.0))
+         | _ -> assert false)
       | _ -> assert false (* Semant should catch other illegal attempts at assignment *)
     (* Construct code for an expression; return its value *)
     and expr scope builder = function
@@ -460,6 +467,7 @@ let translate the_program =
       | A.Id (_, n) | A.Member (_, _, n) as e -> L.build_load (lexpr scope builder e) n builder
       | A.Assign _ as e -> L.build_load (lexpr scope builder e) "" builder
       | A.Asnop  _ as e -> L.build_load (lexpr scope builder e) "" builder
+      | A.Idop   _ as e -> L.build_load (lexpr scope builder e) "" builder
       | A.Binop (e1, op, t, e2) ->
         let e1' = expr scope builder e1
         and e2' = expr scope builder e2 in

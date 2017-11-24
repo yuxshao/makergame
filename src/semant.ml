@@ -137,7 +137,7 @@ let rec check_namespace (nname, namespace) =
   let check_lvalue loc = function
     | Id([], "this") -> failwith ("'this' cannot be assigned in '" ^ loc ^ "'")
     | Id _ | Member _ | Assign _ | Asnop _ -> ()
-    | _ -> failwith ("LHS ineligible for assignment in " ^ loc)
+    | _ as e -> failwith ("lvalue " ^ string_of_expr e ^ " expected in " ^ loc)
   in
   (* Return the type of an expression and the new expression or throw an exception *)
   let rec expr scope e = match e with
@@ -164,6 +164,14 @@ let rec check_namespace (nname, namespace) =
        | Not, Bool -> Bool, Unop(op, Bool, ex')
        | _ -> failwith ("illegal unary operator " ^ string_of_uop op ^
                         string_of_typ t ^ " in " ^ string_of_expr e))
+    | Idop (opid, _, e1) ->
+      check_lvalue (string_of_expr e) e1;
+      let (t, e1') = expr scope e1 in
+      (match t with 
+       | Int -> Int, Idop(opid, Int, e1')
+       | Float -> Float, Idop(opid, Float, e1')
+       | _ -> failwith ("illegal Increment/Decrement operator " ^
+                        string_of_typ t ^ " " ^ string_of_idop opid))
     | Noexpr -> Void, e
     | Assign(l, r) ->
       check_lvalue (string_of_expr e) l;
