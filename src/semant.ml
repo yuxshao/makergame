@@ -31,31 +31,43 @@ let add_to_scope ?loc m (n, t) =
 let check_assign lvaluet rvaluet err =
   if lvaluet = rvaluet then lvaluet else failwith err
 
+(* Build an AST given a filename. For use in namespaces for file-loading. *)
+let ast_of_file f =
+  let channel =
+    try open_in f with Sys_error s ->
+      failwith ("unable to open file for namespace: \'" ^ s ^ "\'")
+  in
+  try Parser.program Scanner.token (Lexing.from_channel channel)
+  with Parsing.Parse_error -> failwith ("failed to parse file " ^ f)
+;;
+
 (* Semantic checking of a program. Returns void if successful,
    throws an exception if something is wrong.
 
    Check each global variable, then check each function *)
 
-let rec check_namespace (nname, namespace) =
+let rec check_namespace (nname, namespace) files =
   let { Namespace.variables = globals; functions ; gameobjs; namespaces } = namespace in
 
   (**** Checking Namespaces ****)
   report_duplicate (fun n -> "duplicate namespace " ^ nname ^ "::" ^ n) (List.map fst namespaces);
 
-  let rec namespace_of_chain top chain =
+  let rec namespace_of_chain top files chain =
     let find ns n =
       try match List.assoc n ns.Namespace.namespaces with
         | Namespace.Concrete c -> c
-        | Namespace.Alias chain -> namespace_of_chain ns chain
+        | Namespace.Alias chain -> namespace_of_chain ns files chain
+        | Namespace.File f ->
+          try List.assoc f files
+          with Not_found -> failwith ("compiler bug! file " ^ f ^ " not found in files")
       with Not_found -> failwith ("unrecognized namespace " ^ n ^ " in " ^ (String.concat "::" chain))
     in
     List.fold_left find top chain
   in
-  let namespace_of_chain chain = namespace_of_chain namespace chain in
 
   (* Ensure aliases only refer to previously defined namespaces *)
   (* TODO: mention this in LRM *)
-  let namespaces =
+  let namespaces, files =
     let open Namespace in
     (* Check for loops in alias references by redirecting at most {#aliases} times *)
     let aliases =
@@ -64,17 +76,29 @@ let rec check_namespace (nname, namespace) =
     in
     let rec check_loop num name =
       match List.assoc name namespace.namespaces with
-      | Concrete _ | Alias [] -> ()
       | Alias _ when num = 0 -> failwith ("namespace alias " ^ name ^ " never resolves")
       | Alias (hd :: _) -> check_loop (num - 1) hd
+      | _ -> ()
     in
     List.iter (check_loop (List.length aliases)) aliases;
-    let check_ns = function
-      | n, Concrete ns -> let (n, ns) = check_namespace (n, ns) in (n, Concrete ns)
-      | n, Alias chain -> ignore (namespace_of_chain chain); (n, Alias chain)
+    (* Update list of file-namespace associations by opening each file namespace *)
+    let check_file_ns accum = function
+      | _, File f when not (List.mem_assoc f accum) ->
+        let { main = file_prog; files = _ } = ast_of_file f in
+        let _, files = check_namespace ("file-" ^ f, file_prog) ((f, file_prog) :: accum) in
+        files
+      | _ -> accum
     in
-    List.map check_ns namespaces
+    let files = List.fold_left check_file_ns files namespaces in
+    (* Check validity of concretes and aliases *)
+    let check_ns = function
+      | n, Concrete ns -> let (n, ns), _ = check_namespace (n, ns) files in (n, Concrete ns)
+      | n, Alias chain -> ignore (namespace_of_chain namespace files chain); (n, Alias chain)
+      | _, File _ as ns -> ns
+    in
+    List.map check_ns namespaces, files
   in
+  let namespace_of_chain = namespace_of_chain namespace files in
 
   (**** Checking Global Variables ****)
 
@@ -378,10 +402,10 @@ let rec check_namespace (nname, namespace) =
   let functions = List.map (check_function ~scope) functions in
   let gameobjs = List.map (check_gameobj ~scope) gameobjs in
 
-  nname, { Namespace.variables = globals; functions; gameobjs; namespaces }
+  (nname, { Namespace.variables = globals; functions; gameobjs; namespaces }), files
 
-let check program =
-  let _, program = check_namespace ("", program) in
+let check_program program =
+  let (_, program), files = check_namespace ("", program.main) program.files in
 
   (* add gameobj main if it doesn't exist but a void main() function does *)
   let { Namespace.gameobjs; functions ; _ } = program in
@@ -401,4 +425,4 @@ let check program =
       (match fn.Func.formals with [] -> () | _ -> failwith arg_err);
       (Gameobj.make "main" ([], [], [Gameobj.Create, block])) :: gameobjs
   in
-  { program with Namespace.gameobjs }
+  { main = { program with Namespace.gameobjs }; files }

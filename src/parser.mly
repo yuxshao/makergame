@@ -11,8 +11,8 @@ open Ast
 %token EQ NEQ LT LEQ GT GEQ TRUE FALSE AND OR
 %token BREAK RETURN IF ELSE FOR WHILE FOREACH
 %token INT BOOL FLOAT STRING SPRITE SOUND VOID
-%token NAMESPACE OBJECT EVENT CREATE DESTROY DRAW STEP
-%token EXTERN
+%token OBJECT EVENT CREATE DESTROY DRAW STEP
+%token NAMESPACE EXTERN OPEN
 %token <int> LITERAL
 %token <string> ID
 %token <string> STRLIT
@@ -40,11 +40,12 @@ open Ast
 
 %%
 
-program: decls EOF { Namespace.make $1 }
+program: decls EOF { { main = Namespace.make $1; files = [] } }
 
 ndecl:
  | NAMESPACE ID LCURLY decls RCURLY { $2, Namespace.Concrete (Namespace.make $4) }
  | NAMESPACE ID ASSIGN id_chain SEMI { $2, Namespace.Alias (fst $4 @ [snd $4]) }
+ | NAMESPACE ID ASSIGN OPEN STRLIT SEMI { $2, Namespace.File $5 }
 
 decls:
    /* nothing */ { [],[],[],[] }

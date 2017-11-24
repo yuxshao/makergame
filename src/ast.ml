@@ -122,7 +122,7 @@ module Namespace = struct
     gameobjs : Gameobj.decl list;
   }
   (* a namespace could be an alias for another in the tree, with the same values *)
-  and t = Concrete of concrete | Alias of string list
+  and t = Concrete of concrete | Alias of string list | File of string
   and decl = string * t
 
   let make (variables, functions, gameobjs, namespaces) =
@@ -142,7 +142,11 @@ module Namespace = struct
 
 end
 
-type program = Namespace.concrete
+type program = {
+  main : Namespace.concrete;
+  (* TODO: handle matching files in different directories *)
+  files : (string * Namespace.concrete) list
+}
 
 
 
@@ -263,6 +267,7 @@ and string_of_ns_decl (name, ns) =
   let open Namespace in
   match ns with
   | Alias chain -> "namespace " ^ name ^ " = " ^ String.concat "::" chain ^";\n"
-  | Concrete n -> "namespace " ^ name ^ " {\n" ^ string_of_concrete_ns n ^ "\n}\n"
+  | File f      -> "namespace " ^ name ^ " = open \"" ^ f ^"\";\n"
+  | Concrete n  -> "namespace " ^ name ^ " {\n" ^ string_of_concrete_ns n ^ "\n}\n"
 
-let string_of_program = string_of_concrete_ns
+let string_of_program { main; files = _ } = string_of_concrete_ns main

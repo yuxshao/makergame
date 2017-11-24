@@ -58,7 +58,6 @@ rule token = parse
   | "sprite" { SPRITE }
   | "sound"  { SOUND }
   (* game keywords *)
-  | "namespace" { NAMESPACE }
   | "object" { OBJECT }
   | "event"  { EVENT }
   | "create" { CREATE }
@@ -66,7 +65,9 @@ rule token = parse
   | "draw"   { DRAW }
   | "step"   { STEP }
   (* misc keywords *)
+  | "namespace" { NAMESPACE }
   | "extern" { EXTERN }
+  | "open"   { OPEN }
   (* literals *)
   | "true"   { TRUE }
   | "false"  { FALSE }
