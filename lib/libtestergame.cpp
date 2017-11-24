@@ -1,8 +1,16 @@
 // SFML-independent environment for testing
+#include <cstdio>
 static bool game_ended = false;
 
 extern "C" {
 
+// built-in print functions
+void print(int x) { printf("%d\n", x); }
+void printb(bool x) { if (x) printf("true\n"); else printf("false\n"); }
+void print_float(double x) { printf("%f\n", x); }
+void printstr(char *x) { printf("%s\n", x); }
+
+// dummy remainder functions
 void *load_sound(const char *filename) { return nullptr; }
 void play_sound(void *sound) { }
 void loop_sound(void *sound) { }

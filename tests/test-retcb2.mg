@@ -1,18 +1,17 @@
-extern void end_game();
 
 int compute() {
   int i;  
 
   i = 15;
-  print(i);
+  std::print(i);
   return i;
 
   i = 32; /* code after a return is ok */
-  print(i);
+  std::print(i);
 }
 
 void main()
 {
   compute();
-  end_game();
+  std::end_game();
 }

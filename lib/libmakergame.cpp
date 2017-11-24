@@ -30,6 +30,12 @@ static bool game_ended = false;
 
 extern "C" {
 
+// built-in print functions
+void print(int x) { printf("%d\n", x); }
+void printb(bool x) { if (x) printf("true\n"); else printf("false\n"); }
+void print_float(double x) { printf("%f\n", x); }
+void printstr(char *x) { printf("%s\n", x); }
+
 sf::Sound *load_sound(const char *filename) {
   if (!sound_map.count(filename) && !sound_map[filename].loadFromFile(filename))
     std::cerr << "unable to load sound " << filename << "\n";

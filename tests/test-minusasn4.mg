@@ -1,4 +1,3 @@
-extern void end_game();
 
 int minusAsn(int x)
 {
@@ -7,8 +6,8 @@ int minusAsn(int x)
 
 void main()
 {
-  print( minusAsn(0) );
+  std::print( minusAsn(0) );
 
-  end_game();
+  std::end_game();
   return;
 }

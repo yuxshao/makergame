@@ -130,10 +130,6 @@ let translate the_program files =
     | A.Void -> void_t
   in
 
-  (* Declare printf(), which the print built-in function will call *)
-  let printf_t = L.var_arg_function_type i32_t [| L.pointer_type i8_t |] in
-  let printf_func = L.declare_function "printf" printf_t the_module in
-
   (* Define list_add(new, head), which puts new to the end of the list
      marked by head. *)
   let list_add_func =
@@ -175,17 +171,8 @@ let translate the_program files =
     ignore (L.build_ret_void builder); f
   in
 
-  let fmt_str name contents =
-    L.define_global (name ^ "_fmt") (L.const_stringz context contents) the_module
-  in
-  let int_fmt_str   = fmt_str "int"   "%d\n" in
-  let float_fmt_str = fmt_str "float" "%f\n" in
-  let str_fmt_str   = fmt_str "str"   "%s\n" in
-  let fmt_str global builder =
-    L.build_gep global
-      [|L.const_int i32_t 0; L.const_int i32_t 0|] "" builder
-  in
-
+  (* let printf_t = L.var_arg_function_type i32_t [| L.pointer_type i8_t |] in *)
+  (* let printf_func = L.declare_function "printf" printf_t the_module in *)
   (* let build_print fmt elems builder = *)
   (*   ignore (L.build_call printf_func *)
   (*             (Array.of_list (L.build_global_stringptr (fmt ^ "\n") "" builder *)
@@ -501,19 +488,6 @@ let translate the_program files =
         (match op with
            A.Neg     -> if t=A.Int then L.build_neg else L.build_fneg
          | A.Not     -> L.build_not) e' "tmp" builder
-      | A.Call (([], "printstr"), [e]) ->
-        L.build_call printf_func
-          [| fmt_str str_fmt_str builder; (expr scope builder e) |]
-          "printf" builder
-      | A.Call (([], "print"), [e]) | A.Call (([], "printb"), [e]) ->
-        L.build_call printf_func
-          [| fmt_str int_fmt_str builder; (expr scope builder e) |]
-          "printf" builder
-      | A.Call (([], "print_float"), [e]) ->
-        L.build_call printf_func
-          [| fmt_str float_fmt_str builder; (expr scope builder e) |]
-          "printf" builder
-      (* TODO: unify print names and their tests *)
       | A.Call ((chain, f), act) ->
         let _, fscope = scope in
         let fn =

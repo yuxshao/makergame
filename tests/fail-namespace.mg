@@ -1,5 +1,3 @@
-extern void end_game();
-
 namespace sp {
   object hello {
     int this; /* error in namespace */
@@ -8,7 +6,7 @@ namespace sp {
 
 object main {
   event create {
-    printstr("hey");
-    end_game();
+    std::printstr("hey");
+    std::end_game();
   }
 }

@@ -12,7 +12,4 @@ void foo(int c, bool d)
   d + a; /* Error: bool + int */
 }
 
-void main()
-{
-  return;
-}
+void main() { }

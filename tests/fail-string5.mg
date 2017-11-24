@@ -1,4 +1,3 @@
 void main () {
-  printstr("hello\world");
-  return;
+  std::printstr("hello\world");
 }

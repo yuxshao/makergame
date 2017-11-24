@@ -1,8 +1,7 @@
-extern void end_game();
 void main()
 {
-  if (false) print(42);
-  print(17);
-  end_game();
+  if (false) std::print(42);
+  std::print(17);
+  std::end_game();
   return;
 }

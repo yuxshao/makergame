@@ -1,4 +1,3 @@
-extern void end_game();
 void main () {
   float f1;
   f1 = 3.5;
@@ -6,6 +5,6 @@ void main () {
   f2 = 2.5;
   float sum;
   sum = f1 + f2;
-  print_float(sum);
-  end_game();
+  std::print_float(sum);
+  std::end_game();
 }

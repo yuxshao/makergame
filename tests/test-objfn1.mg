@@ -1,4 +1,3 @@
-extern void end_game();
 
 int number() { return 3; }
 
@@ -14,12 +13,12 @@ object main {
     h = make(); // self member function test
     h = this.make();
 
-    print(h.number()); // other member function test
-    print((create helper).number()); 
+    std::print(h.number()); // other member function test
+    std::print((create helper).number()); 
 
-    print(h.get_number());
-    print(number()); // number is not shadowed in object main
+    std::print(h.get_number());
+    std::print(number()); // number is not shadowed in object main
 
-    end_game();
+    std::end_game();
   }
 }

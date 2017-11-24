@@ -1,13 +1,12 @@
-extern void end_game();
 void main()
 {
   int i;
   i = 5;
   while (i > 0) {
-    print(i);
+    std::print(i);
     i = i - 1;
   }
-  print(42);
-  end_game();
+  std::print(42);
+  std::end_game();
   return;
 }

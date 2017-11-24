@@ -1,1 +1,5 @@
-object main { void same() { } void same() { } } // error: duplicate fns
+// error: duplicate fns
+object main {
+  void same() { }
+  void same() { }
+}

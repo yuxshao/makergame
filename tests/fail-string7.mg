@@ -1,4 +1,3 @@
 void main () {
-  printstr("is "this" wrong?");
-  return;
+  std::printstr("is "this" wrong?");
 }

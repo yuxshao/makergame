@@ -1,15 +1,14 @@
-extern void end_game();
 void printem(int a, int b, int c, int d)
 {
-  print(a);
-  print(b);
-  print(c);
-  print(d);
+  std::print(a);
+  std::print(b);
+  std::print(c);
+  std::print(d);
 }
 
 void main()
 {
   printem(42,17,192,8);
-  end_game();
+  std::end_game();
   return;
 }

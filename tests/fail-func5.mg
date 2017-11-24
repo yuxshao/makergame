@@ -8,7 +8,4 @@ int bar() {
   return;
 }
 
-void main()
-{
-  return;
-}
+void main() { }
