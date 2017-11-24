@@ -79,7 +79,7 @@ let build_while ~pred ~body context builder the_function =
   ignore (L.build_cond_br bool_val body_bb merge_bb pred_builder);
   L.builder_at_end context merge_bb
 
-let translate the_program =
+let translate the_program files =
   let context = L.global_context () in
   let the_module = L.create_module context "MicroC"
   and i64_t    = L.i64_type    context
@@ -320,11 +320,18 @@ let translate the_program =
       let add_ns m (n, ns) = match ns with
         | Concrete ns -> StringMap.add n (B.Concrete (define_llns (nname ^ "::" ^ n, ns))) m
         | Alias chain -> StringMap.add n (B.Alias chain) m
+        | File f      -> StringMap.add n (B.File f) m
       in
       List.fold_left add_ns StringMap.empty namespaces
     in
     { B.variables = llvars; functions = llfns; gameobjs = llgameobjs; namespaces = llnamespaces }
   in
+
+  let llfiles =
+    List.fold_left (fun m (fname, ns) -> StringMap.add fname (define_llns (":file-" ^ fname, ns)) m)
+      StringMap.empty files
+  in
+  let llprogram = define_llns ("", the_program) in
 
   let rec define_ns_contents llns (nname, the_namespace) =
     let { A.Namespace.variables = globals;
@@ -343,6 +350,7 @@ let translate the_program =
       let search ns n = match StringMap.find n ns.B.namespaces with
         | B.Concrete c -> c
         | B.Alias chain -> namespace_of_chain ns chain
+        | B.File f -> StringMap.find f llfiles
       in
       List.fold_left search top chain
     in
@@ -352,7 +360,8 @@ let translate the_program =
       let open A.Namespace in
       let search ns n = match List.assoc n ns.A.Namespace.namespaces with
         | Concrete c -> c
-        | Alias chain -> ast_namespace_of_chain top chain
+        | Alias chain -> ast_namespace_of_chain ns chain
+        | File f -> List.assoc f files
       in
       List.fold_left search top chain
     in
@@ -742,6 +751,7 @@ let translate the_program =
       build_function_body create_gb [] [A.Expr (A.Create ([], "main"))] A.Void
     else ()
   in
+
   let global_event (name, offset) =
     let fn = L.define_function ("global_" ^ name) (L.function_type void_t [||]) the_module in
     let builder = L.builder_at_end context (L.entry_block fn) in
@@ -771,7 +781,10 @@ let translate the_program =
     ignore (L.build_ret_void builder)
   in
   List.iter global_event ["step", 3; "draw", 5];
-  ignore (define_ns_contents (define_llns ("", the_program)) ("", the_program));
+
+  define_ns_contents llprogram ("", the_program);
+  List.iter (fun (fname, ns) -> define_ns_contents (StringMap.find fname llfiles) (fname, ns))
+    files;
 
   the_module
 

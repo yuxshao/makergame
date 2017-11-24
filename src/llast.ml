@@ -22,4 +22,4 @@ type concrete = {
   gameobjs: gameobj StringMap.t;
   namespaces: namespace StringMap.t;
 }
-and namespace = Concrete of concrete | Alias of string list
+and namespace = Concrete of concrete | Alias of string list | File of string
