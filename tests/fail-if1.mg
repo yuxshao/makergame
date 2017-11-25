@@ -1,6 +1,8 @@
-void main()
+object main {
+event create
 {
   if (true) {}
   if (false) {} else {}
   if (42) {} /* Error: non-bool predicate */
+}
 }

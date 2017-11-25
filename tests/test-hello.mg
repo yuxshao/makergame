@@ -1,9 +1,10 @@
-extern void end_game();
-void main()
+object main {
+event create
 {
-  print(42);
-  print(71);
-  print(1);
-  end_game();
+  std::print(42);
+  std::print(71);
+  std::print(1);
+  std::end_game();
   return;
+}
 }

@@ -1,0 +1,1 @@
+Fatal error: exception Failure("unable to open file for namespace: 'test-helpers/nonexistent12345555.mg: No such file or directory'")

@@ -1,1 +1,1 @@
-Fatal error: exception Failure("LHS ineligible for assignment in 1")
+Fatal error: exception Failure("lvalue 1 expected in 1")

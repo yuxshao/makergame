@@ -1,14 +1,10 @@
-extern void end_game();
-
-int addAsn(int x)
+object main {
+event create
 {
-  return (x += 2) += 2;
+  int x;
+  x = 0;
+  std::print((x += 2) += 2);
+  std::print(x);
+  std::end_game();
 }
-
-void main()
-{
-  print( addAsn(0) );
-
-  end_game();
-  return;
 }

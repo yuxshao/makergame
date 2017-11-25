@@ -1,13 +1,14 @@
-extern void end_game();
-void main()
+object main {
+event create
 {
   int i;
   i = 0;
   for ( ; i < 5; ) {
-    print(i);
+    std::print(i);
     i = i + 1;
   }
-  print(42);
-  end_game();
+  std::print(42);
+  std::end_game();
   return;
+}
 }

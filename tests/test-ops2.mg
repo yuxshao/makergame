@@ -1,19 +1,20 @@
-extern void end_game();
-void main()
+object main {
+event create
 {
-  printb(true);
-  printb(false);
-  printb(true && true);
-  printb(true && false);
-  printb(false && true);
-  printb(false && false);
-  printb(true || true);
-  printb(true || false);
-  printb(false || true);
-  printb(false || false);
-  printb(!false);
-  printb(!true);
-  print(-10);
-  print(--42);
-  end_game();
+  std::printb(true);
+  std::printb(false);
+  std::printb(true && true);
+  std::printb(true && false);
+  std::printb(false && true);
+  std::printb(false && false);
+  std::printb(true || true);
+  std::printb(true || false);
+  std::printb(false || true);
+  std::printb(false || false);
+  std::printb(!false);
+  std::printb(!true);
+  std::print(-10);
+  std::print(-(-42));
+  std::end_game();
+}
 }

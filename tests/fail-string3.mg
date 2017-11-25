@@ -1,3 +1,5 @@
-void main () {
-  printstr(4);
+object main {
+event create {
+  std::printstr(4);
+}
 }

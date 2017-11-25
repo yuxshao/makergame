@@ -1,15 +1,16 @@
-extern void end_game();
 void foo(bool i)
 {
   int i; /* Should hide the formal i */
 
   i = 42;
-  print(i + i);
+  std::print(i + i);
 }
 
-void main()
+object main {
+event create
 {
   foo(true);
-  end_game();
+  std::end_game();
   return;
+}
 }

@@ -1,0 +1,1 @@
+Fatal error: exception Failure("cannot access private namespace a in n::a")

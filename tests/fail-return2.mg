@@ -4,7 +4,4 @@ void foo()
   else return;
 }
 
-void main()
-{
-  return 42;
-}
+object main { }

@@ -1,4 +1,3 @@
-extern void end_game();
 
 object main {
   int x;
@@ -6,8 +5,8 @@ object main {
   event step {
     int x;
     x = 5;
-    print(this.x);
-    print(x);
-    end_game();
+    std::print(this.x);
+    std::print(x);
+    std::end_game();
   }
 }

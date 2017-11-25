@@ -33,50 +33,106 @@ let check_assign lvaluet rvalue rvaluet err =
   else if (match )
   else failwith err
 
-(* Semantic checking of a program. Returns void if successful,
-   throws an exception if something is wrong.
+(* Build an AST given a filename. For use in namespaces for file-loading. *)
+let ast_of_file f =
+  let channel =
+    try open_in f with Sys_error s ->
+      failwith ("unable to open file for namespace: \'" ^ s ^ "\'")
+  in
+  try Parser.program Scanner.token (Lexing.from_channel channel)
+  with Parsing.Parse_error -> failwith ("failed to parse file " ^ f)
+;;
 
-   Check each global variable, then check each function *)
+(* Semantic checking of a namespace. Returns checked AST if successful, throws
+   an exception if something is wrong.
 
-let rec check_namespace (nname, namespace) =
-  let { Namespace.variables = globals; functions ; gameobjs; namespaces } = namespace in
+   Check each inner namespace, global variable, function, and then gameobj. *)
+
+let rec check_namespace (nname, namespace) files =
+  let { Namespace.variables = globals; functions ; gameobjs; namespaces = _ } = namespace in
 
   (**** Checking Namespaces ****)
-  report_duplicate (fun n -> "duplicate namespace " ^ nname ^ "::" ^ n) (List.map fst namespaces);
-
-  let rec namespace_of_chain top chain =
-    let find ns n =
-      try match List.assoc n ns.Namespace.namespaces with
-        | Namespace.Concrete c -> c
-        | Namespace.Alias chain -> namespace_of_chain ns chain
-      with Not_found -> failwith ("unrecognized namespace " ^ n ^ " in " ^ (String.concat "::" chain))
-    in
-    List.fold_left find top chain
+  (* Add the standard namespace and mark private *)
+  let namespace =
+    let namespaces = ("std", (true, Namespace.File "std.mg")) :: namespace.Namespace.namespaces in
+    { namespace with Namespace.namespaces }
   in
-  let namespace_of_chain chain = namespace_of_chain namespace chain in
 
-  (* Ensure aliases only refer to previously defined namespaces *)
-  (* TODO: mention this in LRM *)
-  let namespaces =
+  report_duplicate (fun n -> "duplicate namespace " ^ nname ^ "::" ^ n)
+    (List.map fst namespace.Namespace.namespaces);
+
+  (* Access an inner namespace in a chain. Prevent access to private namespaces. *)
+  let rec namespace_of_chain top files chain =
+    let find (ns, can_private) n =
+      try let is_private, inner_ns = List.assoc n ns.Namespace.namespaces in
+        if is_private && (not can_private)
+        then failwith ("cannot access private namespace " ^ n ^
+                       " in " ^ (String.concat "::" chain))
+        else
+          match inner_ns with
+          | Namespace.Concrete c -> c, false
+          | Namespace.Alias chain -> namespace_of_chain ns files chain, false
+          | Namespace.File f ->
+            try List.assoc f files, false
+            with Not_found -> failwith ("BUG: file " ^ f ^ " not found in files")
+      with Not_found ->
+        List.iter (fun (n, _) -> print_endline n) ns.Namespace.namespaces;
+        failwith ("unrecognized namespace " ^ n ^ " in " ^ (String.concat "::" chain))
+    in
+    let ns, _ = List.fold_left find (top, true) chain in ns
+  in
+
+  (* Check inner namespaces and populate list of files *)
+  let namespace, files =
     let open Namespace in
-    (* Check for loops in alias references by redirecting at most {#aliases} times *)
-    let aliases =
-      List.fold_left (fun a (n, x) -> match x with Alias _ -> n :: a | _ -> a) []
-        namespace.namespaces
+    (* Check and update nested concrete namespaces *)
+    let namespaces =
+      let check_concrete = function
+        | n, (p, Concrete ns) ->
+          let (n, ns), _ = check_namespace (n, ns) files in (n, (p, Concrete ns))
+        | _ as ns -> ns
+      in
+      List.map check_concrete namespace.namespaces
     in
-    let rec check_loop num name =
-      match List.assoc name namespace.namespaces with
-      | Concrete _ | Alias [] -> ()
-      | Alias _ when num = 0 -> failwith ("namespace alias " ^ name ^ " never resolves")
-      | Alias (hd :: _) -> check_loop (num - 1) hd
+    let namespace = { namespace with namespaces } in
+    (* Update list of file-namespace associations by opening each file namespace *)
+    let check_file_ns accum = function
+      | _, (_is_private, File f) when not (List.mem_assoc f accum) ->
+        let { main = file_prog; files = _ } = ast_of_file f in
+        let _, files = check_namespace ("file-" ^ f, file_prog) ((f, file_prog) :: accum) in
+        files
+      | _ -> accum
     in
-    List.iter (check_loop (List.length aliases)) aliases;
-    let check_ns = function
-      | n, Concrete ns -> let (n, ns) = check_namespace (n, ns) in (n, Concrete ns)
-      | n, Alias chain -> ignore (namespace_of_chain chain); (n, Alias chain)
+    let files = List.fold_left check_file_ns files namespaces in
+    (* Check namespace aliases *)
+    let () =
+      let aliases =
+        List.fold_left
+          (fun a (n, (_, x)) -> match x with Alias chain -> (n, chain) :: a | _ -> a) []
+          namespace.namespaces
+      in
+      (* Check for loops in alias references by redirecting at most {#aliases} times *)
+      let rec check_loop num name =
+        let ns =
+          try let _is_private, ns = List.assoc name namespace.namespaces in ns
+          with Not_found -> failwith ("alias " ^ name ^ " does not exist")
+        in
+        match ns with
+        | Alias _ when num = 0 -> failwith ("namespace alias " ^ name ^ " never resolves")
+        | Alias (hd :: _) -> check_loop (num - 1) hd
+        | _ -> ()
+      in
+      (* Also verify that each alias indeed resolves to a namespace *)
+      let check_resolve chain =
+        ignore (namespace_of_chain namespace files chain)
+      in
+      List.iter
+        (fun (name, chain) -> check_loop (List.length aliases) name; check_resolve chain)
+        aliases
     in
-    List.map check_ns namespaces
+    namespace, files
   in
+  let namespace_of_chain = namespace_of_chain namespace files in
 
   (**** Checking Global Variables ****)
 
@@ -85,19 +141,6 @@ let rec check_namespace (nname, namespace) =
   report_duplicate (fun n -> "duplicate global " ^ nname ^ "::" ^ n) (List.map fst globals);
 
   (**** Checking Functions ****)
-
-  (* Add built-in function declarations *)
-  let functions =
-    let open Func in
-    let add ~fname ~arg_type list =
-      (fname, { typ = Void; formals = [("x", arg_type)]; block = None; gameobj = None }) :: list
-    in
-    functions
-    |> add ~fname:"print"       ~arg_type:Int
-    |> add ~fname:"printb"      ~arg_type:Bool
-    |> add ~fname:"print_float" ~arg_type:Float
-    |> add ~fname:"printstr"    ~arg_type:String
-  in
 
   report_duplicate (fun n -> "duplicate function " ^ nname ^ "::" ^ n) (List.map fst functions);
   report_duplicate (fun n -> "duplicate gameobj " ^ nname ^ "::" ^ n) (List.map fst gameobjs);
@@ -138,8 +181,8 @@ let rec check_namespace (nname, namespace) =
   (* Check that the expression can indeed be assigned to *)
   let check_lvalue loc = function
     | Id([], "this") -> failwith ("'this' cannot be assigned in '" ^ loc ^ "'")
-    | Id _ | Member _ | Assign _ | Asnop _ -> ()
-    | _ -> failwith ("LHS ineligible for assignment in " ^ loc)
+    | Id _ | Member _ | Assign _ | Asnop _ | Idop _ -> ()
+    | _ as e -> failwith ("lvalue " ^ string_of_expr e ^ " expected in " ^ loc)
   in
   (* Return the type of an expression and the new expression or throw an exception *)
   let rec expr scope e = match e with
@@ -166,6 +209,14 @@ let rec check_namespace (nname, namespace) =
        | Not, Bool -> Bool, Unop(op, Bool, ex')
        | _ -> failwith ("illegal unary operator " ^ string_of_uop op ^
                         string_of_typ t ^ " in " ^ string_of_expr e))
+    | Idop (opid, _, e1) ->
+      check_lvalue (string_of_expr e) e1;
+      let (t, e1') = expr scope e1 in
+      (match t with 
+       | Int -> Int, Idop(opid, Int, e1')
+       | Float -> Float, Idop(opid, Float, e1')
+       | _ -> failwith ("illegal Increment/Decrement operator " ^
+                        string_of_typ t ^ " " ^ string_of_idop opid))
     | Noexpr -> Void, e
     | Assign(l, r) ->
       check_lvalue (string_of_expr e) l;
@@ -371,28 +422,13 @@ let rec check_namespace (nname, namespace) =
   in
   let functions = List.map (check_function ~scope) functions in
   let gameobjs = List.map (check_gameobj ~scope) gameobjs in
+  let namespaces = namespace.Namespace.namespaces in
 
-  nname, { Namespace.variables = globals; functions; gameobjs; namespaces }
+  (nname, { Namespace.variables = globals; functions; gameobjs; namespaces }), files
 
-let check program =
-  let _, program = check_namespace ("", program) in
+let check_program program =
+  let (_, main), files = check_namespace ("", program.main) program.files in
 
-  (* add gameobj main if it doesn't exist but a void main() function does *)
-  let { Namespace.gameobjs; functions ; _ } = program in
-  let gameobjs =
-    if List.mem_assoc "main" gameobjs
-    then gameobjs
-    else
-      let undef_err = "either main game object or function must be defined" in
-      let not_void_err = "main function must return void" in
-      let arg_err = "main function must take no arguments" in
-      let fn =
-        try List.assoc "main" functions with Not_found -> failwith undef_err in
-      let block =
-        match fn.Func.block with Some b -> b | None -> failwith undef_err
-      in
-      (match fn.Func.typ with Void -> () | _ -> failwith not_void_err);
-      (match fn.Func.formals with [] -> () | _ -> failwith arg_err);
-      (Gameobj.make "main" ([], [], [Gameobj.Create, block])) :: gameobjs
-  in
-  { program with Namespace.gameobjs }
+  if not (List.mem_assoc "main" main.Namespace.gameobjs)
+  then failwith "main game object must be defined"
+  else { main; files }

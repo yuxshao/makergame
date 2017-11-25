@@ -1,4 +1,3 @@
-extern void end_game();
 int foo(int a)
 {
   int j;
@@ -10,9 +9,11 @@ int foo(int a)
   return j;
 }
 
-void main()
+object main {
+event create
 {
-  print(foo(7));
-  end_game();
+  std::print(foo(7));
+  std::end_game();
   return;
+}
 }

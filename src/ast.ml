@@ -3,6 +3,8 @@
 type op = Add | Sub | Mult | Div | Expo | Modulo | Equal | Neq | Less | Leq |
           Greater | Geq | And | Or
 
+type idop = Inc | Dec
+
 type asnop = Addasn | Subasn | Multasn | Divasn
 
 type uop = Neg | Not
@@ -36,6 +38,7 @@ type expr =
   | Binop of expr * op * typ * expr
   | Asnop of expr * asnop * typ * expr
   | Unop of uop * typ * expr
+  | Idop of idop * typ * expr
   | Assign of expr * expr
   (* (LHS before period, name of LHS object type, RHS) *)
   | Member of expr * id_chain * string
@@ -120,8 +123,8 @@ module Namespace = struct
     gameobjs : Gameobj.decl list;
   }
   (* a namespace could be an alias for another in the tree, with the same values *)
-  and t = Concrete of concrete | Alias of string list
-  and decl = string * t
+  and t = Concrete of concrete | Alias of string list | File of string
+  and decl = string * (bool * t)
 
   let make (variables, functions, gameobjs, namespaces) =
     { variables; functions; gameobjs; namespaces }
@@ -140,7 +143,11 @@ module Namespace = struct
 
 end
 
-type program = Namespace.concrete
+type program = {
+  main : Namespace.concrete;
+  (* TODO: handle matching files in different directories *)
+  files : (string * Namespace.concrete) list
+}
 
 
 
@@ -161,6 +168,10 @@ let string_of_op = function
   | Geq -> ">="
   | And -> "&&"
   | Or -> "||"
+
+let string_of_idop = function
+    Inc -> "++"
+  | Dec -> "--"
 
 let string_of_uop = function
     Neg -> "-"
@@ -185,6 +196,7 @@ let rec string_of_expr = function
        string_of_expr l ^ " " ^ string_of_asnop o ^ " " ^ string_of_expr r
   | Binop(e1, o, _, e2) ->
       string_of_expr e1 ^ " " ^ string_of_op o ^ " " ^ string_of_expr e2
+  | Idop(o, _, e) -> string_of_idop o ^ string_of_expr e
   | Unop(o, _, e) -> string_of_uop o ^ string_of_expr e
   | Assign(l, r) -> string_of_expr l ^ " = " ^ string_of_expr r
   | Call(f, el) ->
@@ -252,10 +264,12 @@ let rec string_of_concrete_ns { Namespace.variables; functions; gameobjs; namesp
   String.concat "\n" (List.map string_of_fdecl functions) ^
   String.concat "\n" (List.map string_of_gameobj gameobjs) ^
   String.concat "\n" (List.map string_of_ns_decl namespaces)
-and string_of_ns_decl (name, ns) =
+and string_of_ns_decl (name, (is_private, ns)) =
   let open Namespace in
+  let pref = if is_private then "private namespace " else "namespace " in
   match ns with
-  | Alias chain -> "namespace " ^ name ^ " = " ^ String.concat "::" chain ^";\n"
-  | Concrete n -> "namespace " ^ name ^ " {\n" ^ string_of_concrete_ns n ^ "\n}\n"
+  | Alias chain -> pref ^ name ^ " = " ^ String.concat "::" chain ^";\n"
+  | File f      -> pref ^ name ^ " = open \"" ^ f ^"\";\n"
+  | Concrete n  -> pref ^ name ^ " {\n" ^ string_of_concrete_ns n ^ "\n}\n"
 
-let string_of_program = string_of_concrete_ns
+let string_of_program { main; files = _ } = string_of_concrete_ns main

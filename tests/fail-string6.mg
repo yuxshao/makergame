@@ -1,3 +1,5 @@
-void main () {
-  printstr('yesterday');
+object main {
+event create {
+  std::printstr('yesterday');
+}
 }

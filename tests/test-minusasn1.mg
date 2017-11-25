@@ -1,14 +1,15 @@
-extern void end_game();
 
 int minusAsn(int x)
 {
   return x -= 2;
 }
 
-void main()
+object main {
+event create
 {
-  print( minusAsn(2) );
+  std::print( minusAsn(2) );
 
-  end_game();
+  std::end_game();
   return;
+}
 }

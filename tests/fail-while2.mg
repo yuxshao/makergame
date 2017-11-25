@@ -1,4 +1,5 @@
-void main()
+object main {
+event create
 {
   int i;
 
@@ -10,4 +11,5 @@ void main()
     foo(); /* foo undefined */
   }
 
+}
 }

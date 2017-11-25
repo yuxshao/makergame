@@ -1,18 +1,19 @@
-extern void end_game();
 
 int compute() {
   int i;
   {
     i = 15;
-    print(i);
+    std::print(i);
     return i; /* ok: return at end of block */
   }
   i = 3;
-  print(i);
+  std::print(i);
   return i;
 }
-void main()
+object main {
+event create
 {
   compute();
-  end_game();
+  std::end_game();
+}
 }

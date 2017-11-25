@@ -1,8 +1,7 @@
-void main()
-{
-  int i;
+object main {
+  event create {
+    int i;
 
-  for (i = 0; j < 10 ; i = i + 1) {} /* j undefined */
-
-  return;
+    for (i = 0; j < 10 ; i = i + 1) {} /* j undefined */
+  }
 }

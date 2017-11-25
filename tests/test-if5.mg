@@ -1,4 +1,3 @@
-extern void end_game();
 int cond(bool b)
 {
   int x;
@@ -9,10 +8,12 @@ int cond(bool b)
   return x;
 }
 
-void main()
+object main {
+event create
 {
- print(cond(true));
- print(cond(false));
- end_game();
+ std::print(cond(true));
+ std::print(cond(false));
+ std::end_game();
  return;
+}
 }

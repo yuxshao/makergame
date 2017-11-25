@@ -2,4 +2,4 @@
 namespace a { }
 namespace B = a::c;
 
-object main { event create { } }
+object main { }

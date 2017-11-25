@@ -1,4 +1,5 @@
-void main () {
-  printstr("is "this" wrong?");
-  return;
+object main {
+event create {
+  std::printstr("is "this" wrong?");
+}
 }

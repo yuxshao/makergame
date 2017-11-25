@@ -1,4 +1,3 @@
-extern void end_game();
 
 object helper { }
 object main {
@@ -11,9 +10,9 @@ object main {
     i = 0;
     foreach (helper h) {
       if (i == 2) break;
-      print(i);
+      std::print(i);
       i = i + 1;
     }
-    end_game();
+    std::end_game();
   }
 }

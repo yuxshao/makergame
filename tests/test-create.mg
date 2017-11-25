@@ -1,4 +1,3 @@
-extern void end_game();
 
 object helper {
   int y;
@@ -12,9 +11,9 @@ object main {
   event step {
     int y;
     y = 5;
-    print(y);
-    print(this.y);
-    print(this.h.y);
-    end_game();
+    std::print(y);
+    std::print(this.y);
+    std::print(this.h.y);
+    std::end_game();
   }
 }

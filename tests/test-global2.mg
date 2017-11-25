@@ -1,12 +1,13 @@
-extern void end_game();
 bool i;
 
-void main()
+object main {
+event create
 {
   int i; /* Should hide the global i */
 
   i = 42;
-  print(i + i);
-  end_game();
+  std::print(i + i);
+  std::end_game();
   return;
+}
 }

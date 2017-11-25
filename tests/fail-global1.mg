@@ -3,7 +3,4 @@ bool b;
 void a; /* global variables should not be void */
 
 
-void main()
-{
-  return;
-}
+object main { }

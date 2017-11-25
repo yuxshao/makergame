@@ -1,7 +1,7 @@
-extern void end_game();
-void main()
+object main {
+event create
 {
-  print(1 + 2 * 3 + 4);
-  end_game();
-  return;
+  std::print(1 + 2 * 3 + 4);
+  std::end_game();
+}
 }

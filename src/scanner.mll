@@ -25,6 +25,8 @@ rule token = parse
   | '/'      { DIVIDE }
   | '^'      { EXPONENT }
   | '%'      { MODULO }
+  | "++"     { INCREMENT }
+  | "--"     { DECREMENT }
   | '='      { ASSIGN }
   | "+="     { ADDASN }
   | "-="     { MINUSASN }
@@ -56,7 +58,6 @@ rule token = parse
   | "sprite" { SPRITE }
   | "sound"  { SOUND }
   (* game keywords *)
-  | "namespace" { NAMESPACE }
   | "object" { OBJECT }
   | "event"  { EVENT }
   | "create" { CREATE }
@@ -64,7 +65,11 @@ rule token = parse
   | "draw"   { DRAW }
   | "step"   { STEP }
   (* misc keywords *)
+  | "namespace" { NAMESPACE }
+  | "private" { PRIVATE }
+  | "public" { PUBLIC }
   | "extern" { EXTERN }
+  | "open"   { OPEN }
   (* literals *)
   | "true"   { TRUE }
   | "false"  { FALSE }

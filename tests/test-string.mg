@@ -1,12 +1,13 @@
-extern void end_game();
-void main () {
+object main {
+event create {
   string c;
   c = "hello world";
-  printstr(c);
-  printstr("goodbye world");
-  printstr("this is \"right\"");
-  printstr("Either\\or is okay");
-  printstr("multiple\nlines");
-  end_game();
+  std::printstr(c);
+  std::printstr("goodbye world");
+  std::printstr("this is \"right\"");
+  std::printstr("Either\\or is okay");
+  std::printstr("multiple\nlines");
+  std::end_game();
   return;
+}
 }

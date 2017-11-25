@@ -1,4 +1,3 @@
-extern void end_game();
 
 int i;
 
@@ -7,9 +6,9 @@ object main {
     if (i < 5) {
       destroy this;
       i += 1;
-      print(i);
+      std::print(i);
       create main;
     }
-    else end_game();
+    else std::end_game();
   }
 }

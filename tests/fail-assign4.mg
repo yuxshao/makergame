@@ -1,5 +1,7 @@
 object helper { }
-void main() {
-  helper x;
-  create helper = x; // not an lvalue
+object main {
+  event create {
+    helper x;
+    create helper = x; // not an lvalue
+  }
 }

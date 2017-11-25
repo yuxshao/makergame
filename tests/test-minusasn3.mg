@@ -1,4 +1,3 @@
-extern void end_game();
 
 int minusAsn(int x)
 {
@@ -8,10 +7,12 @@ int minusAsn(int x)
 
 }
 
-void main()
+object main {
+event create
 {
-  print( minusAsn(1) );
+  std::print( minusAsn(1) );
 
-  end_game();
+  std::end_game();
   return;
+}
 }

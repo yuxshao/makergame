@@ -79,7 +79,7 @@ let build_while ~pred ~body context builder the_function =
   ignore (L.build_cond_br bool_val body_bb merge_bb pred_builder);
   L.builder_at_end context merge_bb
 
-let translate the_program =
+let translate the_program files =
   let context = L.global_context () in
   let the_module = L.create_module context "MicroC"
   and i64_t    = L.i64_type    context
@@ -130,10 +130,6 @@ let translate the_program =
     | A.Void -> void_t
   in
 
-  (* Declare printf(), which the print built-in function will call *)
-  let printf_t = L.var_arg_function_type i32_t [| L.pointer_type i8_t |] in
-  let printf_func = L.declare_function "printf" printf_t the_module in
-
   (* Define list_add(new, head), which puts new to the end of the list
      marked by head. *)
   let list_add_func =
@@ -175,17 +171,8 @@ let translate the_program =
     ignore (L.build_ret_void builder); f
   in
 
-  let fmt_str name contents =
-    L.define_global (name ^ "_fmt") (L.const_stringz context contents) the_module
-  in
-  let int_fmt_str   = fmt_str "int"   "%d\n" in
-  let float_fmt_str = fmt_str "float" "%f\n" in
-  let str_fmt_str   = fmt_str "str"   "%s\n" in
-  let fmt_str global builder =
-    L.build_gep global
-      [|L.const_int i32_t 0; L.const_int i32_t 0|] "" builder
-  in
-
+  (* let printf_t = L.var_arg_function_type i32_t [| L.pointer_type i8_t |] in *)
+  (* let printf_func = L.declare_function "printf" printf_t the_module in *)
   (* let build_print fmt elems builder = *)
   (*   ignore (L.build_call printf_func *)
   (*             (Array.of_list (L.build_global_stringptr (fmt ^ "\n") "" builder *)
@@ -317,20 +304,27 @@ let translate the_program =
 
     let llnamespaces =
       let open A.Namespace in
-      let add_ns m (n, ns) = match ns with
+      let add_ns m (n, (_private, ns)) = match ns with
         | Concrete ns -> StringMap.add n (B.Concrete (define_llns (nname ^ "::" ^ n, ns))) m
         | Alias chain -> StringMap.add n (B.Alias chain) m
+        | File f      -> StringMap.add n (B.File f) m
       in
       List.fold_left add_ns StringMap.empty namespaces
     in
     { B.variables = llvars; functions = llfns; gameobjs = llgameobjs; namespaces = llnamespaces }
   in
 
+  let llfiles =
+    List.fold_left (fun m (fname, ns) -> StringMap.add fname (define_llns (":file-" ^ fname, ns)) m)
+      StringMap.empty files
+  in
+  let llprogram = define_llns ("", the_program) in
+
   let rec define_ns_contents llns (nname, the_namespace) =
-    let { A.Namespace.variables = globals;
+    let { A.Namespace.variables = _;
           functions ; gameobjs ; namespaces } = the_namespace in
     let () = (* Recursively check inner namespaces *)
-      let check_inner_ns (nname, ns) = match ns with
+      let check_inner_ns (nname, (_, ns)) = match ns with
         | A.Namespace.Concrete c ->
           (match StringMap.find nname llns.B.namespaces with
            | B.Concrete llc -> define_ns_contents llc (nname, c)
@@ -343,6 +337,7 @@ let translate the_program =
       let search ns n = match StringMap.find n ns.B.namespaces with
         | B.Concrete c -> c
         | B.Alias chain -> namespace_of_chain ns chain
+        | B.File f -> StringMap.find f llfiles
       in
       List.fold_left search top chain
     in
@@ -351,8 +346,9 @@ let translate the_program =
     let rec ast_namespace_of_chain top chain =
       let open A.Namespace in
       let search ns n = match List.assoc n ns.A.Namespace.namespaces with
-        | Concrete c -> c
-        | Alias chain -> ast_namespace_of_chain top chain
+        | _, Concrete c -> c
+        | _, Alias chain -> ast_namespace_of_chain ns chain
+        | _, File f -> List.assoc f files
       in
       List.fold_left search top chain
     in
@@ -449,6 +445,13 @@ let translate the_program =
            | _ -> assert false )
         in
         ignore (L.build_store sum lp builder); lp
+      | A.Idop (idop, t, l) ->
+        (match t, idop with
+         | A.Int, A.Inc -> lexpr (vscope, fscope) builder (A.Asnop (l, A.Addasn, A.Int, A.Literal 1))
+         | A.Int, A.Dec -> lexpr (vscope, fscope) builder (A.Asnop (l, A.Subasn, A.Int, A.Literal 1))
+         | A.Float, A.Inc -> lexpr (vscope, fscope) builder (A.Asnop(l, A.Addasn, A.Float, A.FloatLit 1.0))
+         | A.Float, A.Dec -> lexpr (vscope, fscope) builder (A.Asnop(l, A.Subasn, A.Float, A.FloatLit 1.0))
+         | _ -> assert false)
       | _ -> assert false (* Semant should catch other illegal attempts at assignment *)
     (* Construct code for an expression; return its value *)
     and expr scope builder = function
@@ -458,8 +461,7 @@ let translate the_program =
       | A.FloatLit f -> L.const_float float_t f
       | A.Noexpr -> L.const_int i32_t 0
       | A.Id (_, n) | A.Member (_, _, n) as e -> L.build_load (lexpr scope builder e) n builder
-      | A.Assign _ as e -> L.build_load (lexpr scope builder e) "" builder
-      | A.Asnop  _ as e -> L.build_load (lexpr scope builder e) "" builder
+      | A.Assign _ | A.Asnop _ | A.Idop _ as e -> L.build_load (lexpr scope builder e) "" builder
       | A.Binop (e1, op, t, e2) ->
         let e1' = expr scope builder e1
         and e2' = expr scope builder e2 in
@@ -486,19 +488,6 @@ let translate the_program =
         (match op with
            A.Neg     -> if t=A.Int then L.build_neg else L.build_fneg
          | A.Not     -> L.build_not) e' "tmp" builder
-      | A.Call (([], "printstr"), [e]) ->
-        L.build_call printf_func
-          [| fmt_str str_fmt_str builder; (expr scope builder e) |]
-          "printf" builder
-      | A.Call (([], "print"), [e]) | A.Call (([], "printb"), [e]) ->
-        L.build_call printf_func
-          [| fmt_str int_fmt_str builder; (expr scope builder e) |]
-          "printf" builder
-      | A.Call (([], "print_float"), [e]) ->
-        L.build_call printf_func
-          [| fmt_str float_fmt_str builder; (expr scope builder e) |]
-          "printf" builder
-      (* TODO: unify print names and their tests *)
       | A.Call ((chain, f), act) ->
         let _, fscope = scope in
         let fn =
@@ -736,6 +725,7 @@ let translate the_program =
       build_function_body create_gb [] [A.Expr (A.Create ([], "main"))] A.Void
     else ()
   in
+
   let global_event (name, offset) =
     let fn = L.define_function ("global_" ^ name) (L.function_type void_t [||]) the_module in
     let builder = L.builder_at_end context (L.entry_block fn) in
@@ -765,7 +755,10 @@ let translate the_program =
     ignore (L.build_ret_void builder)
   in
   List.iter global_event ["step", 3; "draw", 5];
-  ignore (define_ns_contents (define_llns ("", the_program)) ("", the_program));
+
+  define_ns_contents llprogram ("", the_program);
+  List.iter (fun (fname, ns) -> define_ns_contents (StringMap.find fname llfiles) (fname, ns))
+    files;
 
   the_module
 

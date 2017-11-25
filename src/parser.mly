@@ -6,12 +6,13 @@ open Ast
 
 %token SEMI LPAREN RPAREN LBRACK RBRACK LCURLY RCURLY COMMA PERIOD DBCOLON
 %token PLUS MINUS TIMES DIVIDE EXPONENT MODULO ASSIGN NOT
+%token INCREMENT DECREMENT
 %token ADDASN MINUSASN TIMEASN DIVASN
 %token EQ NEQ LT LEQ GT GEQ TRUE FALSE AND OR
 %token BREAK RETURN IF ELSE FOR WHILE FOREACH
 %token INT BOOL FLOAT STRING SPRITE SOUND VOID
-%token NAMESPACE OBJECT EVENT CREATE DESTROY DRAW STEP
-%token EXTERN
+%token OBJECT EVENT CREATE DESTROY DRAW STEP
+%token PRIVATE PUBLIC NAMESPACE EXTERN OPEN
 %token <int> LITERAL
 %token <string> ID
 %token <string> STRLIT
@@ -30,6 +31,7 @@ open Ast
 %left TIMES DIVIDE
 %left EXPONENT MODULO
 %right NOT NEG
+%left INCREMENT DECREMENT
 %left PERIOD
 %left DBCOLON
 
@@ -38,11 +40,17 @@ open Ast
 
 %%
 
-program: decls EOF { Namespace.make $1 }
+program: decls EOF { { main = Namespace.make $1; files = [] } }
 
 ndecl:
+ | PUBLIC ndecl_base  { let n, ns = $2 in n, (false, ns) }
+ | ndecl_base         { let n, ns = $1 in n, (false, ns) }
+ | PRIVATE ndecl_base { let n, ns = $2 in n, (true, ns) }
+
+ndecl_base:
  | NAMESPACE ID LCURLY decls RCURLY { $2, Namespace.Concrete (Namespace.make $4) }
  | NAMESPACE ID ASSIGN id_chain SEMI { $2, Namespace.Alias (fst $4 @ [snd $4]) }
+ | NAMESPACE ID ASSIGN OPEN STRLIT SEMI { $2, Namespace.File $5 }
 
 decls:
    /* nothing */ { [],[],[],[] }
@@ -139,6 +147,8 @@ expr:
   | expr EXPONENT expr { Binop($1, Expo, Void,  $3) }
   | expr MODULO expr   { Binop($1, Modulo, Void,  $3) }
   | expr EQ     expr   { Binop($1, Equal, Void,   $3) }
+  | INCREMENT   expr   { Idop(Inc, Void, $2) }
+  | DECREMENT   expr   { Idop(Dec, Void, $2)}
   | expr ADDASN expr   { Asnop($1, Addasn, Void, $3) }
   | expr MINUSASN expr { Asnop($1, Subasn, Void, $3) }
   | expr TIMEASN expr  { Asnop($1, Multasn, Void, $3) }
