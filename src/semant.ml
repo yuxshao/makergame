@@ -28,8 +28,10 @@ let add_to_scope ?loc m (n, t) =
 
 (* Raise an exception of the given rvalue type cannot be assigned to
    the given lvalue type *)
-let check_assign lvaluet rvaluet err =
-  if lvaluet = rvaluet then lvaluet else failwith err
+let check_assign lvaluet rvalue rvaluet err =
+  if lvaluet = rvaluet then rvalue
+  else if (match )
+  else failwith err
 
 (* Semantic checking of a program. Returns void if successful,
    throws an exception if something is wrong.

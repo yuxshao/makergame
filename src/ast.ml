@@ -32,6 +32,7 @@ type expr =
   | FloatLit of float
   | StringLit of string
   | Id of id_chain
+  | Conv of typ * expr * typ
   | Binop of expr * op * typ * expr
   | Asnop of expr * asnop * typ * expr
   | Unop of uop * typ * expr
