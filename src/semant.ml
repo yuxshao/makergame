@@ -256,6 +256,14 @@ let rec check_namespace (nname, namespace) =
         let vscope, fscope = scope in
         check_not_void (fun n -> "illegal void local " ^ n ^ " in " ^ name) d;
         s, (add_to_scope ~loc:name vscope d, fscope)
+      | Vdef(t, id, e) as s ->
+        let (et, e') = expr scope e in
+        ignore (check_assign t et ("illegal assignment " ^ string_of_typ t ^
+                                   " = " ^ string_of_typ et ^ " in " ^
+                                   string_of_expr e));
+        let vscope, fscope = scope in
+        check_not_void (fun n -> "illegal void local " ^ n ^ " in " ^ name) (id, t);
+        s, (add_to_scope ~loc:name vscope (id, t), fscope)
       | Break -> Break, scope
       | Block b -> Block (check_block b ~scope ~name ~return), scope
       | Expr e -> let (_, e') = expr scope e in Expr e', scope

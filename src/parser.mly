@@ -110,6 +110,7 @@ stmt_list:
 stmt:
     expr SEMI { Expr $1 }
   | vdecl { Decl $1 }
+  | typ ID ASSIGN expr SEMI { Vdef($1, $2, $4) }
   | RETURN expr_opt SEMI { Return $2 }
   | BREAK SEMI { Break }
   | code_block { Block($1) }
