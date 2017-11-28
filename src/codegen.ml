@@ -36,6 +36,8 @@ let build_struct_ptr_assign ptr values builder =
     | None -> ()
   in Array.iteri assign values
 
+(* Given value v that's position offset in aggregate type container_t, get a pointer
+   to the container of v, casted to cast. *)
 let build_container_of container_t ?(cast=container_t) offset v name context builder =
   let null = L.const_null (L.pointer_type container_t) in
   let offset = L.build_struct_gep null offset "offset" builder in
@@ -97,15 +99,15 @@ let translate the_program files =
   let nodeptr_t = L.pointer_type node_t in
   L.struct_set_body node_t [|nodeptr_t; nodeptr_t|] false;
 
-  let objref_t = L.named_struct_type context "objref" in
-  L.struct_set_body objref_t [|i64_t; nodeptr_t|] false;
-
   let gameobj_t = L.named_struct_type context "gameobj" in
   let objptr_t = L.pointer_type gameobj_t in
+  let objref_t = L.named_struct_type context "objref" in
+  L.struct_set_body objref_t [|i64_t; objptr_t|] false;
+
   let eventptr_t = L.pointer_type (L.function_type void_t [|objref_t|]) in
   let gameobj_vtable = L.struct_type context [|eventptr_t; eventptr_t; eventptr_t|] in
   let vtableptr_t = L.pointer_type gameobj_vtable in
-  L.struct_set_body gameobj_t [|node_t; i64_t; vtableptr_t|] false;
+  L.struct_set_body gameobj_t [|vtableptr_t; node_t; i64_t|] false;
 
   (* Define linked list heads for the generic gameobj *)
   let make_node_end name =
@@ -381,9 +383,9 @@ let translate the_program files =
        that object in StringMap. *)
     let gameobj_members objref (chain, objname) builder =
       let llobj =
-        let node = L.build_extractvalue objref 1 (objname ^ "_node") builder in
+        let objptr = L.build_extractvalue objref 1 (objname ^ "_objptr_gen") builder in
         let g = StringMap.find objname (namespace_of_chain chain).B.gameobjs in
-        L.build_bitcast node (L.pointer_type g.B.gtyp) objname builder
+        L.build_bitcast objptr (L.pointer_type g.B.gtyp) "objptr" builder
       in
       let ast_ns = ast_namespace_of_chain chain in
       let members = (List.assoc objname ast_ns.A.Namespace.gameobjs).A.Gameobj.members in
@@ -402,12 +404,11 @@ let translate the_program files =
       let g = StringMap.find objname (namespace_of_chain chain).B.gameobjs in
       let body builder break_bb node =
         (* Calculating offsets to get the object pointer *)
-        let obj = build_container_of (g.B.gtyp) 1 node objname context builder ~cast:node_t in
+        let obj = build_container_of g.B.gtyp 1 node objname context builder ~cast:gameobj_t in
 
         let pred builder _ =
           (* Get values for the removal check *)
-          let genobj = L.build_bitcast obj objptr_t (objname ^ "_gen") builder in
-          let id = L.build_load (L.build_struct_gep genobj 1 "id_ptr" builder) "id" builder in
+          let id = L.build_load (L.build_struct_gep obj 2 "id_ptr" builder) "id" builder in
           (* build_print "%d" id builder; *)
           L.build_icmp L.Icmp.Ne id (L.const_null i64_t) "is_removed" builder
         in
@@ -536,12 +537,10 @@ let translate the_program files =
         let g = StringMap.find objname (namespace_of_chain chain).B.gameobjs in
         (* Allocate memory for the object *)
         let llobj = L.build_malloc g.B.gtyp objname builder in
+        let llobj_gen = L.build_bitcast llobj objptr_t (objname ^ "_gen") builder in
         (* Set up linked list connections *)
-        let llnode = L.build_bitcast llobj nodeptr_t (objname ^ "_node") builder in
-        let llobjnode =
-          L.build_bitcast (L.build_struct_gep llobj 1 "" builder)
-            nodeptr_t (objname ^ "_objnode") builder
-        in
+        let llnode = L.build_struct_gep llobj_gen 1 (objname ^ "_node") builder in
+        let llobjnode = L.build_struct_gep llobj 1 (objname ^ "_objnode") builder in
         let obj_head, _ = obj_end objname in let gameobj_head, _ = gameobj_end in
         ignore (L.build_call list_add_func [|llobjnode; obj_head|] "" builder);
         ignore (L.build_call list_add_func [|llnode; gameobj_head|] "" builder);
@@ -550,9 +549,8 @@ let translate the_program files =
         let llid = L.build_add llid (L.const_int i64_t 1) "new_id" builder in
         ignore (L.build_store llid global_objid builder);
         (* Event function pointers *)
-        let llobj_gen = L.build_bitcast llobj objptr_t (objname ^ "_gen") builder in
-        build_struct_ptr_assign llobj_gen [|None; Some llid; Some g.B.vtable|] builder;
-        let objref = build_struct_assign (L.undef objref_t) [|Some llid; Some llnode|] builder in
+        build_struct_ptr_assign llobj_gen [|Some g.B.vtable; None; Some llid|] builder;
+        let objref = build_struct_assign (L.undef objref_t) [|Some llid; Some llobj_gen|] builder in
         let create_event = (find_obj_event_decl (chain, objname) "create").B.value in
         (* TODO: include something in LRM about non-initialized values *)
         let actuals = List.map (expr scope builder) args in
@@ -576,22 +574,21 @@ let translate the_program files =
            invisible to loops but refs to them still work until at least end of
            event. *)
         let objref = expr scope builder e in
-        let node = L.build_extractvalue objref 1 "node" builder in
+        let objptr = L.build_extractvalue objref 1 "objptr" builder in
         let () =
           (* Call its destroy event *)
-          let objptr = L.build_bitcast node objptr_t "objptr" builder in
           let destroy_event =
-            let tbl = L.build_load (L.build_struct_gep objptr 2 "" builder) "tbl" builder in
+            let tbl = L.build_load (L.build_struct_gep objptr 0 "" builder) "tbl" builder in
             L.build_load (L.build_struct_gep tbl 1 "eventptr" builder) "event" builder
           in
           ignore (L.build_call destroy_event [|objref|] "" builder);
           (* Mark its id as 0 *)
-          let idptr = L.build_struct_gep objptr 1 (objtype ^ "_id") builder in
+          let idptr = L.build_struct_gep objptr 2 (objtype ^ "_id") builder in
           ignore (L.build_store (L.const_int i64_t 0) idptr builder)
         in
         (* Find the list node connecting objects of this particular type *)
         let llg = StringMap.find objtype (namespace_of_chain chain).B.gameobjs in
-        let obj = L.build_bitcast node (L.pointer_type llg.B.gtyp) objtype builder in
+        let obj = L.build_bitcast objptr (L.pointer_type llg.B.gtyp) objtype builder in
         (* Disconnect particular object neighbours' node links. *)
         let objnode = L.build_struct_gep obj 1 (objtype ^ "_node") builder in
         ignore (L.build_call list_rem_func [|objnode|] "" builder);
@@ -652,10 +649,9 @@ let translate the_program files =
         for_builder, scope
       | A.Foreach (objname, name, body_stmt) ->
         (* TODO: describe semantics. what if obj of type is destroyed or created in this? *)
-        let body builder break_bb node =
-          let objptr = L.build_bitcast node objptr_t "objptr" builder in
-          let id = L.build_load (L.build_struct_gep objptr 1 "" builder) "id" builder in
-          let obj = build_struct_assign (L.undef objref_t) [|Some id; Some node|] builder in
+        let body builder break_bb objptr =
+          let id = L.build_load (L.build_struct_gep objptr 2 "" builder) "id" builder in
+          let obj = build_struct_assign (L.undef objref_t) [|Some id; Some objptr|] builder in
           let objref = L.build_alloca objref_t "ref" builder in
           ignore (L.build_store obj objref builder);
           let builder, _ =
@@ -750,25 +746,25 @@ let translate the_program files =
     let fn = L.define_function ("global_" ^ name) (L.function_type void_t [||]) the_module in
     let builder = L.builder_at_end context (L.entry_block fn) in
     let body builder _ node =
-      let objptr = L.build_bitcast node objptr_t "objptr" builder in
-      let id = L.build_load (L.build_struct_gep objptr 1 "id_ptr" builder) "id" builder in
+      let objptr = build_container_of gameobj_t 1 node "objptr" context builder in
+      let id = L.build_load (L.build_struct_gep objptr 2 "id_ptr" builder) "id" builder in
 
       let pred b _ = L.build_icmp L.Icmp.Ne id (L.const_null i64_t) "is_removed" b in
 
       let call b _ =
         let this_fn =
-          let tbl = L.build_load (L.build_struct_gep objptr 2 "" b) ("this_tbl") b in
+          let tbl = L.build_load (L.build_struct_gep objptr 0 "" b) ("this_tbl") b in
           let ptr = L.build_struct_gep tbl offset ("this_" ^ name ^ "ptr") b in
           L.build_load ptr ("this_" ^ name) b
         in
-        let objref = build_struct_assign (L.undef objref_t) [|Some id; Some node|] b in
+        let objref = build_struct_assign (L.undef objref_t) [|Some id; Some objptr|] b in
         ignore (L.build_call this_fn [|objref|] "" b); b
       in
 
       let remove b _ =
         ignore (L.build_call list_rem_func [|node|] "" b);
-        ignore (L.build_store (L.const_null node_t) node b); (* for safety/faster errors *)
-        ignore (L.build_free node b); b
+        ignore (L.build_store (L.const_null gameobj_t) objptr b); (* for safety/faster errors *)
+        ignore (L.build_free objptr b); b
       in
 
       build_if ~pred ~then_:call ~else_:remove context builder fn
