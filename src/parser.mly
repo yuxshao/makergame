@@ -69,6 +69,8 @@ fdecl:
      { $2, Func.make $1 $4 None $6 }
 
 event:
+ | EVENT CREATE LPAREN formals_opt RPAREN code_block
+   { "create", Func.make Void $4 None $6 }
  | EVENT CREATE  code_block { "create",  Func.make Void [] None $3 }
  | EVENT STEP    code_block { "step",    Func.make Void [] None $3 }
  | EVENT DESTROY code_block { "destroy", Func.make Void [] None $3 }
@@ -166,7 +168,8 @@ expr:
   | expr ASSIGN expr   { Assign($1, $3) }
   | id_chain LPAREN actuals_opt RPAREN { Call($1, $3) }
   | expr PERIOD ID LPAREN actuals_opt RPAREN { MemberCall($1, ([], ""), $3, $5) }
-  | CREATE id_chain    { Create($2) }
+  | CREATE id_chain                           { Create($2, []) }
+  | CREATE id_chain LPAREN actuals_opt RPAREN { Create($2, $4) }
   | DESTROY expr       { Destroy($2, ([], "")) }
   | LPAREN expr RPAREN { $2 }
 

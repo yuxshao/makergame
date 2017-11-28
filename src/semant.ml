@@ -256,7 +256,7 @@ let rec check_namespace (nname, namespace) files =
           | _ -> List.assoc fname (namespace_of_chain chain).Namespace.functions
         with Not_found -> failwith ("unrecognized function " ^ (string_of_chain (chain, fname)))
       in
-      let actuals' = check_call_actuals (string_of_expr call) actuals scope fd in
+      let actuals' = check_call_actuals (string_of_expr call) actuals scope fd.Func.formals in
       add_typ_ns chain fd.Func.typ, Call((chain, fname), actuals')
     | MemberCall(e, _, fname, actuals) as call ->
       let fd, (ochain, oname), e' = match expr scope e with
@@ -267,17 +267,22 @@ let rec check_namespace (nname, namespace) files =
                        string_of_expr e ^ " of type " ^ string_of_chain s))
         | _ -> failwith ("cannot get member of non-object " ^ (string_of_expr e))
       in
-      let actuals' = check_call_actuals (string_of_expr call) actuals scope fd in
+      let actuals' = check_call_actuals (string_of_expr call) actuals scope fd.Func.formals in
       add_typ_ns ochain fd.Func.typ, MemberCall(e', (ochain, oname), fname, actuals')
-    | Create(obj_type) -> ignore(gameobj_decl obj_type); Object(obj_type), e
+    | Create(obj_type, actuals) ->
+      let formals =
+        try (List.assoc "create" (gameobj_decl obj_type).Gameobj.events).Func.formals
+        with Not_found -> []
+      in
+      let actuals' = check_call_actuals (string_of_expr e) actuals scope formals in
+      Object(obj_type), Create(obj_type, actuals')
     | Destroy(e, _) ->
       match expr scope e with
       | Object n, e' -> Void, Destroy(e', n)
       | _ -> failwith ("cannot destroy non-object")
-  and check_call_actuals loc actuals scope fd =
-    if List.length actuals != List.length fd.Func.formals then
-      failwith ("expecting " ^
-                string_of_int (List.length fd.Func.formals) ^
+  and check_call_actuals loc actuals scope formals =
+    if List.length actuals != List.length formals then
+      failwith ("expecting " ^ string_of_int (List.length formals) ^
                 " arguments in " ^ loc)
     else
       List.map2
@@ -285,7 +290,7 @@ let rec check_namespace (nname, namespace) files =
           ignore (check_assign ft et
                     ("illegal actual argument found " ^ string_of_typ et ^
                      " expected " ^ string_of_typ ft ^ " in " ^ string_of_expr ex)); ex')
-        fd.Func.formals actuals
+        formals actuals
   in
 
   let check_bool_expr scope e = let (t, e') = expr scope e in if t != Bool

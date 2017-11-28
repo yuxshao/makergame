@@ -44,7 +44,7 @@ type expr =
   (* (LHS before period, name of LHS object type, RHS function name, actuals) *)
   | MemberCall of expr * id_chain * string * expr list
   | Call of id_chain * expr list
-  | Create of id_chain
+  | Create of id_chain * expr list
   | Destroy of expr * id_chain
   | Noexpr
 
@@ -186,7 +186,10 @@ let rec string_of_expr = function
       (string_of_chain f) ^ "(" ^ String.concat ", " (List.map string_of_expr el) ^ ")"
   | Member(e, _, s) -> "(" ^ (string_of_expr e) ^ ")." ^ s
   | MemberCall(e, _, f, el) -> "(" ^ (string_of_expr e) ^ ")." ^ string_of_expr (Call(([], f), el))
-  | Create c -> "create " ^ (string_of_chain c)
+  | Create (c, args) ->
+    (match args with
+     | [] -> "create " ^ string_of_chain c
+     | _ -> "create " ^ string_of_expr(Call(c, args)))
   | Destroy (o, _) -> "destroy " ^ (string_of_expr o)
   | Noexpr -> ""
 

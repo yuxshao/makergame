@@ -506,9 +506,11 @@ let translate the_program files =
           match fn.B.return with A.Void -> "" | _ -> f ^ "_result"
         in
         L.build_call fn.B.value (Array.of_list (obj :: actuals)) result builder
-      | A.Create (chain, objname) ->
+      | A.Create ((chain, objname), args) ->
         let g = StringMap.find objname (namespace_of_chain chain).B.gameobjs in
+        (* Allocate memory for the object *)
         let llobj = L.build_malloc g.B.gtyp objname builder in
+        (* Set up linked list connections *)
         let llnode = L.build_bitcast llobj nodeptr_t (objname ^ "_node") builder in
         let llobjnode =
           L.build_bitcast (L.build_struct_gep llobj 1 "" builder)
@@ -517,9 +519,11 @@ let translate the_program files =
         let obj_head, _ = obj_end objname in let gameobj_head, _ = gameobj_end in
         ignore (L.build_call list_add_func [|llobjnode; obj_head|] "" builder);
         ignore (L.build_call list_add_func [|llnode; gameobj_head|] "" builder);
+        (* Update ID and ID counter *)
         let llid = L.build_load global_objid "old_id" builder in
         let llid = L.build_add llid (L.const_int i64_t 1) "new_id" builder in
         ignore (L.build_store llid global_objid builder);
+        (* Event function pointers *)
         let events =
           ["create"; "step"; "destroy"; "draw"]
           |> List.map (fun event ->
@@ -529,9 +533,10 @@ let translate the_program files =
         let llobj_gen = L.build_bitcast llobj objptr_t (objname ^ "_gen") builder in
         build_struct_ptr_assign llobj_gen (Array.of_list (None :: Some llid :: events)) builder;
         let objref = build_struct_assign (L.undef objref_t) [|Some llid; Some llnode|] builder in
-        let create_event = match List.hd events with | Some ev -> ev | None -> assert false in
+        let create_event = (find_obj_event_decl (chain, objname) "create").B.value in
         (* TODO: include something in LRM about non-initialized values *)
-        ignore (L.build_call create_event [|objref|] "" builder);
+        let actuals = List.map (expr scope builder) args in
+        ignore (L.build_call create_event (Array.of_list (objref :: actuals)) "" builder);
         objref
       | A.Destroy (e, (chain, objtype)) ->
         (* Destruction is lazy in that it involves just removing the
@@ -712,7 +717,7 @@ let translate the_program files =
     (* Build global_create from the global namespace *)
     if nname = "" then
       let create_gb = L.define_function "global_create" (L.function_type void_t [||]) the_module in
-      build_function_body create_gb [] [A.Expr (A.Create ([], "main"))] A.Void
+      build_function_body create_gb [] [A.Expr (A.Create (([], "main"), []))] A.Void
     else ()
   in
 
