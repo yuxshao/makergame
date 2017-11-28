@@ -1,1 +1,1 @@
-Fatal error: exception Failure("cannot access private namespace a in n::a")
+Fatal error: exception Failure("attempted access to private namespace a in resolving n::a")
