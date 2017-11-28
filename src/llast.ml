@@ -14,6 +14,7 @@ type gameobj = {
   ends: L.llvalue * L.llvalue;
   methods: func StringMap.t;
   events: func StringMap.t;
+  vtable: L.llvalue;
 }
 
 type concrete = {

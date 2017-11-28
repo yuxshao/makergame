@@ -103,7 +103,9 @@ let translate the_program files =
   let gameobj_t = L.named_struct_type context "gameobj" in
   let objptr_t = L.pointer_type gameobj_t in
   let eventptr_t = L.pointer_type (L.function_type void_t [|objref_t|]) in
-  L.struct_set_body gameobj_t [|node_t; i64_t; eventptr_t; eventptr_t; eventptr_t; eventptr_t|] false;
+  let gameobj_vtable = L.struct_type context [|eventptr_t; eventptr_t; eventptr_t|] in
+  let vtableptr_t = L.pointer_type gameobj_vtable in
+  L.struct_set_body gameobj_t [|node_t; i64_t; vtableptr_t|] false;
 
   (* Define linked list heads for the generic gameobj *)
   let make_node_end name =
@@ -285,8 +287,17 @@ let translate the_program files =
         (* Define linked list heads for each object type *)
         let ends = make_node_end ("object" ^ nname ^ "::" ^ gname) in
 
-        { B.gtyp = gt; ends;
-          events = fn_decls g.events (Some gname) (to_llname "event");
+        let events = fn_decls g.events (Some gname) (to_llname "event") in
+        let vtable =
+          let fns =
+            ["step"; "destroy"; "draw"]
+            |> List.map (fun event -> (StringMap.find event events).B.value)
+          in
+          L.define_global (gname ^ ".vtable")
+            (L.const_struct context (Array.of_list fns)) the_module
+        in
+
+        { B.gtyp = gt; ends; vtable; events;
           methods = fn_decls g.methods (Some gname) (to_llname "function") }
       in
       let add_llgameobj m (gname, g) = StringMap.add gname (make_llgameobj (gname, g)) m in
@@ -539,14 +550,8 @@ let translate the_program files =
         let llid = L.build_add llid (L.const_int i64_t 1) "new_id" builder in
         ignore (L.build_store llid global_objid builder);
         (* Event function pointers *)
-        let events =
-          ["create"; "step"; "destroy"; "draw"]
-          |> List.map (fun event ->
-              Some (L.build_bitcast (find_obj_event_decl (chain, objname) event).B.value
-                      eventptr_t (objname ^ "_" ^ event) builder))
-        in
         let llobj_gen = L.build_bitcast llobj objptr_t (objname ^ "_gen") builder in
-        build_struct_ptr_assign llobj_gen (Array.of_list (None :: Some llid :: events)) builder;
+        build_struct_ptr_assign llobj_gen [|None; Some llid; Some g.B.vtable|] builder;
         let objref = build_struct_assign (L.undef objref_t) [|Some llid; Some llnode|] builder in
         let create_event = (find_obj_event_decl (chain, objname) "create").B.value in
         (* TODO: include something in LRM about non-initialized values *)
@@ -572,10 +577,13 @@ let translate the_program files =
            event. *)
         let objref = expr scope builder e in
         let node = L.build_extractvalue objref 1 "node" builder in
-        let _ =
+        let () =
           (* Call its destroy event *)
           let objptr = L.build_bitcast node objptr_t "objptr" builder in
-          let destroy_event = L.build_load (L.build_struct_gep objptr 4 "" builder) "event" builder in
+          let destroy_event =
+            let tbl = L.build_load (L.build_struct_gep objptr 2 "" builder) "tbl" builder in
+            L.build_load (L.build_struct_gep tbl 1 "eventptr" builder) "event" builder
+          in
           ignore (L.build_call destroy_event [|objref|] "" builder);
           (* Mark its id as 0 *)
           let idptr = L.build_struct_gep objptr 1 (objtype ^ "_id") builder in
@@ -749,7 +757,9 @@ let translate the_program files =
 
       let call b _ =
         let this_fn =
-          L.build_load (L.build_struct_gep objptr offset "" b) ("this_" ^ name) b
+          let tbl = L.build_load (L.build_struct_gep objptr 2 "" b) ("this_tbl") b in
+          let ptr = L.build_struct_gep tbl offset ("this_" ^ name ^ "ptr") b in
+          L.build_load ptr ("this_" ^ name) b
         in
         let objref = build_struct_assign (L.undef objref_t) [|Some id; Some node|] b in
         ignore (L.build_call this_fn [|objref|] "" b); b
@@ -766,7 +776,7 @@ let translate the_program files =
     let builder = build_node_loop builder fn ~ends:gameobj_end ~body in
     ignore (L.build_ret_void builder)
   in
-  List.iter global_event ["step", 3; "draw", 5];
+  List.iter global_event ["step", 0; "draw", 2];
 
   define_ns_contents llprogram ("", the_program);
   List.iter (fun (fname, ns) -> define_ns_contents (StringMap.find fname llfiles) (fname, ns))
