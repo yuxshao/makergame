@@ -61,7 +61,7 @@ let build_if ~pred ~then_ ?(else_ = (fun b _ -> b)) context builder the_function
   L.builder_at_end context merge_bb
 
 (* Builds a while LLVM construct given a predicate construct (returning a bool
-   llvalue and possibly some information to body) and a body construct. *)
+   llmvalue and possibly some information to body) and a body construct. *)
 let build_while ~pred ~body context builder the_function =
   let pred_bb = L.append_block context "while" the_function in
   let body_bb = L.append_block context "while_body" the_function in
@@ -591,6 +591,14 @@ let translate the_program files =
         let vscope, fscope = scope in
         let local_var = L.build_alloca (ltype_of_typ typ) name builder in
         builder, (StringMap.add name (local_var, typ) vscope, fscope)
+      | A.Vdef (typ, name, e) ->
+        let vscope, fscope = scope in
+        let local_var = L.build_alloca (ltype_of_typ typ) name builder in
+        let new_vscope = StringMap.add name (local_var, typ) vscope in
+        let e' = expr (vscope, fscope) builder e in
+        (*TODO: what should be asn on the left side*)
+        ignore(L.build_store e' local_var builder);
+        builder, (StringMap.add name (local_var, typ) new_vscope, fscope)
       | A.Block b ->
         let merge_bb = L.append_block context "block_end" fn in
         let builder, _ =
