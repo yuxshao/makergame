@@ -19,7 +19,7 @@ type typ =
   | Float
   | String
   | Sprite
-  | Sound 
+  | Sound
   | Object of id_chain          (* object type, in relative position of namespaces *)
   | Arr of typ * int
 
@@ -231,7 +231,9 @@ let rec string_of_stmt = function
     "if (" ^ string_of_expr e ^ ")\n" ^ string_of_stmt s
   | If(e, s1, s2) ->  "if (" ^ string_of_expr e ^ ")\n" ^
       string_of_stmt s1 ^ "else\n" ^ string_of_stmt s2
-  | For(e1, e2, e3, s) -> "for (" ^ string_of_expr e1  ^ " ; " ^ string_of_expr e2 ^ " ; " ^ string_of_expr e3  ^ ") " ^ string_of_stmt s
+  | For(e1, e2, e3, s) ->
+    "for (" ^ string_of_expr e1  ^ " ; " ^ string_of_expr e2 ^ " ; " ^
+    string_of_expr e3  ^ ") " ^ string_of_stmt s
   | While(e, s) -> "while (" ^ string_of_expr e ^ ") " ^ string_of_stmt s
   | Foreach(obj_t, id, s) ->
       "foreach (" ^ string_of_chain obj_t  ^ " " ^ id ^ ") " ^ string_of_stmt s

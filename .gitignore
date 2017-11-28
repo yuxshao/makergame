@@ -14,3 +14,4 @@ vgcore.*
 trial
 testall.log
 *.exe
+.DS_Store
