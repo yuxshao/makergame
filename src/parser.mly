@@ -66,13 +66,13 @@ fdecl:
  | EXTERN typ ID LPAREN formals_opt RPAREN SEMI
      { $3, { Func.typ = $2 ; formals = $5 ; gameobj = None ; block = None } }
  | typ ID LPAREN formals_opt RPAREN code_block
-     { $2, { Func.typ = $1 ; formals = $4 ; gameobj = None ; block = Some $6 } }
+     { $2, Func.make $1 $4 None $6 }
 
 event:
-  | EVENT CREATE code_block { (Gameobj.Create, $3) }
-  | EVENT DESTROY code_block { (Gameobj.Destroy, $3) }
-  | EVENT STEP code_block { (Gameobj.Step, $3) }
-  | EVENT DRAW code_block { (Gameobj.Draw, $3) }
+ | EVENT CREATE  code_block { "create",  Func.make Void [] None $3 }
+ | EVENT STEP    code_block { "step",    Func.make Void [] None $3 }
+ | EVENT DESTROY code_block { "destroy", Func.make Void [] None $3 }
+ | EVENT DRAW    code_block { "draw",    Func.make Void [] None $3 }
 
 odecl:
    OBJECT ID LCURLY odecl_body RCURLY

@@ -271,20 +271,11 @@ let translate the_program files =
     let llgameobjs =
       let open A.Gameobj in
 
-      let event_decls (gname, g) =
-        let event_to_llname gname ename = "object" ^ nname ^ "::" ^ gname ^ ".event." ^ ename in
-        let add_decl m (f_name, _) =
-          let name = event_to_llname gname f_name in
-          let llfn_t = L.function_type void_t [|ltype_of_typ (A.Object([], gname))|] in
-          StringMap.add f_name (L.define_function name llfn_t the_module) m
-        in
-        List.fold_left add_decl StringMap.empty
-          [("create", g.create); ("step", g.step); ("destroy", g.destroy); ("draw", g.draw)]
-      in
-
       let make_llgameobj (gname, g) =
         (* Declare the struct type *)
-        let obj_fn_to_llname gname ename = "object" ^ nname ^ "::" ^ gname ^ ".function." ^ ename in
+        let to_llname pref ename =
+          "object" ^ nname ^ "::" ^ gname ^ "." ^ pref ^ "." ^ ename
+        in
         let gt = L.named_struct_type context gname in
 
         (* Set its body *)
@@ -295,8 +286,9 @@ let translate the_program files =
         (* Define linked list heads for each object type *)
         let ends = make_node_end ("object" ^ nname ^ "::" ^ gname) in
 
-        { B.gtyp = gt; events = event_decls (gname, g); ends;
-          methods = fn_decls g.methods (Some gname) (obj_fn_to_llname gname) }
+        { B.gtyp = gt; ends;
+          events = fn_decls g.events (Some gname) (to_llname "event");
+          methods = fn_decls g.methods (Some gname) (to_llname "function") }
       in
       let add_llgameobj m (gname, g) = StringMap.add gname (make_llgameobj (gname, g)) m in
       List.fold_left add_llgameobj StringMap.empty gameobjs
@@ -531,7 +523,7 @@ let translate the_program files =
         let events =
           ["create"; "step"; "destroy"; "draw"]
           |> List.map (fun event ->
-              Some (L.build_bitcast (find_obj_event_decl (chain, objname) event)
+              Some (L.build_bitcast (find_obj_event_decl (chain, objname) event).B.value
                       eventptr_t (objname ^ "_" ^ event) builder))
         in
         let llobj_gen = L.build_bitcast llobj objptr_t (objname ^ "_gen") builder in
@@ -706,25 +698,16 @@ let translate the_program files =
 
     let build_obj_functions (gname, g) =
       let open A.Gameobj in
-      let build_fn (fname, { A.Func.typ; formals; block; gameobj = _ }) =
-        let llfn = (find_obj_fn_decl ([], gname) fname).B.value in
+      let build_fn find_fn (fname, { A.Func.typ; formals; block; gameobj = _ }) =
+        let llfn = (find_fn ([], gname) fname).B.value in
         match block with
         | Some block -> build_function_body llfn formals block typ ~gameobj:gname
         | None -> assert false    (* Semant ensures obj fns are not external *)
       in
-      List.iter build_fn g.methods
+      List.iter (build_fn find_obj_fn_decl) g.methods;
+      List.iter (build_fn find_obj_event_decl) g.events;
     in
     List.iter build_obj_functions gameobjs;
-
-    let build_obj_events (gname, g) =
-      let open A.Gameobj in
-      let build_fn (f_name, block) =
-        let llfn = find_obj_event_decl ([], gname) f_name in
-        build_function_body llfn [] block A.Void ~gameobj:gname
-      in
-      List.iter build_fn [("create", g.create); ("step", g.step); ("destroy", g.destroy); ("draw", g.draw)]
-    in
-    List.iter build_obj_events gameobjs;
 
     (* Build global_create from the global namespace *)
     if nname = "" then

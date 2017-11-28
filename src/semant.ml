@@ -356,28 +356,32 @@ let rec check_namespace (nname, namespace) files =
     check_block ~scope ~name ~return block
   in
 
-  let check_function ~scope (name, func) =
+  let check_function ~scope ~objname (name, func) =
     let open Func in
+    let loc = match objname with
+      | Some objname -> nname ^ "::" ^ objname ^ "::" ^ name
+      | None -> nname ^ "::" ^ name
+    in
     List.iter
-      (check_not_void (fun n -> "illegal void formal " ^ n ^ " in " ^ nname ^ "::" ^ name))
+      (check_not_void (fun n -> "illegal void formal " ^ n ^ " in " ^ loc))
       func.formals;
 
     let scope =
       let vscope, fscope = scope in
-      List.fold_left (add_to_scope ~loc:("formals of " ^ nname ^ "::" ^ name))
+      List.fold_left (add_to_scope ~loc:("formals of " ^ loc))
         vscope func.formals, fscope
     in
 
     (* formals can have the same name as locals. is this okay? think about these
        edge cases *)
     report_duplicate
-      (fun n -> "duplicate formal " ^ n ^ " in " ^ nname ^ "::" ^ name)
+      (fun n -> "duplicate formal " ^ n ^ " in " ^ loc)
       (List.map fst func.formals);
 
     let block =
       match func.block with
       | Some block ->
-        Some (check_block ~scope ~name:(nname ^ "::" ^ name) ~return:func.typ block)
+        Some (check_block ~scope ~name:loc ~return:func.typ block)
       | None -> None
     in
     name, { func with block = block }
@@ -385,13 +389,6 @@ let rec check_namespace (nname, namespace) files =
 
   let check_gameobj ~scope (name, obj) =
     let open Gameobj in
-    let obj_fn_list obj =
-      [("create", Gameobj.Create, obj.create);
-       ("step", Gameobj.Step, obj.step);
-       ("draw", Gameobj.Draw, obj.draw);
-       ("destroy", Gameobj.Destroy, obj.destroy)]
-    in
-
     report_duplicate
       (fun n -> "duplicate members " ^ n ^ " in " ^ name)
       (List.map fst obj.members);
@@ -399,6 +396,29 @@ let rec check_namespace (nname, namespace) files =
     report_duplicate
       (fun n -> "duplicate methods " ^ n ^ " in " ^ name)
       (List.map fst obj.methods);
+
+    report_duplicate
+      (fun n -> "duplicate events " ^ n ^ " in " ^ name)
+      (List.map fst obj.events);
+
+    let valid_events = ["create"; "step"; "draw"; "destroy"] in
+    let check_event (name, ev) =
+      (* Precautionary checks that shouldn't happen b/c of parser *)
+      match (name, ev.Func.formals, ev.Func.typ) with
+      | name, _, Void when name = "create" -> ()
+      | name, args, Void when List.mem name valid_events && args = [] -> ()
+      | _ -> assert false
+    in
+    List.iter check_event obj.events;
+
+    let obj_fn_list =
+      let add_if_absent events evname =
+        if not (List.mem_assoc evname events)
+        then (evname, Func.make Void [] (Some name) []) :: events
+        else events
+      in
+      List.fold_left add_if_absent obj.events valid_events
+    in
 
     (* Add "this" and gameobj members to scope *)
     (* gameobj_scope also checks that no members are named 'this' *)
@@ -410,23 +430,19 @@ let rec check_namespace (nname, namespace) files =
     in
     let check_obj_fn (fname, func) =
       match func.Func.block with
-      | Some _ -> check_function ~scope (fname, func)
+      | Some _ -> check_function ~scope ~objname:(Some name) (fname, func)
       | _ -> failwith ("illegal extern function " ^ nname ^ "::" ^ name ^ "::" ^ fname)
     in
-    let check_event (fname, eventtype, block) =
-      eventtype,
-      check_block ~scope ~name:(nname ^ "::" ^ name ^ "::" ^ fname) ~return:Void block
-    in
     let methods' = List.map check_obj_fn obj.methods in
-    let blocks' = List.map check_event (obj_fn_list obj) in
-    make name (obj.members, methods', blocks')
+    let events' = List.map check_obj_fn obj_fn_list in
+    make name (obj.members, methods', events')
   in
 
   let scope =
     List.fold_left (add_to_scope ~loc:(nname ^ " globals")) StringMap.empty globals,
     global_functions
   in
-  let functions = List.map (check_function ~scope) functions in
+  let functions = List.map (check_function ~objname:None ~scope) functions in
   let gameobjs = List.map (check_gameobj ~scope) gameobjs in
   let namespaces = namespace.Namespace.namespaces in
 
