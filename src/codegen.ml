@@ -388,7 +388,6 @@ let translate the_program files =
       members
     in
 
-    let add_to_scope to_add scope = StringMap.fold StringMap.add scope to_add in
     let build_object_loop builder the_function (chain, objname) ~body =
       let g = StringMap.find objname (namespace_of_chain chain).B.gameobjs in
       let body builder break_bb node =
@@ -673,13 +672,15 @@ let translate the_program files =
           gameobj_members this ([], obj) builder
         | None -> StringMap.empty
       in
+      let method_scope =
+        match gameobj with
+        | Some obj -> (StringMap.find obj llns.B.gameobjs).B.methods
+        | None -> StringMap.empty
+      in
+      let add_to_scope to_add = StringMap.fold StringMap.add to_add in
       let scope =
         llns.B.variables |> add_to_scope member_scope |> add_to_scope formal_scope,
-        match gameobj with
-        | Some obj ->
-          let g = StringMap.find obj llns.B.gameobjs in
-          StringMap.fold StringMap.add g.B.methods llns.B.functions
-        | _ -> llns.B.functions
+        llns.B.functions |> add_to_scope method_scope
       in
 
       let builder, _ =
