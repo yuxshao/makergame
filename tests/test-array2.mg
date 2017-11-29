@@ -1,3 +1,4 @@
+// array returns
 int make_ten_of[10](int x) {
   int ret[10];
   int i;
