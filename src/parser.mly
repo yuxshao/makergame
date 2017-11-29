@@ -32,7 +32,7 @@ open Ast
 %left EXPONENT MODULO
 %right NOT NEG
 %left INCREMENT DECREMENT
-%left PERIOD
+%left PERIOD LBRACK RBRACK
 %left DBCOLON
 
 %start program
@@ -106,10 +106,6 @@ typ:
   | id_chain { Object($1) }
   | typ LBRACK LITERAL RBRACK { Arr($1, $3) }
 
-/* TODO: allow typ ID EQ EXPR (vdecldef) for function-local variables.
-   also think about what can go in if/while conditions, as well as for
-   initializer.I think vdecl, vdecldef, expr_opt can go in for
-   initializer, while only vdecldef and exprs can go in conditions. */
 vdecl:
   | typ ID SEMI { ($2, $1) }
 
@@ -166,6 +162,7 @@ expr:
   | MINUS expr %prec NEG { Unop(Neg, Void,   $2) }
   | NOT expr           { Unop(Not, Void, $2) }
   | expr ASSIGN expr   { Assign($1, $3) }
+  | expr PERIOD LBRACK expr RBRACK { Subscript($1, $4) }
   | id_chain LPAREN actuals_opt RPAREN { Call($1, $3) }
   | expr PERIOD ID LPAREN actuals_opt RPAREN { MemberCall($1, ([], ""), $3, $5) }
   | CREATE id_chain                           { Create($2, []) }

@@ -40,6 +40,7 @@ type expr =
   | Unop of uop * typ * expr
   | Idop of idop * typ * expr
   | Assign of expr * expr
+  | Subscript of expr * expr
   (* (LHS before period, name of LHS object type, RHS) *)
   | Member of expr * id_chain * string
   (* (LHS before period, name of LHS object type, RHS function name, actuals) *)
@@ -197,6 +198,7 @@ let rec string_of_expr = function
   | Assign(l, r) -> string_of_expr l ^ " = " ^ string_of_expr r
   | Call(f, el) ->
     (string_of_chain f) ^ "(" ^ String.concat ", " (List.map string_of_expr el) ^ ")"
+  | Subscript(e, ind) -> string_of_expr e ^ "[" ^ string_of_expr ind ^ "]"
   | Member(e, _, s) -> "(" ^ (string_of_expr e) ^ ")." ^ s
   | MemberCall(e, _, f, el) -> "(" ^ (string_of_expr e) ^ ")." ^ string_of_expr (Call(([], f), el))
   | Create (c, args) ->

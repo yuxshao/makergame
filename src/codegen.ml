@@ -117,13 +117,12 @@ let translate the_program files =
 
   let global_objid = L.define_global "last_objid" (L.const_int i64_t 0) the_module in
 
-  let ltype_of_typ = function
+  let rec ltype_of_typ = function
     | A.Int -> i32_t
     | A.Bool -> i1_t
     | A.Float -> float_t
-    | A.Arr _ -> failwith "not implemented"
+    | A.Arr (typ, len) -> L.array_type (ltype_of_typ typ) len
     | A.String -> L.pointer_type i8_t
-    (* | A.Arr (typ, len) -> L.array_type (ltype_of_typ typ) len *)
     | A.Sprite -> sprite_t
     | A.Sound -> sound_t
     | A.Object _ -> objref_t
@@ -419,6 +418,10 @@ let translate the_program files =
       | A.Assign (l, r) ->
         let l', r' = lexpr (vscope, fscope) builder l, expr (vscope, fscope) builder r in
         ignore (L.build_store r' l' builder); l'
+      | A.Subscript (arr, ind) ->
+        let arr' = lexpr (vscope, fscope) builder arr in
+        let ind' = expr (vscope, fscope) builder ind in
+        L.build_gep arr' [|L.const_null i32_t; ind'|] "subscript" builder
       | A.Asnop (l, asnop ,t, r) ->
         let lp = lexpr (vscope, fscope) builder l in
         let le = L.build_load lp "le" builder in
@@ -482,6 +485,11 @@ let translate the_program files =
         (match op with
            A.Neg     -> if t=A.Int then L.build_neg else L.build_fneg
          | A.Not     -> L.build_not) e' "tmp" builder
+      | A.Subscript (arr, ind) ->
+        let arr', ind' = expr scope builder arr, expr scope builder ind in
+        let arr_ptr = L.build_alloca (L.type_of arr') "arr" builder in
+        ignore (L.build_store arr' arr_ptr builder);
+        L.build_load (L.build_gep arr_ptr [|L.const_null i32_t; ind'|] "" builder) "subscript" builder
       | A.Call ((chain, f), act) ->
         let _, fscope = scope in
         let fn =

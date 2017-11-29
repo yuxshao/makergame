@@ -186,8 +186,9 @@ let rec check_namespace (nname, namespace) files =
     | _ as t -> t
   in
   (* Check that the expression can indeed be assigned to *)
-  let check_lvalue loc = function
+  let rec check_lvalue loc = function
     | Id([], "this") -> failwith ("'this' cannot be assigned in '" ^ loc ^ "'")
+    | Subscript(arr, _) -> check_lvalue loc arr (* subscr is lvalue iff arr is *)
     | Id _ | Member _ | Assign _ | Asnop _ | Idop _ -> ()
     | _ as e -> failwith ("lvalue " ^ string_of_expr e ^ " expected in " ^ loc)
   in
@@ -272,6 +273,20 @@ let rec check_namespace (nname, namespace) files =
           | _ -> add_typ_ns chain (List.assoc name (namespace_of_chain chain).Namespace.variables)
         with Not_found -> failwith ("undeclared identifier " ^ (string_of_chain (chain, name)))
       in t, e
+    | Subscript(arr, ind) ->
+      let ind' =
+        match expr scope ind with
+        | Int, ind' -> ind'
+        | _ -> failwith ("expected integer index " ^ string_of_expr ind ^
+                         " in " ^ string_of_expr e)
+      in
+      let elem_type, arr' =
+        match expr scope arr with
+        | Arr (t, _), arr' -> t, arr'
+        | _ -> failwith ("expected array " ^ string_of_expr arr ^
+                         " in " ^ string_of_expr e)
+      in
+      elem_type, Subscript(arr', ind')
     | Member(e, _, name) ->
       (match expr scope e with
        | Object s, e' ->
