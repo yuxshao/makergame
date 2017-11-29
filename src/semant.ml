@@ -362,14 +362,14 @@ let rec check_namespace (nname, namespace) files =
         let vscope, fscope = scope in
         check_not_void (fun n -> "illegal void local " ^ n ^ " in " ^ name) d;
         s, (add_to_scope ~loc:name vscope d, fscope)
-      | Vdef(t, id, e) ->
+      | Vdef((id, t), e) ->
         let (et, e') = expr scope e in
         let (_, e'') = check_assign t e' et ("illegal assignment " ^ string_of_typ t ^
                                              " = " ^ string_of_typ et ^ " in " ^
                                              string_of_expr e) in
         let vscope, fscope = scope in
         check_not_void (fun n -> "illegal void local " ^ n ^ " in " ^ name) (id, t);
-        Vdef(t, id, e''), (add_to_scope ~loc:name vscope (id, t), fscope)
+        Vdef((id, t), e''), (add_to_scope ~loc:name vscope (id, t), fscope)
       | Break -> Break, scope
       | Block b -> Block (check_block b ~scope ~name ~return), scope
       | Expr e -> let (_, e') = expr scope e in Expr e', scope

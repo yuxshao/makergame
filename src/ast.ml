@@ -52,7 +52,7 @@ type expr =
 
 type stmt =
   | Decl of Var.decl
-  | Vdef of typ * string * expr
+  | Vdef of Var.decl * expr
   | Block of block
   | Expr of expr
   | Break
@@ -212,7 +212,7 @@ let string_of_vdecl (id, t) = string_of_typ t ^ " " ^ id ^ ";\n"
 
 let rec string_of_stmt = function
   | Decl d -> string_of_vdecl d
-  | Vdef(t, id, e) -> string_of_typ t ^ " " ^ id ^ " = " ^ string_of_expr e ^ ";\n"
+  | Vdef((id, t), e) -> string_of_typ t ^ " " ^ id ^ " = " ^ string_of_expr e ^ ";\n"
   | Block(blk) -> string_of_block blk
   | Expr(expr) -> string_of_expr expr ^ ";\n"
   | Break -> "break;\n"

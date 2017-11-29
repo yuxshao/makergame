@@ -119,7 +119,7 @@ stmt_list:
 stmt:
     expr SEMI { Expr $1 }
   | vdecl { Decl $1 }
-  | bind ASSIGN expr SEMI { let name, typ = $1 in Vdef(typ, name, $3) }
+  | bind ASSIGN expr SEMI { Vdef($1, $3) }
   | RETURN expr_opt SEMI { Return $2 }
   | BREAK SEMI { Break }
   | code_block { Block($1) }

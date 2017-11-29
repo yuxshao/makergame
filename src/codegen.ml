@@ -598,7 +598,7 @@ let translate the_program files =
         let vscope, fscope = scope in
         let local_var = L.build_alloca (ltype_of_typ typ) name builder in
         builder, (StringMap.add name (local_var, typ) vscope, fscope)
-      | A.Vdef (typ, name, e) ->
+      | A.Vdef ((name, typ), e) ->
         let vscope, fscope = scope in
         let local_var = L.build_alloca (ltype_of_typ typ) name builder in
         let new_vscope = StringMap.add name (local_var, typ) vscope in
