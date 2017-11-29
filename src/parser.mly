@@ -62,11 +62,15 @@ decls:
 code_block:
    LCURLY stmt_list RCURLY { $2 }
 
+bind:
+ | typ ID { ($2, $1) }
+ | bind LBRACK LITERAL RBRACK { let name, typ = $1 in (name, Arr(typ, $3)) }
+
 fdecl:
- | EXTERN typ ID LPAREN formals_opt RPAREN SEMI
-     { $3, { Func.typ = $2 ; formals = $5 ; gameobj = None ; block = None } }
- | typ ID LPAREN formals_opt RPAREN code_block
-     { $2, Func.make $1 $4 None $6 }
+ | EXTERN bind LPAREN formals_opt RPAREN SEMI
+     { let name, typ = $2 in name, { Func.typ; formals = $4; gameobj = None; block = None } }
+ | bind LPAREN formals_opt RPAREN code_block
+     { let name, typ = $1 in name, Func.make typ $3 None $5 }
 
 event:
  | EVENT CREATE LPAREN formals_opt RPAREN code_block
@@ -92,8 +96,8 @@ formals_opt:
   | formal_list   { $1 }
 
 formal_list:
-    typ ID                   { [($2,$1)] }
-  | typ ID COMMA formal_list { ($2,$1) :: $4 }
+    bind                   { [$1] }
+  | bind COMMA formal_list { $1 :: $3 }
 
 typ:
     INT { Int }
@@ -104,10 +108,9 @@ typ:
   | FLOAT { Float }
   | STRING { String }
   | id_chain { Object($1) }
-  | typ LBRACK LITERAL RBRACK { Arr($1, $3) }
 
 vdecl:
-  | typ ID SEMI { ($2, $1) }
+  | bind SEMI { $1 }
 
 stmt_list:
     /* nothing */  { [] }
@@ -116,7 +119,7 @@ stmt_list:
 stmt:
     expr SEMI { Expr $1 }
   | vdecl { Decl $1 }
-  | typ ID ASSIGN expr SEMI { Vdef($1, $2, $4) }
+  | bind ASSIGN expr SEMI { let name, typ = $1 in Vdef(typ, name, $3) }
   | RETURN expr_opt SEMI { Return $2 }
   | BREAK SEMI { Break }
   | code_block { Block($1) }
@@ -162,7 +165,7 @@ expr:
   | MINUS expr %prec NEG { Unop(Neg, Void,   $2) }
   | NOT expr           { Unop(Not, Void, $2) }
   | expr ASSIGN expr   { Assign($1, $3) }
-  | expr PERIOD LBRACK expr RBRACK { Subscript($1, $4) }
+  | expr LBRACK expr RBRACK { Subscript($1, $3) }
   | id_chain LPAREN actuals_opt RPAREN { Call($1, $3) }
   | expr PERIOD ID LPAREN actuals_opt RPAREN { MemberCall($1, ([], ""), $3, $5) }
   | CREATE id_chain                           { Create($2, []) }
