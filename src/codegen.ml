@@ -425,24 +425,21 @@ let translate the_program files =
         let re = expr(vscope, fscope) builder r in
         let sum =
           (match t, asnop with
-           | A.Int, A.Addasn ->  L.build_add le re "Asn" builder
-           | A.Float, A.Addasn -> L.build_fadd le re "Asn" builder
-           | A.Int, A.Subasn -> L.build_sub le re "Asn" builder
-           | A.Float, A.Subasn -> L.build_fsub le re "Asn" builder
-           | A.Int, A.Multasn -> L.build_mul le re "Asn" builder
-           | A.Float, A.Multasn -> L.build_fmul le re "Asn" builder
-           | A.Int, A.Divasn -> L.build_sdiv le re "Asn" builder
-           | A.Float, A.Divasn -> L.build_fdiv le re "Asn" builder
-           | _ -> assert false )
+           | A.Int, A.Addasn  -> L.build_add  | A.Float, A.Addasn  -> L.build_fadd
+           | A.Int, A.Subasn  -> L.build_sub  | A.Float, A.Subasn  -> L.build_fsub
+           | A.Int, A.Multasn -> L.build_mul  | A.Float, A.Multasn -> L.build_fmul
+           | A.Int, A.Divasn  -> L.build_sdiv | A.Float, A.Divasn  -> L.build_fdiv
+           | _ -> assert false) le re "Asn" builder
         in
         ignore (L.build_store sum lp builder); lp
       | A.Idop (idop, t, l) ->
-        (match t, idop with
-         | A.Int, A.Inc -> lexpr (vscope, fscope) builder (A.Asnop (l, A.Addasn, A.Int, A.Literal 1))
-         | A.Int, A.Dec -> lexpr (vscope, fscope) builder (A.Asnop (l, A.Subasn, A.Int, A.Literal 1))
-         | A.Float, A.Inc -> lexpr (vscope, fscope) builder (A.Asnop(l, A.Addasn, A.Float, A.FloatLit 1.0))
-         | A.Float, A.Dec -> lexpr (vscope, fscope) builder (A.Asnop(l, A.Subasn, A.Float, A.FloatLit 1.0))
-         | _ -> assert false)
+        lexpr (vscope, fscope) builder
+          (match t, idop with
+           | A.Int, A.Inc -> A.Asnop (l, A.Addasn, A.Int, A.Literal 1)
+           | A.Int, A.Dec -> A.Asnop (l, A.Subasn, A.Int, A.Literal 1)
+           | A.Float, A.Inc -> A.Asnop(l, A.Addasn, A.Float, A.FloatLit 1.0)
+           | A.Float, A.Dec -> A.Asnop(l, A.Subasn, A.Float, A.FloatLit 1.0)
+           | _ -> assert false)
       | _ -> assert false (* Semant should catch other illegal attempts at assignment *)
     (* Construct code for an expression; return its value *)
     and expr scope builder = function
