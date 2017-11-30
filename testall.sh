@@ -165,6 +165,8 @@ LLIFail() {
   exit 1
 }
 
+export OCAMLRUNPARAM=""
+
 which "$LLI" >> $globallog || LLIFail
 
 if [ ! -f lib/libtestergame.o ]

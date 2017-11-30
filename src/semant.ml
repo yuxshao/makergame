@@ -43,6 +43,45 @@ let ast_of_file f =
   with Parsing.Parse_error -> failwith ("failed to parse file " ^ f)
 ;;
 
+(* Access a namespace inside another namespace (top) through a chain. Prevent
+   access to private namespaces.
+
+   files should contain every file that could possibly be accessed in the
+   chain. prev accumulates previous namespace accesses to detect loops. cname
+   is a name for the chain in error messages. *)
+let rec namespace_of_chain top prev files can_private chain cname =
+  match chain with
+  | [] -> top
+  | hd :: tl ->
+    (* Check for permissions and get the next namespace *)
+    let inner_ns =
+      let is_private, ns =
+        try List.assoc hd top.Namespace.namespaces
+        with Not_found ->
+          failwith ("unrecognized namespace " ^ hd ^
+                    " encountered when resolving " ^ cname)
+      in
+      if is_private && (not can_private)
+      then failwith ("attempted access to private namespace " ^
+                     hd ^ " in resolving " ^ cname)
+      else ns
+    in
+    (* Check for loops. Update prev *)
+    let prev' =
+      if List.mem (top, chain) prev
+      then failwith ("namespace " ^ cname ^ " never resolves")
+      else (top, chain) :: prev
+    in
+    (* Recurse down depending on nature of next namespace *)
+    let top', chain', private' =
+      match inner_ns with
+      | Namespace.Concrete c -> c, tl, false
+      | Namespace.Alias a -> top, (a @ tl), true
+      | Namespace.File f -> List.assoc f files, tl, false
+    in
+    namespace_of_chain top' prev' files private' chain' cname
+;;
+
 (* Semantic checking of a namespace. Returns checked AST if successful, throws
    an exception if something is wrong.
 
@@ -60,27 +99,6 @@ let rec check_namespace (nname, namespace) files =
 
   report_duplicate (fun n -> "duplicate namespace " ^ nname ^ "::" ^ n)
     (List.map fst namespace.Namespace.namespaces);
-
-  (* Access an inner namespace in a chain. Prevent access to private namespaces. *)
-  let rec namespace_of_chain top files chain =
-    let find (ns, can_private) n =
-      try let is_private, inner_ns = List.assoc n ns.Namespace.namespaces in
-        if is_private && (not can_private)
-        then failwith ("cannot access private namespace " ^ n ^
-                       " in " ^ (String.concat "::" chain))
-        else
-          match inner_ns with
-          | Namespace.Concrete c -> c, false
-          | Namespace.Alias chain -> namespace_of_chain ns files chain, false
-          | Namespace.File f ->
-            try List.assoc f files, false
-            with Not_found -> failwith ("BUG: file " ^ f ^ " not found in files")
-      with Not_found ->
-        List.iter (fun (n, _) -> print_endline n) ns.Namespace.namespaces;
-        failwith ("unrecognized namespace " ^ n ^ " in " ^ (String.concat "::" chain))
-    in
-    let ns, _ = List.fold_left find (top, true) chain in ns
-  in
 
   (* Check inner namespaces and populate list of files *)
   let namespace, files =
@@ -104,35 +122,23 @@ let rec check_namespace (nname, namespace) files =
       | _ -> accum
     in
     let files = List.fold_left check_file_ns files namespaces in
-    (* Check namespace aliases *)
+    (* Verify that each alias indeed resolves to a namespace *)
     let () =
       let aliases =
         List.fold_left
-          (fun a (n, (_, x)) -> match x with Alias chain -> (n, chain) :: a | _ -> a) []
+          (fun a (_, (_, x)) -> match x with Alias chain -> chain :: a | _ -> a) []
           namespace.namespaces
       in
-      (* Check for loops in alias references by redirecting at most {#aliases} times *)
-      let rec check_loop num name =
-        let ns =
-          try let _is_private, ns = List.assoc name namespace.namespaces in ns
-          with Not_found -> failwith ("alias " ^ name ^ " does not exist")
-        in
-        match ns with
-        | Alias _ when num = 0 -> failwith ("namespace alias " ^ name ^ " never resolves")
-        | Alias (hd :: _) -> check_loop (num - 1) hd
-        | _ -> ()
-      in
-      (* Also verify that each alias indeed resolves to a namespace *)
       let check_resolve chain =
-        ignore (namespace_of_chain namespace files chain)
+        ignore (namespace_of_chain namespace [] files true chain (String.concat "::" chain))
       in
-      List.iter
-        (fun (name, chain) -> check_loop (List.length aliases) name; check_resolve chain)
-        aliases
+      List.iter check_resolve aliases
     in
     namespace, files
   in
-  let namespace_of_chain = namespace_of_chain namespace files in
+  let namespace_of_chain chain =
+    namespace_of_chain namespace [] files true chain (String.concat "::" chain)
+  in
 
   (**** Checking Global Variables ****)
 
@@ -258,7 +264,7 @@ let rec check_namespace (nname, namespace) files =
           | _ -> List.assoc fname (namespace_of_chain chain).Namespace.functions
         with Not_found -> failwith ("unrecognized function " ^ (string_of_chain (chain, fname)))
       in
-      let actuals' = check_call_actuals (string_of_expr call) actuals scope fd in
+      let actuals' = check_call_actuals (string_of_expr call) actuals scope fd.Func.formals in
       add_typ_ns chain fd.Func.typ, Call((chain, fname), actuals')
     | MemberCall(e, _, fname, actuals) as call ->
       let fd, (ochain, oname), e' = match expr scope e with
@@ -269,17 +275,22 @@ let rec check_namespace (nname, namespace) files =
                        string_of_expr e ^ " of type " ^ string_of_chain s))
         | _ -> failwith ("cannot get member of non-object " ^ (string_of_expr e))
       in
-      let actuals' = check_call_actuals (string_of_expr call) actuals scope fd in
+      let actuals' = check_call_actuals (string_of_expr call) actuals scope fd.Func.formals in
       add_typ_ns ochain fd.Func.typ, MemberCall(e', (ochain, oname), fname, actuals')
-    | Create(obj_type) -> ignore(gameobj_decl obj_type); Object(obj_type), e
+    | Create(obj_type, actuals) ->
+      let formals =
+        try (List.assoc "create" (gameobj_decl obj_type).Gameobj.events).Func.formals
+        with Not_found -> []
+      in
+      let actuals' = check_call_actuals (string_of_expr e) actuals scope formals in
+      Object(obj_type), Create(obj_type, actuals')
     | Destroy(e, _) ->
       match expr scope e with
       | Object n, e' -> Void, Destroy(e', n)
       | _ -> failwith ("cannot destroy non-object")
-  and check_call_actuals loc actuals scope fd =
-    if List.length actuals != List.length fd.Func.formals then
-      failwith ("expecting " ^
-                string_of_int (List.length fd.Func.formals) ^
+  and check_call_actuals loc actuals scope formals =
+    if List.length actuals != List.length formals then
+      failwith ("expecting " ^ string_of_int (List.length formals) ^
                 " arguments in " ^ loc)
     else
       List.map2
@@ -287,7 +298,7 @@ let rec check_namespace (nname, namespace) files =
           ignore (check_assign ft et
                     ("illegal actual argument found " ^ string_of_typ et ^
                      " expected " ^ string_of_typ ft ^ " in " ^ string_of_expr ex)); ex')
-        fd.Func.formals actuals
+        formals actuals
   in
 
   let check_bool_expr scope e = let (t, e') = expr scope e in if t != Bool
@@ -310,6 +321,14 @@ let rec check_namespace (nname, namespace) files =
         let vscope, fscope = scope in
         check_not_void (fun n -> "illegal void local " ^ n ^ " in " ^ name) d;
         s, (add_to_scope ~loc:name vscope d, fscope)
+      | Vdef(t, id, e) ->
+        let (et, e') = expr scope e in
+        ignore (check_assign t et ("illegal assignment " ^ string_of_typ t ^
+                                   " = " ^ string_of_typ et ^ " in " ^
+                                   string_of_expr e));
+        let vscope, fscope = scope in
+        check_not_void (fun n -> "illegal void local " ^ n ^ " in " ^ name) (id, t);
+        Vdef(t, id, e'), (add_to_scope ~loc:name vscope (id, t), fscope)
       | Break -> Break, scope
       | Block b -> Block (check_block b ~scope ~name ~return), scope
       | Expr e -> let (_, e') = expr scope e in Expr e', scope
@@ -350,28 +369,32 @@ let rec check_namespace (nname, namespace) files =
     check_block ~scope ~name ~return block
   in
 
-  let check_function ~scope (name, func) =
+  let check_function ~scope ~objname (name, func) =
     let open Func in
+    let loc = match objname with
+      | Some objname -> nname ^ "::" ^ objname ^ "::" ^ name
+      | None -> nname ^ "::" ^ name
+    in
     List.iter
-      (check_not_void (fun n -> "illegal void formal " ^ n ^ " in " ^ nname ^ "::" ^ name))
+      (check_not_void (fun n -> "illegal void formal " ^ n ^ " in " ^ loc))
       func.formals;
 
     let scope =
       let vscope, fscope = scope in
-      List.fold_left (add_to_scope ~loc:("formals of " ^ nname ^ "::" ^ name))
+      List.fold_left (add_to_scope ~loc:("formals of " ^ loc))
         vscope func.formals, fscope
     in
 
     (* formals can have the same name as locals. is this okay? think about these
        edge cases *)
     report_duplicate
-      (fun n -> "duplicate formal " ^ n ^ " in " ^ nname ^ "::" ^ name)
+      (fun n -> "duplicate formal " ^ n ^ " in " ^ loc)
       (List.map fst func.formals);
 
     let block =
       match func.block with
       | Some block ->
-        Some (check_block ~scope ~name:(nname ^ "::" ^ name) ~return:func.typ block)
+        Some (check_block ~scope ~name:loc ~return:func.typ block)
       | None -> None
     in
     name, { func with block = block }
@@ -379,13 +402,6 @@ let rec check_namespace (nname, namespace) files =
 
   let check_gameobj ~scope (name, obj) =
     let open Gameobj in
-    let obj_fn_list obj =
-      [("create", Gameobj.Create, obj.create);
-       ("step", Gameobj.Step, obj.step);
-       ("draw", Gameobj.Draw, obj.draw);
-       ("destroy", Gameobj.Destroy, obj.destroy)]
-    in
-
     report_duplicate
       (fun n -> "duplicate members " ^ n ^ " in " ^ name)
       (List.map fst obj.members);
@@ -393,6 +409,29 @@ let rec check_namespace (nname, namespace) files =
     report_duplicate
       (fun n -> "duplicate methods " ^ n ^ " in " ^ name)
       (List.map fst obj.methods);
+
+    report_duplicate
+      (fun n -> "duplicate events " ^ n ^ " in " ^ name)
+      (List.map fst obj.events);
+
+    let valid_events = ["create"; "step"; "draw"; "destroy"] in
+    let check_event (name, ev) =
+      (* Precautionary checks that shouldn't happen b/c of parser *)
+      match (name, ev.Func.formals, ev.Func.typ) with
+      | name, _, Void when name = "create" -> ()
+      | name, args, Void when List.mem name valid_events && args = [] -> ()
+      | _ -> assert false
+    in
+    List.iter check_event obj.events;
+
+    let obj_fn_list =
+      let add_if_absent events evname =
+        if not (List.mem_assoc evname events)
+        then (evname, Func.make Void [] (Some name) []) :: events
+        else events
+      in
+      List.fold_left add_if_absent obj.events valid_events
+    in
 
     (* Add "this" and gameobj members to scope *)
     (* gameobj_scope also checks that no members are named 'this' *)
@@ -404,23 +443,19 @@ let rec check_namespace (nname, namespace) files =
     in
     let check_obj_fn (fname, func) =
       match func.Func.block with
-      | Some _ -> check_function ~scope (fname, func)
+      | Some _ -> check_function ~scope ~objname:(Some name) (fname, func)
       | _ -> failwith ("illegal extern function " ^ nname ^ "::" ^ name ^ "::" ^ fname)
     in
-    let check_event (fname, eventtype, block) =
-      eventtype,
-      check_block ~scope ~name:(nname ^ "::" ^ name ^ "::" ^ fname) ~return:Void block
-    in
     let methods' = List.map check_obj_fn obj.methods in
-    let blocks' = List.map check_event (obj_fn_list obj) in
-    make name (obj.members, methods', blocks')
+    let events' = List.map check_obj_fn obj_fn_list in
+    make name (obj.members, methods', events')
   in
 
   let scope =
     List.fold_left (add_to_scope ~loc:(nname ^ " globals")) StringMap.empty globals,
     global_functions
   in
-  let functions = List.map (check_function ~scope) functions in
+  let functions = List.map (check_function ~objname:None ~scope) functions in
   let gameobjs = List.map (check_gameobj ~scope) gameobjs in
   let namespaces = namespace.Namespace.namespaces in
 

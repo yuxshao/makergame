@@ -1,1 +1,1 @@
-Fatal error: exception Failure("alias a does not exist")
+Fatal error: exception Failure("unrecognized namespace a encountered when resolving a")

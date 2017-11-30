@@ -66,13 +66,15 @@ fdecl:
  | EXTERN typ ID LPAREN formals_opt RPAREN SEMI
      { $3, { Func.typ = $2 ; formals = $5 ; gameobj = None ; block = None } }
  | typ ID LPAREN formals_opt RPAREN code_block
-     { $2, { Func.typ = $1 ; formals = $4 ; gameobj = None ; block = Some $6 } }
+     { $2, Func.make $1 $4 None $6 }
 
 event:
-  | EVENT CREATE code_block { (Gameobj.Create, $3) }
-  | EVENT DESTROY code_block { (Gameobj.Destroy, $3) }
-  | EVENT STEP code_block { (Gameobj.Step, $3) }
-  | EVENT DRAW code_block { (Gameobj.Draw, $3) }
+ | EVENT CREATE LPAREN formals_opt RPAREN code_block
+   { "create", Func.make Void $4 None $6 }
+ | EVENT CREATE  code_block { "create",  Func.make Void [] None $3 }
+ | EVENT STEP    code_block { "step",    Func.make Void [] None $3 }
+ | EVENT DESTROY code_block { "destroy", Func.make Void [] None $3 }
+ | EVENT DRAW    code_block { "draw",    Func.make Void [] None $3 }
 
 odecl:
    OBJECT ID LCURLY odecl_body RCURLY
@@ -118,6 +120,7 @@ stmt_list:
 stmt:
     expr SEMI { Expr $1 }
   | vdecl { Decl $1 }
+  | typ ID ASSIGN expr SEMI { Vdef($1, $2, $4) }
   | RETURN expr_opt SEMI { Return $2 }
   | BREAK SEMI { Break }
   | code_block { Block($1) }
@@ -165,7 +168,8 @@ expr:
   | expr ASSIGN expr   { Assign($1, $3) }
   | id_chain LPAREN actuals_opt RPAREN { Call($1, $3) }
   | expr PERIOD ID LPAREN actuals_opt RPAREN { MemberCall($1, ([], ""), $3, $5) }
-  | CREATE id_chain    { Create($2) }
+  | CREATE id_chain                           { Create($2, []) }
+  | CREATE id_chain LPAREN actuals_opt RPAREN { Create($2, $4) }
   | DESTROY expr       { Destroy($2, ([], "")) }
   | LPAREN expr RPAREN { $2 }
 

@@ -271,20 +271,11 @@ let translate the_program files =
     let llgameobjs =
       let open A.Gameobj in
 
-      let event_decls (gname, g) =
-        let event_to_llname gname ename = "object" ^ nname ^ "::" ^ gname ^ ".event." ^ ename in
-        let add_decl m (f_name, _) =
-          let name = event_to_llname gname f_name in
-          let llfn_t = L.function_type void_t [|ltype_of_typ (A.Object([], gname))|] in
-          StringMap.add f_name (L.define_function name llfn_t the_module) m
-        in
-        List.fold_left add_decl StringMap.empty
-          [("create", g.create); ("step", g.step); ("destroy", g.destroy); ("draw", g.draw)]
-      in
-
       let make_llgameobj (gname, g) =
         (* Declare the struct type *)
-        let obj_fn_to_llname gname ename = "object" ^ nname ^ "::" ^ gname ^ ".function." ^ ename in
+        let to_llname pref ename =
+          "object" ^ nname ^ "::" ^ gname ^ "." ^ pref ^ "." ^ ename
+        in
         let gt = L.named_struct_type context gname in
 
         (* Set its body *)
@@ -295,8 +286,9 @@ let translate the_program files =
         (* Define linked list heads for each object type *)
         let ends = make_node_end ("object" ^ nname ^ "::" ^ gname) in
 
-        { B.gtyp = gt; events = event_decls (gname, g); ends;
-          methods = fn_decls g.methods (Some gname) (obj_fn_to_llname gname) }
+        { B.gtyp = gt; ends;
+          events = fn_decls g.events (Some gname) (to_llname "event");
+          methods = fn_decls g.methods (Some gname) (to_llname "function") }
       in
       let add_llgameobj m (gname, g) = StringMap.add gname (make_llgameobj (gname, g)) m in
       List.fold_left add_llgameobj StringMap.empty gameobjs
@@ -396,7 +388,6 @@ let translate the_program files =
       members
     in
 
-    let add_to_scope to_add scope = StringMap.fold StringMap.add scope to_add in
     let build_object_loop builder the_function (chain, objname) ~body =
       let g = StringMap.find objname (namespace_of_chain chain).B.gameobjs in
       let body builder break_bb node =
@@ -434,24 +425,21 @@ let translate the_program files =
         let re = expr(vscope, fscope) builder r in
         let sum =
           (match t, asnop with
-           | A.Int, A.Addasn ->  L.build_add le re "Asn" builder
-           | A.Float, A.Addasn -> L.build_fadd le re "Asn" builder
-           | A.Int, A.Subasn -> L.build_sub le re "Asn" builder
-           | A.Float, A.Subasn -> L.build_fsub le re "Asn" builder
-           | A.Int, A.Multasn -> L.build_mul le re "Asn" builder
-           | A.Float, A.Multasn -> L.build_fmul le re "Asn" builder
-           | A.Int, A.Divasn -> L.build_sdiv le re "Asn" builder
-           | A.Float, A.Divasn -> L.build_fdiv le re "Asn" builder
-           | _ -> assert false )
+           | A.Int, A.Addasn  -> L.build_add  | A.Float, A.Addasn  -> L.build_fadd
+           | A.Int, A.Subasn  -> L.build_sub  | A.Float, A.Subasn  -> L.build_fsub
+           | A.Int, A.Multasn -> L.build_mul  | A.Float, A.Multasn -> L.build_fmul
+           | A.Int, A.Divasn  -> L.build_sdiv | A.Float, A.Divasn  -> L.build_fdiv
+           | _ -> assert false) le re "Asn" builder
         in
         ignore (L.build_store sum lp builder); lp
       | A.Idop (idop, t, l) ->
-        (match t, idop with
-         | A.Int, A.Inc -> lexpr (vscope, fscope) builder (A.Asnop (l, A.Addasn, A.Int, A.Literal 1))
-         | A.Int, A.Dec -> lexpr (vscope, fscope) builder (A.Asnop (l, A.Subasn, A.Int, A.Literal 1))
-         | A.Float, A.Inc -> lexpr (vscope, fscope) builder (A.Asnop(l, A.Addasn, A.Float, A.FloatLit 1.0))
-         | A.Float, A.Dec -> lexpr (vscope, fscope) builder (A.Asnop(l, A.Subasn, A.Float, A.FloatLit 1.0))
-         | _ -> assert false)
+        lexpr (vscope, fscope) builder
+          (match t, idop with
+           | A.Int, A.Inc -> A.Asnop (l, A.Addasn, A.Int, A.Literal 1)
+           | A.Int, A.Dec -> A.Asnop (l, A.Subasn, A.Int, A.Literal 1)
+           | A.Float, A.Inc -> A.Asnop(l, A.Addasn, A.Float, A.FloatLit 1.0)
+           | A.Float, A.Dec -> A.Asnop(l, A.Subasn, A.Float, A.FloatLit 1.0)
+           | _ -> assert false)
       | _ -> assert false (* Semant should catch other illegal attempts at assignment *)
     (* Construct code for an expression; return its value *)
     and expr scope builder = function
@@ -514,9 +502,11 @@ let translate the_program files =
           match fn.B.return with A.Void -> "" | _ -> f ^ "_result"
         in
         L.build_call fn.B.value (Array.of_list (obj :: actuals)) result builder
-      | A.Create (chain, objname) ->
+      | A.Create ((chain, objname), args) ->
         let g = StringMap.find objname (namespace_of_chain chain).B.gameobjs in
+        (* Allocate memory for the object *)
         let llobj = L.build_malloc g.B.gtyp objname builder in
+        (* Set up linked list connections *)
         let llnode = L.build_bitcast llobj nodeptr_t (objname ^ "_node") builder in
         let llobjnode =
           L.build_bitcast (L.build_struct_gep llobj 1 "" builder)
@@ -525,21 +515,24 @@ let translate the_program files =
         let obj_head, _ = obj_end objname in let gameobj_head, _ = gameobj_end in
         ignore (L.build_call list_add_func [|llobjnode; obj_head|] "" builder);
         ignore (L.build_call list_add_func [|llnode; gameobj_head|] "" builder);
+        (* Update ID and ID counter *)
         let llid = L.build_load global_objid "old_id" builder in
         let llid = L.build_add llid (L.const_int i64_t 1) "new_id" builder in
         ignore (L.build_store llid global_objid builder);
+        (* Event function pointers *)
         let events =
           ["create"; "step"; "destroy"; "draw"]
           |> List.map (fun event ->
-              Some (L.build_bitcast (find_obj_event_decl (chain, objname) event)
+              Some (L.build_bitcast (find_obj_event_decl (chain, objname) event).B.value
                       eventptr_t (objname ^ "_" ^ event) builder))
         in
         let llobj_gen = L.build_bitcast llobj objptr_t (objname ^ "_gen") builder in
         build_struct_ptr_assign llobj_gen (Array.of_list (None :: Some llid :: events)) builder;
         let objref = build_struct_assign (L.undef objref_t) [|Some llid; Some llnode|] builder in
-        let create_event = match List.hd events with | Some ev -> ev | None -> assert false in
+        let create_event = (find_obj_event_decl (chain, objname) "create").B.value in
         (* TODO: include something in LRM about non-initialized values *)
-        ignore (L.build_call create_event [|objref|] "" builder);
+        let actuals = List.map (expr scope builder) args in
+        ignore (L.build_call create_event (Array.of_list (objref :: actuals)) "" builder);
         objref
       | A.Destroy (e, (chain, objtype)) ->
         (* Destruction is lazy in that it involves just removing the
@@ -591,6 +584,13 @@ let translate the_program files =
         let vscope, fscope = scope in
         let local_var = L.build_alloca (ltype_of_typ typ) name builder in
         builder, (StringMap.add name (local_var, typ) vscope, fscope)
+      | A.Vdef (typ, name, e) ->
+        let vscope, fscope = scope in
+        let local_var = L.build_alloca (ltype_of_typ typ) name builder in
+        let new_vscope = StringMap.add name (local_var, typ) vscope in
+        let e' = expr (vscope, fscope) builder e in
+        ignore(L.build_store e' local_var builder);
+        builder, (StringMap.add name (local_var, typ) new_vscope, fscope)
       | A.Block b ->
         let merge_bb = L.append_block context "block_end" fn in
         let builder, _ =
@@ -669,13 +669,15 @@ let translate the_program files =
           gameobj_members this ([], obj) builder
         | None -> StringMap.empty
       in
+      let method_scope =
+        match gameobj with
+        | Some obj -> (StringMap.find obj llns.B.gameobjs).B.methods
+        | None -> StringMap.empty
+      in
+      let add_to_scope to_add = StringMap.fold StringMap.add to_add in
       let scope =
         llns.B.variables |> add_to_scope member_scope |> add_to_scope formal_scope,
-        match gameobj with
-        | Some obj ->
-          let g = StringMap.find obj llns.B.gameobjs in
-          StringMap.fold StringMap.add g.B.methods llns.B.functions
-        | _ -> llns.B.functions
+        llns.B.functions |> add_to_scope method_scope
       in
 
       let builder, _ =
@@ -699,30 +701,21 @@ let translate the_program files =
 
     let build_obj_functions (gname, g) =
       let open A.Gameobj in
-      let build_fn (fname, { A.Func.typ; formals; block; gameobj = _ }) =
-        let llfn = (find_obj_fn_decl ([], gname) fname).B.value in
+      let build_fn find_fn (fname, { A.Func.typ; formals; block; gameobj = _ }) =
+        let llfn = (find_fn ([], gname) fname).B.value in
         match block with
         | Some block -> build_function_body llfn formals block typ ~gameobj:gname
         | None -> assert false    (* Semant ensures obj fns are not external *)
       in
-      List.iter build_fn g.methods
+      List.iter (build_fn find_obj_fn_decl) g.methods;
+      List.iter (build_fn find_obj_event_decl) g.events;
     in
     List.iter build_obj_functions gameobjs;
-
-    let build_obj_events (gname, g) =
-      let open A.Gameobj in
-      let build_fn (f_name, block) =
-        let llfn = find_obj_event_decl ([], gname) f_name in
-        build_function_body llfn [] block A.Void ~gameobj:gname
-      in
-      List.iter build_fn [("create", g.create); ("step", g.step); ("destroy", g.destroy); ("draw", g.draw)]
-    in
-    List.iter build_obj_events gameobjs;
 
     (* Build global_create from the global namespace *)
     if nname = "" then
       let create_gb = L.define_function "global_create" (L.function_type void_t [||]) the_module in
-      build_function_body create_gb [] [A.Expr (A.Create ([], "main"))] A.Void
+      build_function_body create_gb [] [A.Expr (A.Create (([], "main"), []))] A.Void
     else ()
   in
 

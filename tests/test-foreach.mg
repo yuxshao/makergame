@@ -1,9 +1,8 @@
-
-int y;
+int x;
 object helper {
   int y;
 
-  event create { y = y + 2; this.y = y; }
+  event create { x = x + 2; this.y = x; }
 }
 
 object main {

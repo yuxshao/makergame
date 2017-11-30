@@ -1,1 +1,1 @@
-Fatal error: exception Failure("namespace alias B never resolves")
+Fatal error: exception Failure("namespace A never resolves")

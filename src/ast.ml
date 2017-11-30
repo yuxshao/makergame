@@ -45,12 +45,13 @@ type expr =
   (* (LHS before period, name of LHS object type, RHS function name, actuals) *)
   | MemberCall of expr * id_chain * string * expr list
   | Call of id_chain * expr list
-  | Create of id_chain
+  | Create of id_chain * expr list
   | Destroy of expr * id_chain
   | Noexpr
 
 type stmt =
   | Decl of Var.decl
+  | Vdef of typ * string * expr
   | Block of block
   | Expr of expr
   | Break
@@ -69,41 +70,24 @@ module Func = struct
     block : block option;
   }
   type decl = string * t
+
+  let make typ formals gameobj block = { typ; formals; gameobj; block = (Some block) }
 end
 
 module Gameobj = struct
-  type event_t = Create | Destroy | Step | Draw
-
-  (* consider using this for the AST post-semant *)
   type t = {
     members : Var.decl list;
     methods : Func.decl list;
-    create : block;
-    step : block;
-    destroy : block;
-    draw : block;
+    events : Func.decl list;
   }
   type decl = string * t
 
   let make name (members, methods, events) =
     (* Tag each method with this object name *)
-    let methods = List.map (fun (n, x) -> n, { x with Func.gameobj = Some name }) methods in
-    let initial_obj =
-      { members; methods; create = []; step = []; destroy = []; draw = [] }
-    in
-    let fail n = failwith (n ^ " defined multiple times in " ^ name) in
-    (* TODO: someone can still duplicate by defining the first as empty *)
-    let add_event o event = match (event : event_t * block) with
-      | (Create, block) ->
-        if o.create != [] then fail "create" else { o with create = block }
-      | (Step, block) ->
-        if o.step != [] then fail "step" else { o with step = block }
-      | (Destroy, block) ->
-        if o.destroy != [] then fail "destroy" else { o with destroy = block }
-      | (Draw, block) ->
-        if o.draw != [] then fail "draw" else { o with draw = block }
-    in
-    name, List.fold_left add_event initial_obj events
+    let add_gameobj (n, x) = n, { x with Func.gameobj = Some name } in
+    let methods = List.map add_gameobj methods in
+    let events  = List.map add_gameobj events in
+    name, { members; methods; events }
 
   let add_vdecl (vdecls, fdecls, edecls) vdecl =
     (vdecl :: vdecls, fdecls, edecls)
@@ -203,7 +187,10 @@ let rec string_of_expr = function
       (string_of_chain f) ^ "(" ^ String.concat ", " (List.map string_of_expr el) ^ ")"
   | Member(e, _, s) -> "(" ^ (string_of_expr e) ^ ")." ^ s
   | MemberCall(e, _, f, el) -> "(" ^ (string_of_expr e) ^ ")." ^ string_of_expr (Call(([], f), el))
-  | Create c -> "create " ^ (string_of_chain c)
+  | Create (c, args) ->
+    (match args with
+     | [] -> "create " ^ string_of_chain c
+     | _ -> "create " ^ string_of_expr(Call(c, args)))
   | Destroy (o, _) -> "destroy " ^ (string_of_expr o)
   | Noexpr -> ""
 
@@ -222,6 +209,7 @@ let string_of_vdecl (id, t) = string_of_typ t ^ " " ^ id ^ ";\n"
 
 let rec string_of_stmt = function
   | Decl d -> string_of_vdecl d
+  | Vdef(t, id, e) -> string_of_typ t ^ " " ^ id ^ " = " ^ string_of_expr e ^ ";\n"
   | Block(blk) -> string_of_block blk
   | Expr(expr) -> string_of_expr expr ^ ";\n"
   | Break -> "break;\n"
@@ -239,6 +227,19 @@ let rec string_of_stmt = function
 and string_of_block block =
   "{\n" ^ String.concat "" (List.map string_of_stmt block) ^ "}\n"
 
+let string_of_edecl (name, func) =
+  let open Func in
+  let block_str =
+    match func.block with
+    | None -> assert false
+    | Some block -> string_of_block block
+  in
+  let arg_str = match func.formals with
+    | [] -> ""
+    | _ as args -> "(" ^ String.concat ", " (List.map fst args) ^ ")"
+  in
+  "event " ^ string_of_typ func.typ ^ " " ^ name ^ arg_str ^ "\n" ^ block_str
+
 let string_of_fdecl (name, func) =
   let open Func in
   let prefix, suffix =
@@ -253,10 +254,8 @@ let string_of_gameobj (name, obj) =
   let open Gameobj in
   name ^ " {\n" ^
   String.concat "" (List.map string_of_vdecl obj.members) ^ "\n" ^
-  "CREATE " ^ (string_of_block obj.create) ^ "\n" ^
-  "DESTROY " ^ (string_of_block obj.destroy) ^ "\n" ^
-  "STEP " ^ (string_of_block obj.step) ^ "\n" ^
-  "DRAW " ^ (string_of_block obj.draw) ^ "\n" ^
+  String.concat "" (List.map string_of_fdecl obj.methods) ^ "\n" ^
+  String.concat "" (List.map string_of_edecl obj.events) ^ "\n" ^
   "}\n"
 
 let rec string_of_concrete_ns { Namespace.variables; functions; gameobjs; namespaces } =
