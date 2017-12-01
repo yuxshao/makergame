@@ -29,11 +29,10 @@ let add_to_scope ?loc m (n, t) =
 (* Raise an exception of the given rvalue type cannot be assigned to
    the given lvalue type *)
 let check_assign lvaluet rvalue rvaluet err =
-  if lvaluet = rvaluet then (lvaluet, rvalue)
-  else (match lvaluet, rvaluet with
-          Float, Int -> (Float, Conv(Float, rvalue, Int))
-        | Int, Float -> (Int, Conv(Int, rvalue, Float))
-        | _ -> failwith err)
+  match lvaluet, rvaluet with
+  | Float, Int -> (Float, Conv(Float, rvalue, Int))
+  | Int, Float -> (Int, Conv(Int, rvalue, Float))
+  | _ -> if lvaluet = rvaluet then (lvaluet, rvalue) else failwith err
 
 (* Build an AST given a filename. For use in namespaces for file-loading. *)
 let ast_of_file f =
@@ -201,26 +200,27 @@ let rec check_namespace (nname, namespace) files =
     | Conv(t1, e, _) ->
       let (t2, e') = expr scope e in
       check_assign t1 e' t2 ("Cannot convert " ^ string_of_typ t2 ^ " to " ^
-                                          string_of_typ t1 ^ " in " ^ string_of_expr e')
+                             string_of_typ t1 ^ " in " ^ string_of_expr e')
     | Binop(e1, op, _, e2) ->
       let (t1, e1') = expr scope e1 and (t2, e2') = expr scope e2 in
       let err = "illegal binary operator " ^ string_of_typ t1 ^ " " ^ string_of_op op ^ " " ^
-                                          string_of_typ t2 ^ " in " ^ string_of_expr e
+                string_of_typ t2 ^ " in " ^ string_of_expr e
       in
       (match op with
        | Add | Sub | Mult | Div when t1 = Int && t2 = Int -> Int, Binop(e1', op, Int, e2')
        | Add | Sub | Mult | Div when t1 = Float && t2 = Float -> Float, Binop(e1', op, Float, e2')
-       | Add | Sub | Mult | Div when t1 = Float && t2 = Int -> 
+       | Add | Sub | Mult | Div when t1 = Float && t2 = Int ->
          let (_, e2'') = check_assign t1 e2' t2 err
-         in Float, Binop(e1', op, Float, e2'') 
+         in Float, Binop(e1', op, Float, e2'')
        | Add | Sub | Mult | Div when t1 = Int && t2 = Float ->
          let (_, e1'') = check_assign t2 e1' t1 err
          in Float, Binop(e1'', op, Float, e2')
+       (* TODO: mention in LRM that we are not converting bools *)
        (* TODO: string, obj equality *)
        | Equal | Neq when t1 = t2 && (t1 = Float || t1 = Int) -> Bool, Binop(e1', op, t1, e2')
-       | Equal | Neq when t1 = Float && t2 = Int -> 
+       | Equal | Neq when t1 = Float && t2 = Int ->
          let (_, e2'') = check_assign t1 e2' t2 err
-         in Bool, Binop(e1', op, Float, e2'') 
+         in Bool, Binop(e1', op, Float, e2'')
        | Equal | Neq when t1 = Int && t2 = Float ->
          let (_, e1'') = check_assign t1 e2' t2 err
          in Bool, Binop(e1'', op, Float, e2')
@@ -228,7 +228,7 @@ let rec check_namespace (nname, namespace) files =
        | Less | Leq | Greater | Geq when t1 = Float && t2 = Float -> Bool, Binop(e1', op, Float, e2')
        | Less | Leq | Greater | Geq when t1 = Float && t2 = Int ->
          let (_, e2'') = check_assign t1 e2' t2 err
-         in Bool, Binop(e1', op, Float, e2'') 
+         in Bool, Binop(e1', op, Float, e2'')
        | Less | Leq | Greater | Geq when t1 = Int && t2 = Float ->
          let (_, e1'') = check_assign t1 e2' t2 err
          in Bool, Binop(e1'', op, Float, e2')
@@ -243,7 +243,7 @@ let rec check_namespace (nname, namespace) files =
     | Idop (opid, _, e1) ->
       check_lvalue (string_of_expr e) e1;
       let (t, e1') = expr scope e1 in
-      (match t with 
+      (match t with
        | Int -> Int, Idop(opid, Int, e1')
        | Float -> Float, Idop(opid, Float, e1')
        | _ -> failwith ("illegal Increment/Decrement operator " ^
@@ -253,8 +253,8 @@ let rec check_namespace (nname, namespace) files =
       check_lvalue (string_of_expr e) l;
       let (lt, l') = expr scope l and (rt, r') = expr scope r in
       let (t'', r'') = check_assign lt r' rt ("illegal assignment " ^ string_of_typ lt ^
-                          " = " ^ string_of_typ rt ^ " in " ^
-                          string_of_expr e)
+                                              " = " ^ string_of_typ rt ^ " in " ^
+                                              string_of_expr e)
       in t'', Assign(l', r'')
     | Asnop(e1, opasn, _, e2) ->
       check_lvalue (string_of_expr e1) e1;
@@ -322,8 +322,8 @@ let rec check_namespace (nname, namespace) files =
       List.map2
         (fun (_, ft) ex -> let (et, ex') = expr scope ex in
           let (_, ex'') = check_assign ft ex' et
-                    ("illegal actual argument found " ^ string_of_typ et ^
-                     " expected " ^ string_of_typ ft ^ " in " ^ string_of_expr ex) in ex'')
+              ("illegal actual argument found " ^ string_of_typ et ^
+               " expected " ^ string_of_typ ft ^ " in " ^ string_of_expr ex) in ex'')
         formals actuals
   in
 
@@ -350,8 +350,8 @@ let rec check_namespace (nname, namespace) files =
       | Vdef(t, id, e) ->
         let (et, e') = expr scope e in
         let (_, e'') = check_assign t e' et ("illegal assignment " ^ string_of_typ t ^
-                                   " = " ^ string_of_typ et ^ " in " ^
-                                   string_of_expr e) in
+                                             " = " ^ string_of_typ et ^ " in " ^
+                                             string_of_expr e) in
         let vscope, fscope = scope in
         check_not_void (fun n -> "illegal void local " ^ n ^ " in " ^ name) (id, t);
         Vdef(t, id, e''), (add_to_scope ~loc:name vscope (id, t), fscope)
@@ -361,7 +361,7 @@ let rec check_namespace (nname, namespace) files =
       | Return e ->             (* TODO in LRM say stuff can follow returns *)
         let t, e' = expr scope e in
         let (_, e'') = check_assign return e' t ("return gives " ^ string_of_typ t ^ " expected " ^
-                       string_of_typ return ^ " in " ^ string_of_expr e) in
+                                                 string_of_typ return ^ " in " ^ string_of_expr e) in
         Return e'', scope
       | If(p, b1, b2) ->
         let (b1', _), (b2', _) = stmt scope b1, stmt scope b2 in

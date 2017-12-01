@@ -189,14 +189,14 @@ let rec string_of_expr = function
   | Id c -> string_of_chain c
   | Conv (t, e, _) -> "(" ^ string_of_typ t ^ ")" ^ string_of_expr e
   | Asnop(l, o, _, r) ->
-       string_of_expr l ^ " " ^ string_of_asnop o ^ " " ^ string_of_expr r
+    string_of_expr l ^ " " ^ string_of_asnop o ^ " " ^ string_of_expr r
   | Binop(e1, o, _, e2) ->
-      string_of_expr e1 ^ " " ^ string_of_op o ^ " " ^ string_of_expr e2
+    string_of_expr e1 ^ " " ^ string_of_op o ^ " " ^ string_of_expr e2
   | Idop(o, _, e) -> string_of_idop o ^ string_of_expr e
   | Unop(o, _, e) -> string_of_uop o ^ string_of_expr e
   | Assign(l, r) -> string_of_expr l ^ " = " ^ string_of_expr r
   | Call(f, el) ->
-      (string_of_chain f) ^ "(" ^ String.concat ", " (List.map string_of_expr el) ^ ")"
+    (string_of_chain f) ^ "(" ^ String.concat ", " (List.map string_of_expr el) ^ ")"
   | Member(e, _, s) -> "(" ^ (string_of_expr e) ^ ")." ^ s
   | MemberCall(e, _, f, el) -> "(" ^ (string_of_expr e) ^ ")." ^ string_of_expr (Call(([], f), el))
   | Create (c, args) ->
@@ -218,13 +218,13 @@ let rec string_of_stmt = function
   | If(e, s, Block([])) ->
     "if (" ^ string_of_expr e ^ ")\n" ^ string_of_stmt s
   | If(e, s1, s2) ->  "if (" ^ string_of_expr e ^ ")\n" ^
-      string_of_stmt s1 ^ "else\n" ^ string_of_stmt s2
+                      string_of_stmt s1 ^ "else\n" ^ string_of_stmt s2
   | For(e1, e2, e3, s) ->
-      "for (" ^ string_of_expr e1  ^ " ; " ^ string_of_expr e2 ^ " ; " ^
-      string_of_expr e3  ^ ") " ^ string_of_stmt s
+    "for (" ^ string_of_expr e1  ^ " ; " ^ string_of_expr e2 ^ " ; " ^
+    string_of_expr e3  ^ ") " ^ string_of_stmt s
   | While(e, s) -> "while (" ^ string_of_expr e ^ ") " ^ string_of_stmt s
   | Foreach(obj_t, id, s) ->
-      "foreach (" ^ string_of_chain obj_t  ^ " " ^ id ^ ") " ^ string_of_stmt s
+    "foreach (" ^ string_of_chain obj_t  ^ " " ^ id ^ ") " ^ string_of_stmt s
 and string_of_block block =
   "{\n" ^ String.concat "" (List.map string_of_stmt block) ^ "}\n"
 

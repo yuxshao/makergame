@@ -452,9 +452,9 @@ let translate the_program files =
       | A.Conv (t1, e, t2) ->
         let e' = expr scope builder e in 
         (match t1, t2 with
-              A.Float, A.Int -> L.build_sitofp e' float_t "" builder
-            | A.Int, A.Float -> L.build_fptosi e' i32_t "" builder
-            | _ -> assert false)
+           A.Float, A.Int -> L.build_sitofp e' float_t "" builder
+         | A.Int, A.Float -> L.build_fptosi e' i32_t "" builder
+         | _ -> assert false)
       | A.Assign _ | A.Asnop _ | A.Idop _ as e -> L.build_load (lexpr scope builder e) "" builder
       | A.Binop (e1, op, t, e2) ->
         let e1' = expr scope builder e1
