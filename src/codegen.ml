@@ -449,6 +449,11 @@ let translate the_program files =
       | A.FloatLit f -> L.const_float float_t f
       | A.Noexpr -> L.const_int i32_t 0
       | A.Id (_, n) | A.Member (_, _, n) as e -> L.build_load (lexpr scope builder e) n builder
+      | A.Conv (t1, e, t2) ->
+        let e' = expr scope builder e in 
+        match t1, t2 with
+              A.Float, A.Int -> L.build_sitofp e' float_t "" builder
+            | A.Int, A.Float -> L.build_fptosi e' i32_t "" builder
       | A.Assign _ | A.Asnop _ | A.Idop _ as e -> L.build_load (lexpr scope builder e) "" builder
       | A.Binop (e1, op, t, e2) ->
         let e1' = expr scope builder e1
