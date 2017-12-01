@@ -198,6 +198,10 @@ let rec check_namespace (nname, namespace) files =
     | BoolLit _ -> Bool, e
     | FloatLit _ -> Float, e
     | StringLit _ -> String, e
+    | Conv(t1, e, _) ->
+      let (t2, e') = expr scope e in
+      check_assign t1 e' t2 ("Cannot convert " ^ string_of_typ t2 ^ " to " ^
+                                          string_of_typ t1 ^ " in " ^ string_of_expr e')
     | Binop(e1, op, _, e2) ->
       let (t1, e1') = expr scope e1 and (t2, e2') = expr scope e2 in
       let err = "illegal binary operator " ^ string_of_typ t1 ^ " " ^ string_of_op op ^ " " ^
@@ -216,10 +220,10 @@ let rec check_namespace (nname, namespace) files =
        | Equal | Neq when t1 = t2 && (t1 = Float || t1 = Int) -> Bool, Binop(e1', op, t1, e2')
        | Equal | Neq when t1 = Float && t2 = Int -> 
          let (_, e2'') = check_assign t1 e2' t2 err
-         in Float, Binop(e1', op, Float, e2'') 
+         in Bool, Binop(e1', op, Float, e2'') 
        | Equal | Neq when t1 = Int && t2 = Float ->
          let (_, e1'') = check_assign t1 e2' t2 err
-         in Float, Binop(e1'', op, Float, e2')
+         in Bool, Binop(e1'', op, Float, e2')
        | Less | Leq | Greater | Geq when t1 = Int && t2 = Int -> Bool, Binop(e1', op, Int, e2')
        | Less | Leq | Greater | Geq when t1 = Float && t2 = Float -> Bool, Binop(e1', op, Float, e2')
        | Less | Leq | Greater | Geq when t1 = Float && t2 = Int ->
@@ -356,7 +360,7 @@ let rec check_namespace (nname, namespace) files =
       | Expr e -> let (_, e') = expr scope e in Expr e', scope
       | Return e ->             (* TODO in LRM say stuff can follow returns *)
         let t, e' = expr scope e in
-        let (t', e'') = check_assign return e' t ("return gives " ^ string_of_typ t ^ " expected " ^
+        let (_, e'') = check_assign return e' t ("return gives " ^ string_of_typ t ^ " expected " ^
                        string_of_typ return ^ " in " ^ string_of_expr e) in
         Return e'', scope
       | If(p, b1, b2) ->

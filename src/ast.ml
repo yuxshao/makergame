@@ -169,6 +169,17 @@ let string_of_asnop = function
   | Multasn -> "*="
   | Divasn -> "/="
 
+let rec string_of_typ = function
+    Int -> "int"
+  | Bool -> "bool"
+  | Void -> "void"
+  | Float -> "float"
+  | Sprite -> "sprite"
+  | Sound -> "sound"
+  | Object obj_t -> "object(" ^ string_of_chain obj_t ^ ")"
+  | Arr(typ, len) -> (string_of_typ typ) ^ "[" ^ (string_of_int len) ^ "]"
+  | String -> "string"
+
 let rec string_of_expr = function
     Literal(l) -> string_of_int l
   | StringLit(s) -> "\"" ^ s ^ "\""
@@ -176,6 +187,7 @@ let rec string_of_expr = function
   | BoolLit(true) -> "true"
   | BoolLit(false) -> "false"
   | Id c -> string_of_chain c
+  | Conv (t, e, _) -> "(" ^ string_of_typ t ^ ")" ^ string_of_expr e
   | Asnop(l, o, _, r) ->
        string_of_expr l ^ " " ^ string_of_asnop o ^ " " ^ string_of_expr r
   | Binop(e1, o, _, e2) ->
@@ -193,17 +205,6 @@ let rec string_of_expr = function
      | _ -> "create " ^ string_of_expr(Call(c, args)))
   | Destroy (o, _) -> "destroy " ^ (string_of_expr o)
   | Noexpr -> ""
-
-let rec string_of_typ = function
-    Int -> "int"
-  | Bool -> "bool"
-  | Void -> "void"
-  | Float -> "float"
-  | Sprite -> "sprite"
-  | Sound -> "sound"
-  | Object obj_t -> "object(" ^ string_of_chain obj_t ^ ")"
-  | Arr(typ, len) -> (string_of_typ typ) ^ "[" ^ (string_of_int len) ^ "]"
-  | String -> "string"
 
 let string_of_vdecl (id, t) = string_of_typ t ^ " " ^ id ^ ";\n"
 
