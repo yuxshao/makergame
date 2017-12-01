@@ -29,9 +29,11 @@ let add_to_scope ?loc m (n, t) =
 (* Raise an exception of the given rvalue type cannot be assigned to
    the given lvalue type *)
 let check_assign lvaluet rvalue rvaluet err =
-  if lvaluet = rvaluet then rvalue
-  else if (match )
-  else failwith err
+  if lvaluet = rvaluet then (lvaluet, rvalue)
+  else (match lvaluet, rvaluet with
+          Float, Int -> (Float, Conv(Float, rvalue, Int))
+        | Int, Float -> (Int, Conv(Int, rvalue, Float))
+        | _ -> failwith err)
 
 (* Build an AST given a filename. For use in namespaces for file-loading. *)
 let ast_of_file f =
@@ -198,17 +200,36 @@ let rec check_namespace (nname, namespace) files =
     | StringLit _ -> String, e
     | Binop(e1, op, _, e2) ->
       let (t1, e1') = expr scope e1 and (t2, e2') = expr scope e2 in
+      let err = "illegal binary operator " ^ string_of_typ t1 ^ " " ^ string_of_op op ^ " " ^
+                                          string_of_typ t2 ^ " in " ^ string_of_expr e
+      in
       (match op with
        | Add | Sub | Mult | Div when t1 = Int && t2 = Int -> Int, Binop(e1', op, Int, e2')
        | Add | Sub | Mult | Div when t1 = Float && t2 = Float -> Float, Binop(e1', op, Float, e2')
+       | Add | Sub | Mult | Div when t1 = Float && t2 = Int -> 
+         let (_, e2'') = check_assign t1 e2' t2 err
+         in Float, Binop(e1', op, Float, e2'') 
+       | Add | Sub | Mult | Div when t1 = Int && t2 = Float ->
+         let (_, e1'') = check_assign t2 e1' t1 err
+         in Float, Binop(e1'', op, Float, e2')
        (* TODO: string, obj equality *)
        | Equal | Neq when t1 = t2 && (t1 = Float || t1 = Int) -> Bool, Binop(e1', op, t1, e2')
+       | Equal | Neq when t1 = Float && t2 = Int -> 
+         let (_, e2'') = check_assign t1 e2' t2 err
+         in Float, Binop(e1', op, Float, e2'') 
+       | Equal | Neq when t1 = Int && t2 = Float ->
+         let (_, e1'') = check_assign t1 e2' t2 err
+         in Float, Binop(e1'', op, Float, e2')
        | Less | Leq | Greater | Geq when t1 = Int && t2 = Int -> Bool, Binop(e1', op, Int, e2')
        | Less | Leq | Greater | Geq when t1 = Float && t2 = Float -> Bool, Binop(e1', op, Float, e2')
+       | Less | Leq | Greater | Geq when t1 = Float && t2 = Int ->
+         let (_, e2'') = check_assign t1 e2' t2 err
+         in Bool, Binop(e1', op, Float, e2'') 
+       | Less | Leq | Greater | Geq when t1 = Int && t2 = Float ->
+         let (_, e1'') = check_assign t1 e2' t2 err
+         in Bool, Binop(e1'', op, Float, e2')
        | And | Or when t1 = Bool && t2 = Bool -> Bool, Binop(e1', op, Bool, e2')
-       | _ -> failwith ("illegal binary operator " ^
-                        string_of_typ t1 ^ " " ^ string_of_op op ^ " " ^
-                        string_of_typ t2 ^ " in " ^ string_of_expr e))
+       | _ -> failwith err)
     | Unop(op, _, ex) -> let (t, ex') = expr scope ex in
       (match op, t with
        | Neg, Int | Neg, Float -> t, Unop(op, t, ex')
@@ -227,9 +248,10 @@ let rec check_namespace (nname, namespace) files =
     | Assign(l, r) ->
       check_lvalue (string_of_expr e) l;
       let (lt, l') = expr scope l and (rt, r') = expr scope r in
-      check_assign lt rt ("illegal assignment " ^ string_of_typ lt ^
+      let (t'', r'') = check_assign lt r' rt ("illegal assignment " ^ string_of_typ lt ^
                           " = " ^ string_of_typ rt ^ " in " ^
-                          string_of_expr e), Assign(l', r')
+                          string_of_expr e)
+      in t'', Assign(l', r'')
     | Asnop(e1, opasn, _, e2) ->
       check_lvalue (string_of_expr e1) e1;
       let (t1, e1') = expr scope e1 and (t2, e2') = expr scope e2 in
@@ -295,9 +317,9 @@ let rec check_namespace (nname, namespace) files =
     else
       List.map2
         (fun (_, ft) ex -> let (et, ex') = expr scope ex in
-          ignore (check_assign ft et
+          let (_, ex'') = check_assign ft ex' et
                     ("illegal actual argument found " ^ string_of_typ et ^
-                     " expected " ^ string_of_typ ft ^ " in " ^ string_of_expr ex)); ex')
+                     " expected " ^ string_of_typ ft ^ " in " ^ string_of_expr ex) in ex'')
         formals actuals
   in
 
@@ -323,20 +345,20 @@ let rec check_namespace (nname, namespace) files =
         s, (add_to_scope ~loc:name vscope d, fscope)
       | Vdef(t, id, e) ->
         let (et, e') = expr scope e in
-        ignore (check_assign t et ("illegal assignment " ^ string_of_typ t ^
+        let (_, e'') = check_assign t e' et ("illegal assignment " ^ string_of_typ t ^
                                    " = " ^ string_of_typ et ^ " in " ^
-                                   string_of_expr e));
+                                   string_of_expr e) in
         let vscope, fscope = scope in
         check_not_void (fun n -> "illegal void local " ^ n ^ " in " ^ name) (id, t);
-        Vdef(t, id, e'), (add_to_scope ~loc:name vscope (id, t), fscope)
+        Vdef(t, id, e''), (add_to_scope ~loc:name vscope (id, t), fscope)
       | Break -> Break, scope
       | Block b -> Block (check_block b ~scope ~name ~return), scope
       | Expr e -> let (_, e') = expr scope e in Expr e', scope
       | Return e ->             (* TODO in LRM say stuff can follow returns *)
         let t, e' = expr scope e in
-        if t = return then Return e', scope
-        else failwith ("return gives " ^ string_of_typ t ^ " expected " ^
-                       string_of_typ return ^ " in " ^ string_of_expr e)
+        let (t', e'') = check_assign return e' t ("return gives " ^ string_of_typ t ^ " expected " ^
+                       string_of_typ return ^ " in " ^ string_of_expr e) in
+        Return e'', scope
       | If(p, b1, b2) ->
         let (b1', _), (b2', _) = stmt scope b1, stmt scope b2 in
         If (check_bool_expr scope p, b1', b2'), scope
