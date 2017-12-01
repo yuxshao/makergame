@@ -636,8 +636,8 @@ let translate the_program files =
         build_while context builder fn
           ~pred:(fun b _ -> expr scope b predicate, ())
           ~body:(fun b br _ () -> fst (stmt fn br ret_t (b, scope) body)), scope
-      | A.For (e1, e2, e3, body) ->
-        let while_stmts = [A.Expr e1; A.While (e2, A.Block [body; A.Expr e3])] in
+      | A.For (s1, e2, e3, body) ->
+        let while_stmts = [s1; A.While (e2, A.Block [body; A.Expr e3])] in
         let for_builder, _ =
           stmt fn break_bb ret_t (builder, scope) (A.Block while_stmts)
         in

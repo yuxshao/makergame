@@ -403,10 +403,10 @@ let rec check_namespace (nname, namespace) files =
       | If(p, b1, b2) ->
         let (b1', _), (b2', _) = stmt scope b1, stmt scope b2 in
         If (check_bool_expr scope p, b1', b2'), scope
-      | For(e1, e2, e3, st) ->
-        let (_, e1') = expr scope e1 in let e2' = check_bool_expr scope e2 in
-        let (_, e3') = expr scope e3 in let st', _ = stmt scope st in
-        For (e1', e2', e3', st'), scope
+      | For(s1, e2, e3, st) ->
+        let s1', scope' = stmt scope s1 in let e2' = check_bool_expr scope' e2 in
+        let (_, e3') = expr scope' e3 in let st', _ = stmt scope' st in
+        For (s1', e2', e3', st'), scope
       | While(p, s) ->
         let p' = check_bool_expr scope p in let s', _ = stmt scope s in
         While(p', s'), scope

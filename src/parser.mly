@@ -117,6 +117,9 @@ typ:
 vdecl:
   | bind SEMI { $1 }
 
+vdef:
+  | bind ASSIGN expr SEMI { Vdef($1, $3) }
+
 stmt_list:
     /* nothing */  { [] }
   | stmt stmt_list { $1 :: $2 }
@@ -124,14 +127,16 @@ stmt_list:
 stmt:
     expr SEMI { Expr $1 }
   | vdecl { Decl $1 }
-  | bind ASSIGN expr SEMI { Vdef($1, $3) }
+  | vdef { $1 }
   | RETURN expr_opt SEMI { Return $2 }
   | BREAK SEMI { Break }
   | code_block { Block($1) }
   | IF LPAREN expr RPAREN stmt %prec NOELSE { If($3, $5, Block([])) }
   | IF LPAREN expr RPAREN stmt ELSE stmt    { If($3, $5, $7) }
   | FOR LPAREN expr_opt SEMI expr SEMI expr_opt RPAREN stmt
-     { For($3, $5, $7, $9) }
+     { For (Expr($3), $5, $7, $9) } 
+  | FOR LPAREN vdef expr SEMI expr_opt RPAREN stmt
+     { For($3, $4, $6, $8) }
   | WHILE LPAREN expr RPAREN stmt { While($3, $5) }
   | FOREACH LPAREN id_chain ID RPAREN stmt { Foreach($3, $4, $6) }
 

@@ -59,7 +59,7 @@ type stmt =
   | Break
   | Return of expr
   | If of expr * stmt * stmt
-  | For of expr * expr * expr * stmt
+  | For of stmt * expr * expr * stmt
   | Foreach of id_chain * string * stmt
   | While of expr * stmt
 and block = stmt list
@@ -218,27 +218,27 @@ let rec string_of_expr = function
   | Destroy (o, _) -> "destroy " ^ (string_of_expr o)
   | Noexpr -> ""
 
-let string_of_vdecl (id, t) = string_of_typ t ^ " " ^ id ^ ";\n"
+let string_of_vdecl (id, t) = string_of_typ t ^ " " ^ id ^ ";"
 
 let rec string_of_stmt = function
   | Decl d -> string_of_vdecl d
-  | Vdef((id, t), e) -> string_of_typ t ^ " " ^ id ^ " = " ^ string_of_expr e ^ ";\n"
+  | Vdef((id, t), e) -> string_of_typ t ^ " " ^ id ^ " = " ^ string_of_expr e ^ ";"
   | Block(blk) -> string_of_block blk
-  | Expr(expr) -> string_of_expr expr ^ ";\n"
-  | Break -> "break;\n"
-  | Return(expr) -> "return " ^ string_of_expr expr ^ ";\n"
+  | Expr(expr) -> string_of_expr expr ^ ";"
+  | Break -> "break;"
+  | Return(expr) -> "return " ^ string_of_expr expr ^ ";"
   | If(e, s, Block([])) ->
     "if (" ^ string_of_expr e ^ ")\n" ^ string_of_stmt s
   | If(e, s1, s2) ->  "if (" ^ string_of_expr e ^ ")\n" ^
                       string_of_stmt s1 ^ "else\n" ^ string_of_stmt s2
-  | For(e1, e2, e3, s) ->
-    "for (" ^ string_of_expr e1  ^ " ; " ^ string_of_expr e2 ^ " ; " ^
-    string_of_expr e3  ^ ") " ^ string_of_stmt s
+  | For(s1, e2, e3, s2) ->
+    "for (" ^ string_of_stmt s1 ^ " " ^ string_of_expr e2 ^ "; " ^
+    string_of_expr e3  ^ ") " ^ string_of_stmt s2
   | While(e, s) -> "while (" ^ string_of_expr e ^ ") " ^ string_of_stmt s
   | Foreach(obj_t, id, s) ->
     "foreach (" ^ string_of_chain obj_t  ^ " " ^ id ^ ") " ^ string_of_stmt s
 and string_of_block block =
-  "{\n" ^ String.concat "" (List.map string_of_stmt block) ^ "}\n"
+  "{\n" ^ String.concat "\n" (List.map string_of_stmt block) ^ "\n}\n"
 
 let string_of_edecl (name, func) =
   let open Func in
