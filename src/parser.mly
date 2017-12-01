@@ -62,9 +62,14 @@ decls:
 code_block:
    LCURLY stmt_list RCURLY { $2 }
 
+array_list:
+ /* nothing */ { [] }
+ | LBRACK LITERAL RBRACK array_list { $2 :: $4 }
+
+/* arrays dimensions are done RtL so we fold right*/
 bind:
- | typ ID { ($2, $1) }
- | bind LBRACK LITERAL RBRACK { let name, typ = $1 in (name, Arr(typ, $3)) }
+ | typ ID array_list
+   { List.fold_right (fun l (name, typ) -> (name, Arr(typ, l))) $3 ($2, $1) }
 
 fdecl:
  | EXTERN bind LPAREN formals_opt RPAREN SEMI

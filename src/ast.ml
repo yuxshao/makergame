@@ -170,16 +170,23 @@ let string_of_asnop = function
   | Multasn -> "*="
   | Divasn -> "/="
 
-let rec string_of_typ = function
-    Int -> "int"
-  | Bool -> "bool"
-  | Void -> "void"
-  | Float -> "float"
-  | Sprite -> "sprite"
-  | Sound -> "sound"
-  | Object obj_t -> "object(" ^ string_of_chain obj_t ^ ")"
-  | Arr(typ, len) -> (string_of_typ typ) ^ "[" ^ (string_of_int len) ^ "]"
-  | String -> "string"
+let string_of_typ t =
+  (* Split by prefix and suffix so array dims are in the right order *)
+  let rec string_of_typ_ps = function
+      Int -> "int", ""
+    | Bool -> "bool", ""
+    | Void -> "void", ""
+    | Float -> "float", ""
+    | Sprite -> "sprite", ""
+    | Sound -> "sound", ""
+    | Object obj_t -> "object(" ^ string_of_chain obj_t ^ ")", ""
+    | Arr(typ, len) ->
+      let pref, suf = string_of_typ_ps typ in
+      pref, "[" ^ (string_of_int len) ^ "]" ^ suf
+    | String -> "string", ""
+  in
+  let p, s = string_of_typ_ps t in
+  p ^ s
 
 let rec string_of_expr = function
     Literal(l) -> string_of_int l
