@@ -171,12 +171,17 @@ expr:
   | NOT expr           { Unop(Not, Void, $2) }
   | expr ASSIGN expr   { Assign($1, $3) }
   | expr LBRACK expr RBRACK { Subscript($1, $3) }
+  | LBRACK expr_list RBRACK { ArrayLit $2 }
   | id_chain LPAREN actuals_opt RPAREN { Call($1, $3) }
   | expr PERIOD ID LPAREN actuals_opt RPAREN { MemberCall($1, ([], ""), $3, $5) }
   | CREATE id_chain                           { Create($2, []) }
   | CREATE id_chain LPAREN actuals_opt RPAREN { Create($2, $4) }
   | DESTROY expr       { Destroy($2, ([], "")) }
   | LPAREN expr RPAREN { $2 }
+
+expr_list:
+  | expr { [$1] }
+  | expr COMMA expr_list { $1 :: $3 }
 
 id_chain:
   | ID { [], $1 }

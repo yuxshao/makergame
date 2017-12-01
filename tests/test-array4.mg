@@ -1,12 +1,8 @@
 // multidimensional arrays
 object main {
   event create {
-    int x[3][3];
-    int i; int j;
-    for (i = 0; i < 3; ++i)
-      for (j = 0; j < 3; ++j)
-        x[i][j] = i + j;
-    std::print(x[1][2]);
+    int x[5][2] = [[00, 01], [10, 11], [20, 21], [30, 31], [40, 41]];
+    std::print(x[3][1]);
     std::end_game();
   }
 }

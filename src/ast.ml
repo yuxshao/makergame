@@ -33,6 +33,7 @@ type expr =
   | BoolLit of bool
   | FloatLit of float
   | StringLit of string
+  | ArrayLit of expr list
   | Id of id_chain
   | Conv of typ * expr * typ
   | Binop of expr * op * typ * expr
@@ -194,6 +195,7 @@ let rec string_of_expr = function
   | FloatLit(f) -> string_of_float f
   | BoolLit(true) -> "true"
   | BoolLit(false) -> "false"
+  | ArrayLit l -> "[" ^ String.concat ", " (List.map string_of_expr l) ^ "]"
   | Id c -> string_of_chain c
   | Conv (t, e, _) -> "(" ^ string_of_typ t ^ ")" ^ string_of_expr e
   | Asnop(l, o, _, r) ->

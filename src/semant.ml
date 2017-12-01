@@ -27,12 +27,17 @@ let add_to_scope ?loc m (n, t) =
   | _ -> StringMap.add n t m
 
 (* Raise an exception of the given rvalue type cannot be assigned to
-   the given lvalue type *)
+   the given lvalue type, or else return a new expression with conversion. *)
 let check_assign lvaluet rvalue rvaluet err =
   match lvaluet, rvaluet with
   | Float, Int -> (Float, Conv(Float, rvalue, Int))
   | Int, Float -> (Int, Conv(Int, rvalue, Float))
   | _ -> if lvaluet = rvaluet then (lvaluet, rvalue) else failwith err
+
+(* Raise an exception if the two types are unequal. *)
+let check_assign_strict lvaluet rvalue rvaluet err =
+  if lvaluet = rvaluet then (lvaluet, rvalue)
+  else failwith err
 
 (* Build an AST given a filename. For use in namespaces for file-loading. *)
 let ast_of_file f =
@@ -202,6 +207,22 @@ let rec check_namespace (nname, namespace) files =
       let (t2, e') = expr scope e in
       check_assign t1 e' t2 ("Cannot convert " ^ string_of_typ t2 ^ " to " ^
                              string_of_typ t1 ^ " in " ^ string_of_expr e')
+    | ArrayLit l ->
+      (* Check array size and equality of element types *)
+      (* TODO: in LRM say that implicit conversions do not apply to array literals *)
+      (match l with
+       | [] -> failwith ("illegal empty array " ^ string_of_expr e)
+       | hd :: tl ->
+         let (lt, hd') = expr scope hd in
+         let tl' = List.map (fun l ->
+             let t, e' = expr scope l in
+             let _, e'' = check_assign_strict lt e' t
+               ("array literal " ^ string_of_expr e ^
+                " contains elements of unequal types "
+                ^ string_of_typ lt ^ " and " ^ string_of_typ t)
+             in e'') tl
+         in
+         Arr (lt, List.length l), ArrayLit(hd' :: tl'))
     | Binop(e1, op, _, e2) ->
       let (t1, e1') = expr scope e1 and (t2, e2') = expr scope e2 in
       let err = "illegal binary operator " ^ string_of_typ t1 ^ " " ^ string_of_op op ^ " " ^
