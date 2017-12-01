@@ -463,7 +463,6 @@ let translate the_program files =
         let lll = List.map (expr scope builder) l in
         let typ = (L.array_type (L.type_of (List.hd lll)) (List.length l)) in
         let lll = List.map (fun x -> Some x) lll in
-        (* let arr = L.build_alloca (L.array_type elem_type (List.length l)) "array" builder in *)
         build_struct_assign (L.undef typ) (Array.of_list lll) builder
       | A.Binop (e1, op, t, e2) ->
         let e1' = expr scope builder e1
