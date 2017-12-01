@@ -32,6 +32,7 @@ let check_assign lvaluet rvalue rvaluet err =
   match lvaluet, rvaluet with
   | Float, Int -> (Float, Conv(Float, rvalue, Int))
   | Int, Float -> (Int, Conv(Int, rvalue, Float))
+  (* TODO: array conversions? e.g. int[3] to/from int[5]? int[3] to float[3]? *)
   | _ -> if lvaluet = rvaluet then (lvaluet, rvalue) else failwith err
 
 (* Raise an exception if the two types are unequal. *)

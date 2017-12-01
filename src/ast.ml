@@ -197,6 +197,7 @@ let rec string_of_expr = function
   | BoolLit(false) -> "false"
   | ArrayLit l -> "[" ^ String.concat ", " (List.map string_of_expr l) ^ "]"
   | Id c -> string_of_chain c
+  (* Conv (t, e, _) expresses a conversion of e to type t. _ tags e's original type. *)
   | Conv (t, e, _) -> "(" ^ string_of_typ t ^ ")" ^ string_of_expr e
   | Asnop(l, o, _, r) ->
     string_of_expr l ^ " " ^ string_of_asnop o ^ " " ^ string_of_expr r
