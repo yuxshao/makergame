@@ -596,7 +596,8 @@ let translate the_program files =
         let actuals = List.map (expr scope builder) args in
         ignore (L.build_call create_event (Array.of_list (objref :: actuals)) "" builder);
         objref
-      | A.Destroy (e, (chain, objtype)) ->
+      (* TODO: remove type annotation on Destroy. Since it's unreliable now anyway *)
+      | A.Destroy (e, _) ->
         (* Destruction is lazy in that it involves just removing the
            object-specific link from an node's neighbours (i.e. used for foreach)
            and setting id to 0. When the main event loop encounters an object with
@@ -615,37 +616,18 @@ let translate the_program files =
            event. *)
         let objref = expr scope builder e in
         let objptr = L.build_extractvalue objref 1 "objptr" builder in
-        let () =
-          (* Call its destroy event *)
-          (* TODO: call parent destroy *)
-          let destroy_event =
-            (* Assuming vtable is at front *)
-            let tbl =
-              L.build_load (L.build_bitcast objptr (L.pointer_type vtableptr_t) "" builder) "tbl" builder
-            in
-            L.build_load (L.build_struct_gep tbl 1 "eventptr" builder) "event" builder
+        (* Call its destroy event *)
+        let destroy_event =
+          (* Assuming vtable is at front *)
+          let tbl =
+            L.build_load (L.build_bitcast objptr (L.pointer_type vtableptr_t) "" builder) "tbl" builder
           in
-          ignore (L.build_call destroy_event [|objref|] "" builder);
-          (* Mark its id as 0 *)
-          let idptr = L.build_struct_gep objptr 2 (objtype ^ "_id") builder in
-          ignore (L.build_store (L.const_int i64_t 0) idptr builder)
+          L.build_load (L.build_struct_gep tbl 1 "eventptr" builder) "event" builder
         in
-        (* Find the list node connecting objects of this particular type *)
-        let obj = StringMap.find objtype (namespace_of_chain chain).B.gameobjs in
-        let llobj = L.build_bitcast objptr (L.pointer_type obj.B.gtyp) objtype builder in
-        let rec rem_node_cons obj objname llobj =
-          (* Disconnect particular object neighbours' node links. *)
-          let llobjnode = L.build_struct_gep llobj 1 (objname ^ "_objnode") builder in
-          ignore (L.build_call list_rem_func [|llobjnode|] "" builder);
-          match obj.B.semant.A.Gameobj.parent with
-          | None -> ()
-          | Some (pchain, pobjname) ->
-            (* Get parent and remove parent connections *)
-            let pobj = StringMap.find pobjname (namespace_of_chain pchain).B.gameobjs in
-            let pllobj = L.build_struct_gep llobj 0 (objname ^ "_parent") builder in
-            rem_node_cons pobj pobjname pllobj
-        in
-        rem_node_cons obj objtype llobj;
+        ignore (L.build_call destroy_event [|objref|] "" builder);
+        (* Mark its id as 0 *)
+        let idptr = L.build_struct_gep objptr 2 "id" builder in
+        ignore (L.build_store (L.const_int i64_t 0) idptr builder);
         expr scope builder (A.Noexpr) (* considered Void in semant *)
     in
 
@@ -718,7 +700,8 @@ let translate the_program files =
         build_object_loop builder fn objname ~body, scope
     in
 
-    let build_function_body the_function formals block ?gameobj return_type =
+    (* destroy flag is special case right now *)
+    let build_function_body the_function formals block ?gameobj ?postwork return_type =
       let entry = L.entry_block the_function in
       let builder = L.builder_at_end context entry in
 
@@ -761,6 +744,12 @@ let translate the_program files =
         stmt the_function entry return_type (builder, scope) (A.Block(block))
       in
 
+      (* Possibly add some code at the end *)
+      let builder = match postwork with
+        | None -> builder
+        | Some p -> p builder scope
+      in
+
       (* Add a precautionary return to the end *)
       ignore (match return_type with
           | A.Void -> L.build_ret_void builder
@@ -776,12 +765,35 @@ let translate the_program files =
     in
     List.iter build_function functions;
 
+
     let build_obj_functions (gname, g) =
       let open A.Gameobj in
+
+      (* Postprocessing: removing nodes after a destroy function is called *)
+      let destroy_postprocess builder (vscope, _fscope) =
+        let objrefptr, _typ = StringMap.find "this" vscope in
+        let objref = L.build_load objrefptr "objref" builder in
+        let objptr = L.build_extractvalue objref 1 "objptr" builder in
+        let obj = StringMap.find gname llns.B.gameobjs in
+        let llobj = L.build_bitcast objptr (L.pointer_type obj.B.gtyp) gname builder in
+        (* Disconnect particular object neighbours' node links. *)
+        let llobjnode = L.build_struct_gep llobj 1 (gname ^ "_objnode") builder in
+        ignore (L.build_call list_rem_func [|llobjnode|] "" builder);
+        (* Call parent destroy *)
+        (match g.A.Gameobj.parent with
+         | None -> ()
+         | Some p ->
+           let parent_destroy = (find_obj_event_decl p "destroy").B.value in
+           ignore (L.build_call parent_destroy [|objref|] "" builder));
+        builder
+      in
+
       let build_fn find_fn (fname, { A.Func.typ; formals; block; gameobj = _ }) =
         let llfn = (find_fn ([], gname) fname).B.value in
         match block with
-        | Some block -> build_function_body llfn formals block typ ~gameobj:gname
+        | Some block ->
+          let postwork = if fname = "destroy" then Some destroy_postprocess else None in
+          build_function_body llfn formals block typ ?postwork ~gameobj:gname
         | None -> assert false    (* Semant ensures obj fns are not external *)
       in
       let find_obj_fn_decl (chain, oname) fname =
