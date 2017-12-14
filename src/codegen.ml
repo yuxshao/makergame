@@ -372,19 +372,7 @@ let translate the_program files =
     in
     let namespace_of_chain = namespace_of_chain llns in
 
-    (* These three fns are hardly used. *)
-    let find_function_decl name =
-      try StringMap.find name (llns.B.functions)
-      with Not_found -> failwith ("global " ^ name)
-    in
-    (* What we really need is to augment gameobj_methods to also return
-       virtual method pointers from the vtable. *)
-    let find_obj_fn_decl (chain, oname) fname =
-      try
-        let g = StringMap.find oname (namespace_of_chain chain).B.gameobjs in
-        StringMap.find fname (g.B.methods)
-      with Not_found -> failwith ("obj " ^ oname ^ "." ^ fname)
-    in
+    (* This function is hardly used. *)
     let find_obj_event_decl (chain, oname) event =
       try
         let g = StringMap.find oname (namespace_of_chain chain).B.gameobjs in
@@ -427,6 +415,8 @@ let translate the_program files =
       helper oname
     in
 
+    (* What we really need is to augment gameobj_methods to also return
+       virtual method pointers from the vtable. *)
     let rec gameobj_methods (chain, objname) =
       let g = StringMap.find objname (namespace_of_chain chain).B.gameobjs in
       let parent_methods = match g.B.semant.A.Gameobj.parent with
@@ -780,7 +770,7 @@ let translate the_program files =
     let build_function (fname, { A.Func.block; formals; typ; gameobj = _ }) =
       match block with
       | Some block ->
-        let llfn = (find_function_decl fname).B.value in
+        let llfn = (StringMap.find fname (llns.B.functions)).B.value in
         build_function_body llfn formals block typ
       | None -> ()
     in
@@ -793,6 +783,10 @@ let translate the_program files =
         match block with
         | Some block -> build_function_body llfn formals block typ ~gameobj:gname
         | None -> assert false    (* Semant ensures obj fns are not external *)
+      in
+      let find_obj_fn_decl (chain, oname) fname =
+        let g = StringMap.find oname (namespace_of_chain chain).B.gameobjs in
+        StringMap.find fname (g.B.methods)
       in
       List.iter (build_fn find_obj_fn_decl) g.methods;
       List.iter (build_fn find_obj_event_decl) g.events;
