@@ -81,15 +81,16 @@ module Gameobj = struct
     members : Var.decl list;
     methods : Func.decl list;
     events : Func.decl list;
+    parent : id_chain option;
   }
   type decl = string * t
 
-  let make name (members, methods, events) =
+  let make name (members, methods, events) parent =
     (* Tag each method with this object name *)
     let add_gameobj (n, x) = n, { x with Func.gameobj = Some name } in
     let methods = List.map add_gameobj methods in
     let events  = List.map add_gameobj events in
-    name, { members; methods; events }
+    name, { members; methods; events; parent }
 
   let add_vdecl (vdecls, fdecls, edecls) vdecl =
     (vdecl :: vdecls, fdecls, edecls)
@@ -265,7 +266,11 @@ let string_of_fdecl (name, func) =
 
 let string_of_gameobj (name, obj) =
   let open Gameobj in
-  name ^ " {\n" ^
+  let par_str = match obj.parent with
+    | Some p -> " : " ^ string_of_chain p
+    | None -> ""
+  in
+  name ^ par_str ^ " {\n" ^
   String.concat "" (List.map string_of_vdecl obj.members) ^ "\n" ^
   String.concat "" (List.map string_of_fdecl obj.methods) ^ "\n" ^
   String.concat "" (List.map string_of_edecl obj.events) ^ "\n" ^

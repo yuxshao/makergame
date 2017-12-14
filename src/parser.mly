@@ -4,7 +4,7 @@
 open Ast
 %}
 
-%token SEMI LPAREN RPAREN LBRACK RBRACK LCURLY RCURLY COMMA PERIOD DBCOLON
+%token SEMI LPAREN RPAREN LBRACK RBRACK LCURLY RCURLY COMMA PERIOD COLON DBCOLON
 %token PLUS MINUS TIMES DIVIDE EXPONENT MODULO ASSIGN NOT
 %token INCREMENT DECREMENT
 %token ADDASN MINUSASN TIMEASN DIVASN
@@ -86,8 +86,10 @@ event:
  | EVENT DRAW    code_block { "draw",    Func.make Void [] None $3 }
 
 odecl:
-   OBJECT ID LCURLY odecl_body RCURLY
-     { Gameobj.make $2 $4 }
+ | OBJECT ID COLON id_chain LCURLY odecl_body RCURLY
+     { Gameobj.make $2 $6 (Some $4) }
+ | OBJECT ID LCURLY odecl_body RCURLY
+     { Gameobj.make $2 $4 None }
 
 odecl_body:
     /* nothing */ { [], [], [] }

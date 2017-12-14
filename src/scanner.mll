@@ -18,6 +18,7 @@ rule token = parse
   | ','      { COMMA }
   | '.'      { PERIOD }
   | "::"     { DBCOLON }
+  | ":"      { COLON }
   (* arithmetic and logical *)
   | '+'      { PLUS }
   | '-'      { MINUS }
