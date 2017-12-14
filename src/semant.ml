@@ -382,6 +382,8 @@ let rec check_namespace (nname, namespace) files =
     let rec stmt scope = function
       | Decl d as s ->
         let vscope, fscope = scope in
+        (* Make sure it's actually an object *)
+        (match d with | _, Object o -> ignore(gameobj_decl o) | _ -> ());
         check_not_void (fun n -> "illegal void local " ^ n ^ " in " ^ name) d;
         s, (add_to_scope ~loc:name vscope d, fscope)
       | Vdef((id, t), e) ->
@@ -499,10 +501,12 @@ let rec check_namespace (nname, namespace) files =
     (* Add "this" and gameobj members to scope *)
     (* gameobj_scope also checks that no members are named 'this' *)
     let scope =
-      let vscope, fscope = scope in
-      StringMap.fold StringMap.add vscope (gameobj_scope ([], name))
+      let initial_vscope, initial_fscope = scope in
+      initial_vscope
+      |> StringMap.fold StringMap.add (gameobj_scope ([], name))
       |> StringMap.add "this" (Object([], name)),
-      StringMap.fold StringMap.add fscope (gameobj_functions ([], name))
+      initial_fscope
+      |> StringMap.fold StringMap.add (gameobj_functions ([], name))
     in
     let check_obj_fn (fname, func) =
       match func.Func.block with
