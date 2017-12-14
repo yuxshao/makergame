@@ -490,10 +490,11 @@ let translate the_program files =
       | A.Noexpr -> L.const_int i32_t 0
       | A.Id (_, n) | A.Member (_, _, n) as e -> L.build_load (lexpr scope builder e) n builder
       | A.Conv (t1, e, t2) ->
-        let e' = expr scope builder e in 
+        let e' = expr scope builder e in
         (match t1, t2 with
            A.Float, A.Int -> L.build_sitofp e' float_t "" builder
          | A.Int, A.Float -> L.build_fptosi e' i32_t "" builder
+         | A.Object _, A.Object _ -> e' (* Do nothing since object lltypes are all the same *)
          | _ -> assert false)
       | A.Assign _ | A.Asnop _ | A.Idop _ as e -> L.build_load (lexpr scope builder e) "" builder
       | A.ArrayLit l ->

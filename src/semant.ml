@@ -28,15 +28,6 @@ let add_to_scope ?loc m (n, t) =
   | Some l, "this"  -> failwith ((failstr "this") ^ " in " ^ l)
   | _ -> StringMap.add n t m
 
-(* Raise an exception of the given rvalue type cannot be assigned to
-   the given lvalue type, or else return a new expression with conversion. *)
-let check_assign lvaluet rvalue rvaluet err =
-  match lvaluet, rvaluet with
-  | Float, Int -> (Float, Conv(Float, rvalue, Int))
-  | Int, Float -> (Int, Conv(Int, rvalue, Float))
-  (* TODO: array conversions? e.g. int[3] to/from int[5]? int[3] to float[3]? *)
-  | _ -> if lvaluet = rvaluet then (lvaluet, rvalue) else failwith err
-
 (* Raise an exception if the two types are unequal. *)
 let check_assign_strict lvaluet rvalue rvaluet err =
   if lvaluet = rvaluet then (lvaluet, rvalue)
@@ -173,6 +164,29 @@ let rec check_namespace (nname, namespace) files =
   let gameobj_decl (chain, s) =
     try List.assoc s (namespace_of_chain chain).Namespace.gameobjs
     with Not_found -> failwith ("unrecognized game object " ^ nname ^ "::" ^ s)
+  in
+  let is_gameobj_parent p c =
+    let pdecl = gameobj_decl p in
+    let rec helper c =
+      let decl = gameobj_decl c in
+      if decl = pdecl then true
+      else match decl.Gameobj.parent with
+        | None -> false
+        | Some c -> helper c
+    in
+    helper c
+  in
+
+  (* Raise an exception of the given rvalue type cannot be assigned to
+     the given lvalue type, or else return a new expression with conversion. *)
+  let check_assign lvaluet rvalue rvaluet err =
+    match lvaluet, rvaluet with
+    | Float, Int -> (Float, Conv(Float, rvalue, Int))
+    | Int, Float -> (Int, Conv(Int, rvalue, Float))
+    | Object p, Object c when is_gameobj_parent p c ->
+      (Object p, Conv(Object p, rvalue, Object c))
+    (* TODO: array conversions? e.g. int[3] to/from int[5]? int[3] to float[3]? *)
+    | _ -> if lvaluet = rvaluet then (lvaluet, rvalue) else failwith err
   in
 
   (* Helper for getting a set of things from a gameobj and its parents. *)
