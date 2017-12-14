@@ -18,12 +18,14 @@ let check_not_void exceptf = function
   | _ -> ()
 
 (* Add to the scope. But only if we're not using the identifier 'this' *)
-(* TODO: mention where 'this' can be used. anywhere but assignment but declaration as a regular obj identifier *)
+(* TODO: mention where 'this'/super can be used. anywhere but assignment, declaration as a regular obj identifier *)
 let add_to_scope ?loc m (n, t) =
-  let failstr = "cannot shadow or overwrite identifier 'this'" in
+  let failstr s = ("cannot shadow or overwrite identifier '" ^ s ^ "'") in
   match loc, n with
-  | None, "this" -> failwith failstr
-  | Some l, "this" -> failwith (failstr ^ " in " ^ l)
+  | None,   "super" -> failwith (failstr "super")
+  | None,   "this"  -> failwith (failstr "this")
+  | Some l, "super" -> failwith ((failstr "super") ^ " in " ^ l)
+  | Some l, "this"  -> failwith ((failstr "this") ^ " in " ^ l)
   | _ -> StringMap.add n t m
 
 (* Raise an exception of the given rvalue type cannot be assigned to
@@ -73,7 +75,7 @@ let rec namespace_of_chain top prev files can_private chain cname =
                      hd ^ " in resolving " ^ cname)
       else ns
     in
-    (* Check for loops. Update prev *)
+    (* Check for loops using name reference. Update prev *)
     let prev' =
       if List.mem (top, chain) prev
       then failwith ("namespace " ^ cname ^ " never resolves")
@@ -173,15 +175,33 @@ let rec check_namespace (nname, namespace) files =
     with Not_found -> failwith ("unrecognized game object " ^ nname ^ "::" ^ s)
   in
 
-  let gameobj_functions o =
-    List.fold_left
-      (add_to_scope ~loc:(nname ^ "::" ^ string_of_chain o ^ " gameobj function declarations"))
-      StringMap.empty (gameobj_decl o).Gameobj.methods
+  (* Helper for getting a set of things from a gameobj and its parents. *)
+  let rec gscope_helper name retrieve so_far loc =
+    let chain, _ = name in
+    let decl = gameobj_decl name in
+    (* Physical equality as a kind of 'comparing handles' *)
+    (if List.memq decl so_far
+     then failwith ("inheritance cycle with " ^ string_of_chain name)
+     else ());
+    let indiv_scope =
+      List.fold_left (add_to_scope ~loc:(nname ^ "::" ^ string_of_chain name ^ " " ^ loc))
+        StringMap.empty (retrieve decl)
+    in
+    let parent_scope =
+      match decl.Gameobj.parent with
+      | Some (pchain, pname) ->
+        gscope_helper ((chain @ pchain), pname) retrieve (decl :: so_far) loc
+      | None -> StringMap.empty
+    in
+    StringMap.fold StringMap.add indiv_scope parent_scope
+  in
+
+  let gameobj_functions name =
+    gscope_helper name (fun x -> x.Gameobj.methods) [] "method declarations"
   in
 
   let gameobj_scope name =
-    List.fold_left (add_to_scope ~loc:(nname ^ "::" ^ string_of_chain name ^ " members"))
-      StringMap.empty (gameobj_decl name).Gameobj.members
+    gscope_helper name (fun x -> x.Gameobj.members) [] "members"
   in
 
   (* Object types from inner namespaces need to include the outer calling
@@ -194,6 +214,7 @@ let rec check_namespace (nname, namespace) files =
   (* Check that the expression can indeed be assigned to *)
   let rec check_lvalue loc = function
     | Id([], "this") -> failwith ("'this' cannot be assigned in '" ^ loc ^ "'")
+    | Id([], "super") -> failwith ("'super' cannot be assigned in '" ^ loc ^ "'")
     | Subscript(arr, _) -> check_lvalue loc arr (* subscr is lvalue iff arr is *)
     | Id _ | Member _ | Assign _ | Asnop _ | Idop _ -> ()
     | _ as e -> failwith ("lvalue " ^ string_of_expr e ^ " expected in " ^ loc)
@@ -500,10 +521,17 @@ let rec check_namespace (nname, namespace) files =
 
     (* Add "this" and gameobj members to scope *)
     (* gameobj_scope also checks that no members are named 'this' *)
+    (* gameobj_scope also checks that the parent, if set, exists *)
     let scope =
       let initial_vscope, initial_fscope = scope in
+      let super_scope =
+        match obj.parent with
+        | None -> StringMap.empty
+        | Some pname -> StringMap.singleton "super" (Object pname)
+      in
       initial_vscope
       |> StringMap.fold StringMap.add (gameobj_scope ([], name))
+      |> StringMap.fold StringMap.add super_scope
       |> StringMap.add "this" (Object([], name)),
       initial_fscope
       |> StringMap.fold StringMap.add (gameobj_functions ([], name))
@@ -515,7 +543,7 @@ let rec check_namespace (nname, namespace) files =
     in
     let methods' = List.map check_obj_fn obj.methods in
     let events' = List.map check_obj_fn obj_fn_list in
-    make name (obj.members, methods', events')
+    make name (obj.members, methods', events') obj.parent
   in
 
   let scope =
