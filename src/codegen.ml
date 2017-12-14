@@ -281,10 +281,8 @@ let translate the_program files =
         in
         let gt = L.named_struct_type context gname in
 
-        (* Set its body *)
-        let members = g.A.Gameobj.members in
-        let ll_members = List.map (fun (_, typ) -> ltype_of_typ typ) members in
-        L.struct_set_body gt (Array.of_list (gameobj_t :: node_t :: ll_members)) false;
+        (* Setting its body is deferred until after all llgameobj types are declared *)
+        (* Due to namespace complications... *)
 
         (* Define linked list heads for each object type *)
         let ends = make_node_end ("object" ^ nname ^ "::" ^ gname) in
@@ -299,7 +297,7 @@ let translate the_program files =
             (L.const_struct context (Array.of_list fns)) the_module
         in
 
-        { B.gtyp = gt; ends; vtable; events;
+        { B.gtyp = gt; ends; vtable; events; semant = g;
           methods = fn_decls g.methods (Some gname) (to_llname "function") }
       in
       let add_llgameobj m (gname, g) = StringMap.add gname (make_llgameobj (gname, g)) m in
@@ -324,6 +322,41 @@ let translate the_program files =
   in
   let llprogram = define_llns ("", the_program) in
 
+  let rec namespace_of_chain top chain =
+    let search ns n = match StringMap.find n ns.B.namespaces with
+      | B.Concrete c -> c
+      | B.Alias chain -> namespace_of_chain ns chain
+      | B.File f -> StringMap.find f llfiles
+    in
+    List.fold_left search top chain
+  in
+
+  (* Sort of janky way to set the gameobj bodies after making all the gameobjs. *)
+  (* We're traversing the namespace tree again too... *)
+  let set_gameobj_body ns _gameobj_name llg =
+    let g = llg.B.semant in
+    let members = g.A.Gameobj.members in
+    let ll_members = List.map (fun (_, typ) -> ltype_of_typ typ) members in
+    let parent_t = match g.A.Gameobj.parent with
+      | None -> gameobj_t
+      | Some (chain, oname) ->
+        let p = StringMap.find oname (namespace_of_chain ns chain).B.gameobjs in
+        p.B.gtyp
+    in
+    L.struct_set_body llg.B.gtyp (Array.of_list (parent_t :: node_t :: ll_members)) false;
+  in
+  let rec set_gameobj_bodies ns =
+    StringMap.iter (set_gameobj_body ns) ns.B.gameobjs;
+    let check_inner_ns _ = function
+      | B.Concrete ns -> set_gameobj_bodies ns
+      | _ -> ()
+    in
+    StringMap.iter check_inner_ns ns.B.namespaces
+  in
+  StringMap.iter (fun _ x -> set_gameobj_bodies x) llfiles;
+  (* StringMap.iter (fun _ x -> StringMap.iter (set_gameobj_body x) x.B.gameobjs) llfiles; *)
+  set_gameobj_bodies llprogram;
+
   let rec define_ns_contents llns (nname, the_namespace) =
     let { A.Namespace.variables = _;
           functions ; gameobjs ; namespaces } = the_namespace in
@@ -337,31 +370,15 @@ let translate the_program files =
       in
       List.iter check_inner_ns namespaces
     in
-    let rec namespace_of_chain top chain =
-      let search ns n = match StringMap.find n ns.B.namespaces with
-        | B.Concrete c -> c
-        | B.Alias chain -> namespace_of_chain ns chain
-        | B.File f -> StringMap.find f llfiles
-      in
-      List.fold_left search top chain
-    in
     let namespace_of_chain = namespace_of_chain llns in
 
-    let rec ast_namespace_of_chain top chain =
-      let open A.Namespace in
-      let search ns n = match List.assoc n ns.A.Namespace.namespaces with
-        | _, Concrete c -> c
-        | _, Alias chain -> ast_namespace_of_chain ns chain
-        | _, File f -> List.assoc f files
-      in
-      List.fold_left search top chain
-    in
-    let ast_namespace_of_chain = ast_namespace_of_chain the_namespace in
-
+    (* These three fns are hardly used. *)
     let find_function_decl name =
       try StringMap.find name (llns.B.functions)
       with Not_found -> failwith ("global " ^ name)
     in
+    (* What we really need is to augment gameobj_methods to also return
+       virtual method pointers from the vtable. *)
     let find_obj_fn_decl (chain, oname) fname =
       try
         let g = StringMap.find oname (namespace_of_chain chain).B.gameobjs in
@@ -374,6 +391,7 @@ let translate the_program files =
         StringMap.find event (g.B.events)
       with Not_found -> failwith ("event " ^ oname ^ "." ^ event)
     in
+
     let obj_end oname =
       try (StringMap.find oname (llns.B.gameobjs)).B.ends
       with Not_found -> failwith ("end " ^ oname)
@@ -381,23 +399,41 @@ let translate the_program files =
 
     (* Given value ll for an object of type objname, builds and returns scope of
        that object in StringMap. *)
-    let gameobj_members objref (chain, objname) builder =
-      let llobj =
-        let objptr = L.build_extractvalue objref 1 (objname ^ "_objptr_gen") builder in
-        let g = StringMap.find objname (namespace_of_chain chain).B.gameobjs in
-        L.build_bitcast objptr (L.pointer_type g.B.gtyp) "objptr" builder
-      in
-      let ast_ns = ast_namespace_of_chain chain in
-      let members = (List.assoc objname ast_ns.A.Namespace.gameobjs).A.Gameobj.members in
-      let add_member (map, ind) (name, typ) =
+    let gameobj_members objref oname builder =
+      let add_member llobj (map, ind) (name, typ) =
         let member_var = L.build_struct_gep llobj ind name builder in
         (StringMap.add name (member_var, typ) map, ind + 1)
       in
-      let (members, _) =
-        (* object type struct: gameobj_t :: node_t :: members *)
-        List.fold_left add_member (StringMap.empty, 2) members
+
+      let objptr = L.build_extractvalue objref 1 "objptr_gen" builder in
+      (* Builds the StringMap assuming this object had name (chain, objname).
+         Recurses for inheritance. *)
+      let rec helper (chain, objname) =
+        let g = StringMap.find objname (namespace_of_chain chain).B.gameobjs in
+        let llobj =
+          L.build_bitcast objptr (L.pointer_type g.B.gtyp) "objptr" builder
+        in
+        let members = g.B.semant.A.Gameobj.members in
+        let parent_map = match g.B.semant.A.Gameobj.parent with
+          | None -> StringMap.empty
+          | Some (pchain, pname) -> helper (pchain @ chain, pname)
+        in
+        let (members, _) =
+          (* object type struct: gameobj_t :: node_t :: members *)
+          List.fold_left (add_member llobj) (parent_map, 2) members
+        in
+        members
       in
-      members
+      helper oname
+    in
+
+    let rec gameobj_methods (chain, objname) =
+      let g = StringMap.find objname (namespace_of_chain chain).B.gameobjs in
+      let parent_methods = match g.B.semant.A.Gameobj.parent with
+        | None -> StringMap.empty
+        | Some (pchain, pname) -> gameobj_methods (pchain @ chain, pname)
+      in
+      parent_methods |> StringMap.fold StringMap.add g.B.methods
     in
 
     let build_object_loop builder the_function (chain, objname) ~body =
@@ -526,7 +562,7 @@ let translate the_program files =
         in
         L.build_call fn.B.value (Array.of_list actuals) result builder
       | A.MemberCall (e, objname, f, act) ->
-        let fn = find_obj_fn_decl objname f in
+        let fn = StringMap.find f (gameobj_methods objname) in
         let obj = expr scope builder e in
         let actuals = List.map (expr scope builder) act in
         let result =
@@ -539,11 +575,24 @@ let translate the_program files =
         let llobj = L.build_malloc g.B.gtyp objname builder in
         let llobj_gen = L.build_bitcast llobj objptr_t (objname ^ "_gen") builder in
         (* Set up linked list connections *)
-        let llnode = L.build_struct_gep llobj_gen 1 (objname ^ "_node") builder in
-        let llobjnode = L.build_struct_gep llobj 1 (objname ^ "_objnode") builder in
-        let obj_head, _ = obj_end objname in let gameobj_head, _ = gameobj_end in
-        ignore (L.build_call list_add_func [|llobjnode; obj_head|] "" builder);
-        ignore (L.build_call list_add_func [|llnode; gameobj_head|] "" builder);
+        let rec make_node_cons obj objname llobj =
+          (* Make self connection *)
+          let llobjnode = L.build_struct_gep llobj 1 (objname ^ "_objnode") builder in
+          let obj_head, _ = obj_end objname in
+          ignore (L.build_call list_add_func [|llobjnode; obj_head|] "" builder);
+          match obj.B.semant.A.Gameobj.parent with
+          | None ->
+            (* Make gameobj connection *)
+            let llnode = L.build_struct_gep llobj_gen 1 (objname ^ "_node") builder in
+            let gameobj_head, _ = gameobj_end in
+            ignore (L.build_call list_add_func [|llnode; gameobj_head|] "" builder);
+          | Some (pchain, pobjname) ->
+            (* Get parent and make parent connections *)
+            let pobj = StringMap.find pobjname (namespace_of_chain pchain).B.gameobjs in
+            let pllobj = L.build_struct_gep llobj 0 (objname ^ "_parent") builder in
+            make_node_cons pobj pobjname pllobj
+        in
+        make_node_cons g objname llobj;
         (* Update ID and ID counter *)
         let llid = L.build_load global_objid "old_id" builder in
         let llid = L.build_add llid (L.const_int i64_t 1) "new_id" builder in
@@ -551,6 +600,7 @@ let translate the_program files =
         (* Event function pointers *)
         build_struct_ptr_assign llobj_gen [|Some g.B.vtable; None; Some llid|] builder;
         let objref = build_struct_assign (L.undef objref_t) [|Some llid; Some llobj_gen|] builder in
+        (* TODO: need to call parent create *)
         let create_event = (find_obj_event_decl (chain, objname) "create").B.value in
         (* TODO: include something in LRM about non-initialized values *)
         let actuals = List.map (expr scope builder) args in
@@ -577,8 +627,12 @@ let translate the_program files =
         let objptr = L.build_extractvalue objref 1 "objptr" builder in
         let () =
           (* Call its destroy event *)
+          (* TODO: call parent destroy *)
           let destroy_event =
-            let tbl = L.build_load (L.build_struct_gep objptr 0 "" builder) "tbl" builder in
+            (* Assuming vtable is at front *)
+            let tbl =
+              L.build_load (L.build_bitcast objptr (L.pointer_type vtableptr_t) "" builder) "tbl" builder
+            in
             L.build_load (L.build_struct_gep tbl 1 "eventptr" builder) "event" builder
           in
           ignore (L.build_call destroy_event [|objref|] "" builder);
@@ -587,11 +641,21 @@ let translate the_program files =
           ignore (L.build_store (L.const_int i64_t 0) idptr builder)
         in
         (* Find the list node connecting objects of this particular type *)
-        let llg = StringMap.find objtype (namespace_of_chain chain).B.gameobjs in
-        let obj = L.build_bitcast objptr (L.pointer_type llg.B.gtyp) objtype builder in
-        (* Disconnect particular object neighbours' node links. *)
-        let objnode = L.build_struct_gep obj 1 (objtype ^ "_node") builder in
-        ignore (L.build_call list_rem_func [|objnode|] "" builder);
+        let obj = StringMap.find objtype (namespace_of_chain chain).B.gameobjs in
+        let llobj = L.build_bitcast objptr (L.pointer_type obj.B.gtyp) objtype builder in
+        let rec rem_node_cons obj objname llobj =
+          (* Disconnect particular object neighbours' node links. *)
+          let llobjnode = L.build_struct_gep llobj 1 (objname ^ "_objnode") builder in
+          ignore (L.build_call list_rem_func [|llobjnode|] "" builder);
+          match obj.B.semant.A.Gameobj.parent with
+          | None -> ()
+          | Some (pchain, pobjname) ->
+            (* Get parent and remove parent connections *)
+            let pobj = StringMap.find pobjname (namespace_of_chain pchain).B.gameobjs in
+            let pllobj = L.build_struct_gep llobj 0 (objname ^ "_parent") builder in
+            rem_node_cons pobj pobjname pllobj
+        in
+        rem_node_cons obj objtype llobj;
         expr scope builder (A.Noexpr) (* considered Void in semant *)
     in
 
@@ -694,7 +758,7 @@ let translate the_program files =
       in
       let method_scope =
         match gameobj with
-        | Some obj -> (StringMap.find obj llns.B.gameobjs).B.methods
+        | Some obj -> gameobj_methods ([], obj)
         | None -> StringMap.empty
       in
       let add_to_scope to_add = StringMap.fold StringMap.add to_add in

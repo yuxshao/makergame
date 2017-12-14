@@ -15,6 +15,9 @@ type gameobj = {
   methods: func StringMap.t;
   events: func StringMap.t;
   vtable: L.llvalue;
+  semant: Ast.Gameobj.t;
+  (* TODO: here the ast obj is stored with the llobj. possibly in another place
+     we do two separate lookups. unify *)
 }
 
 type concrete = {
