@@ -372,7 +372,6 @@ let translate the_program files =
     in
     let namespace_of_chain = namespace_of_chain llns in
 
-    (* This function is hardly used. *)
     let find_obj_event_decl (chain, oname) event =
       try
         let g = StringMap.find oname (namespace_of_chain chain).B.gameobjs in
@@ -700,7 +699,6 @@ let translate the_program files =
         build_object_loop builder fn objname ~body, scope
     in
 
-    (* destroy flag is special case right now *)
     let build_function_body the_function formals block ?gameobj ?postwork return_type =
       let entry = L.entry_block the_function in
       let builder = L.builder_at_end context entry in
@@ -731,8 +729,16 @@ let translate the_program files =
       in
       let method_scope =
         match gameobj with
-        | Some obj -> gameobj_methods ([], obj)
         | None -> StringMap.empty
+        | Some obj ->
+          let g = StringMap.find obj llns.B.gameobjs in
+          match g.B.semant.A.Gameobj.parent with
+          | None -> gameobj_methods ([], obj)
+          | Some (chain, pname) ->
+            (* Add super(...) as a way to call the parent constructor. *)
+            let pobj = StringMap.find pname (namespace_of_chain chain).B.gameobjs in
+            gameobj_methods ([], obj)
+            |> StringMap.add "super" (StringMap.find "create" pobj.B.events)
       in
       let add_to_scope to_add = StringMap.fold StringMap.add to_add in
       let scope =

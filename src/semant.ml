@@ -522,23 +522,40 @@ let rec check_namespace (nname, namespace) files =
     (* Add "this" and gameobj members to scope *)
     (* gameobj_scope also checks that no members are named 'this' *)
     (* gameobj_scope also checks that the parent, if set, exists *)
-    let scope =
+    (* For creation, also add super() *)
+    let scope, create_scope =
       let initial_vscope, initial_fscope = scope in
       let super_scope =
         match obj.parent with
         | None -> StringMap.empty
-        | Some pname -> StringMap.singleton "super" (Object pname)
+        | Some (pchain, pname) ->
+          let func =
+            let events = (gameobj_decl (pchain, pname)).events in
+            if List.mem_assoc "create" events
+            then List.assoc "create" events
+            else Func.make Void [] (Some pname) []
+          in
+          StringMap.singleton "super" func
       in
-      initial_vscope
-      |> StringMap.fold StringMap.add (gameobj_scope ([], name))
-      |> StringMap.fold StringMap.add super_scope
-      |> StringMap.add "this" (Object([], name)),
-      initial_fscope
-      |> StringMap.fold StringMap.add (gameobj_functions ([], name))
+      let vscope =
+        initial_vscope
+        |> StringMap.fold StringMap.add (gameobj_scope ([], name))
+        |> StringMap.add "this" (Object([], name))
+      in
+      let fscope =
+        initial_fscope
+        |> StringMap.fold StringMap.add (gameobj_functions ([], name))
+      in
+      (vscope, fscope), (vscope, fscope |> StringMap.fold StringMap.add super_scope)
     in
+
     let check_obj_fn (fname, func) =
       match func.Func.block with
-      | Some _ -> check_function ~scope ~objname:(Some name) (fname, func)
+      | Some _ ->
+        let scope =
+          if fname = "create" then create_scope else scope
+        in
+        check_function ~scope ~objname:(Some name) (fname, func)
       | _ -> failwith ("illegal extern function " ^ nname ^ "::" ^ name ^ "::" ^ fname)
     in
     let methods' = List.map check_obj_fn obj.methods in
