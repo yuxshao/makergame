@@ -6,8 +6,10 @@
 #include <cstdlib>
 
 static std::map<std::string, sf::Texture> image_map;
+static std::map<std::string, sf::Sprite> sprite_map;
 static std::map<std::string, sf::SoundBuffer> sound_map;
 static sf::RenderWindow window;
+static sf::Color clear_color = sf::Color(255, 255, 255);
 
 static void display_window(sf::RenderWindow *window) { window->display(); }
 
@@ -42,20 +44,25 @@ sf::Sound *load_sound(const char *filename) {
   return new sf::Sound(sound_map[filename]);
 }
 
+void set_window_size(int w, int h) { window.setSize(sf::Vector2u(w, h)); }
+void set_window_clear(int r, int g, int b) { clear_color = sf::Color(r, g, b); }
+
 void play_sound(sf::Sound *sound) { play_sound(sound, false); }
 void loop_sound(sf::Sound *sound) { play_sound(sound, true); }
 
 sf::Sprite *load_image(const char *filename) {
-  if (!image_map.count(filename) && !image_map[filename].loadFromFile(filename))
-    std::cerr << "unable to load image " << filename << "\n";
-  return new sf::Sprite(image_map[filename]);
+  if (!image_map.count(filename)) {
+    if (!image_map[filename].loadFromFile(filename))
+      std::cerr << "unable to load image " << filename << "\n";
+    sprite_map[filename] = sf::Sprite(image_map[filename]);
+  }
+  return &sprite_map[filename];
 }
 
-void set_sprite_position(sf::Sprite *sprite, double x, double y) {
+void draw_sprite(sf::Sprite *sprite, double x, double y) {
   sprite->setPosition(x, y);
+  window.draw(*sprite);
 }
-
-void draw_sprite(sf::Sprite *sprite) { window.draw(*sprite); }
 
 void end_game() { close_window(&window); game_ended = true; }
 
@@ -90,7 +97,7 @@ int main() {
         window.close();
     }
     global_step();
-    window.clear();
+    window.clear(clear_color);
     global_draw();
     window.display();
   }

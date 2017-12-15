@@ -379,8 +379,8 @@ let translate the_program files =
       with Not_found -> failwith ("event " ^ oname ^ "." ^ event)
     in
 
-    let obj_end oname =
-      try (StringMap.find oname (llns.B.gameobjs)).B.ends
+    let obj_end (chain, oname) =
+      try (StringMap.find oname (namespace_of_chain chain).B.gameobjs).B.ends
       with Not_found -> failwith ("end " ^ oname)
     in
 
@@ -440,7 +440,7 @@ let translate the_program files =
         let then_ builder _ = body builder break_bb obj in
         build_if ~pred ~then_ context builder the_function
       in
-      build_node_loop builder the_function ~ends:(obj_end objname) ~body
+      build_node_loop builder the_function ~ends:(obj_end (chain, objname)) ~body
     in
 
     (* Construct code for an expression used for assignment; return its value *)
@@ -568,7 +568,7 @@ let translate the_program files =
         let rec make_node_cons obj objname llobj =
           (* Make self connection *)
           let llobjnode = L.build_struct_gep llobj 1 (objname ^ "_objnode") builder in
-          let obj_head, _ = obj_end objname in
+          let obj_head, _ = obj.B.ends in
           ignore (L.build_call list_add_func [|llobjnode; obj_head|] "" builder);
           match obj.B.semant.A.Gameobj.parent with
           | None ->
