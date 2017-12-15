@@ -1,1 +1,4 @@
-Fatal error: exception Failure("expected Boolean expression in 42")
+Uncaught exception:
+  
+  (Failure "expected Boolean expression in 42")
+

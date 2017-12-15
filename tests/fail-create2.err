@@ -1,1 +1,4 @@
-Fatal error: exception Failure("illegal assignment int = object(main) in x = create main")
+Uncaught exception:
+  
+  (Failure "illegal assignment int = object(main) in x = create main")
+

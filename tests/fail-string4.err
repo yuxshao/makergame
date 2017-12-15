@@ -1,1 +1,4 @@
-Fatal error: exception Failure("illegal actual argument found string expected int in "hello"")
+Uncaught exception:
+  
+  (Failure "illegal actual argument found string expected int in \"hello\"")
+

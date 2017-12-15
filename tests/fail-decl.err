@@ -1,1 +1,4 @@
-Fatal error: exception Failure("duplicate local 'x' in single block of ::main::step")
+Uncaught exception:
+  
+  (Failure "duplicate local 'x' in single block of ::main::step")
+

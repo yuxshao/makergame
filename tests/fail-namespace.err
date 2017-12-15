@@ -1,1 +1,5 @@
-Fatal error: exception Failure("cannot shadow or overwrite identifier 'this' in sp::hello members")
+Uncaught exception:
+  
+  (Failure
+   "cannot shadow or overwrite identifier 'this' in sp::hello members")
+

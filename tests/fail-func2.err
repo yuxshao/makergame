@@ -1,1 +1,4 @@
-Fatal error: exception Failure("duplicate formal a in ::bar")
+Uncaught exception:
+  
+  (Failure "duplicate formal a in ::bar")
+

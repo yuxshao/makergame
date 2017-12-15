@@ -1,1 +1,4 @@
-Fatal error: exception Failure("illegal assignment int = string in "hello"")
+Uncaught exception:
+  
+  (Failure "illegal assignment int = string in \"hello\"")
+

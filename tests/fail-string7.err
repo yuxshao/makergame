@@ -1,1 +1,4 @@
-Fatal error: exception Parsing.Parse_error
+Uncaught exception:
+  
+  Parsing.Parse_error
+

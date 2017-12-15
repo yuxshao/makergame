@@ -1,1 +1,4 @@
-Fatal error: exception Failure("illegal character \'")
+Uncaught exception:
+  
+  (Failure "illegal character \\'")
+

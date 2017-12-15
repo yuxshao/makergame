@@ -1,1 +1,4 @@
-Fatal error: exception Failure("illegal assignment int = bool in i = false")
+Uncaught exception:
+  
+  (Failure "illegal assignment int = bool in i = false")
+

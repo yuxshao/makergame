@@ -1,1 +1,4 @@
-Fatal error: exception Failure("unrecognized game object ::asdf")
+Uncaught exception:
+  
+  (Failure "unrecognized game object ::asdf")
+

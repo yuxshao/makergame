@@ -1,1 +1,4 @@
-Fatal error: exception Failure("return gives int expected void in 42")
+Uncaught exception:
+  
+  (Failure "return gives int expected void in 42")
+

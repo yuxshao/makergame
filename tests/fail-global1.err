@@ -1,1 +1,4 @@
-Fatal error: exception Failure("illegal void global ::a")
+Uncaught exception:
+  
+  (Failure "illegal void global ::a")
+

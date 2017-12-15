@@ -1,1 +1,4 @@
-Fatal error: exception Failure("illegal assign operator int -= string in x -= "hello"")
+Uncaught exception:
+  
+  (Failure "illegal assign operator int -= string in x -= \"hello\"")
+

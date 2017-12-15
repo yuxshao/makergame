@@ -1,1 +1,4 @@
-Fatal error: exception Failure("duplicate function ::bar")
+Uncaught exception:
+  
+  (Failure "duplicate function ::bar")
+

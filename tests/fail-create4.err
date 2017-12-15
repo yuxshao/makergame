@@ -1,1 +1,4 @@
-Fatal error: exception Failure("unrecognized function super")
+Uncaught exception:
+  
+  (Failure "unrecognized function super")
+

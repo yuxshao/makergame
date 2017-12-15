@@ -1,1 +1,4 @@
-Fatal error: exception Failure("illegal void formal b in ::bar")
+Uncaught exception:
+  
+  (Failure "illegal void formal b in ::bar")
+

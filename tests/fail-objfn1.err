@@ -1,1 +1,4 @@
-Fatal error: exception Failure("duplicate methods same in main")
+Uncaught exception:
+  
+  (Failure "duplicate methods same in main")
+

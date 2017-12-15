@@ -1,1 +1,4 @@
-Fatal error: exception Failure("illegal binary operator bool + int in d + a")
+Uncaught exception:
+  
+  (Failure "illegal binary operator bool + int in d + a")
+

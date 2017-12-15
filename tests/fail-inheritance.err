@@ -1,1 +1,4 @@
-Fatal error: exception Failure("inheritance cycle with A")
+Uncaught exception:
+  
+  (Failure "inheritance cycle with A")
+

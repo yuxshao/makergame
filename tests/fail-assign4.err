@@ -1,1 +1,4 @@
-Fatal error: exception Failure("lvalue create helper expected in create helper = x")
+Uncaught exception:
+  
+  (Failure "lvalue create helper expected in create helper = x")
+

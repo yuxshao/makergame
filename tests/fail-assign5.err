@@ -1,1 +1,4 @@
-Fatal error: exception Failure("lvalue compute() expected in compute() = 5")
+Uncaught exception:
+  
+  (Failure "lvalue compute() expected in compute() = 5")
+

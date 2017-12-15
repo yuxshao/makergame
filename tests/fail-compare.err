@@ -1,1 +1,4 @@
-Fatal error: exception Failure("illegal binary operator object(main) == object(main) in a == a")
+Uncaught exception:
+  
+  (Failure "illegal binary operator object(main) == object(main) in a == a")
+

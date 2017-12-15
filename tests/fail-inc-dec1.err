@@ -1,1 +1,4 @@
-Fatal error: exception Failure("lvalue 42 expected in ++42")
+Uncaught exception:
+  
+  (Failure "lvalue 42 expected in ++42")
+

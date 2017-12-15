@@ -1,1 +1,5 @@
-Fatal error: exception Failure("array literal [[1, 2], [3, 4], [5, 6, 7]] contains elements of unequal types int[2] and int[3]")
+Uncaught exception:
+  
+  (Failure
+   "array literal [[1, 2], [3, 4], [5, 6, 7]] contains elements of unequal types int[2] and int[3]")
+

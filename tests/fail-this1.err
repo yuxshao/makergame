@@ -1,1 +1,4 @@
-Fatal error: exception Failure("'this' cannot be assigned in 'this = create main'")
+Uncaught exception:
+  
+  (Failure "'this' cannot be assigned in 'this = create main'")
+

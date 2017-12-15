@@ -1,1 +1,4 @@
-Fatal error: exception Failure("unsupported escape character \w")
+Uncaught exception:
+  
+  (Failure "unsupported escape character \\w")
+

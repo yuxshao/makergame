@@ -1,1 +1,4 @@
-Fatal error: exception Failure("cannot shadow or overwrite identifier 'this' in ::main::create")
+Uncaught exception:
+  
+  (Failure "cannot shadow or overwrite identifier 'this' in ::main::create")
+

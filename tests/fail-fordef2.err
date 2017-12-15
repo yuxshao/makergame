@@ -1,1 +1,4 @@
-Fatal error: exception Failure("undeclared identifier i")
+Uncaught exception:
+  
+  (Failure "undeclared identifier i")
+

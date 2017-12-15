@@ -1,1 +1,4 @@
-Fatal error: exception Failure("duplicate namespace ::sp")
+Uncaught exception:
+  
+  (Failure "duplicate namespace ::sp")
+
