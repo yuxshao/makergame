@@ -41,6 +41,7 @@ let resolve_file f curr_dir =
        2) If the path is relative, try:
           a) The current directory of the file loading you.
           c) MAKERGAME_PATH
+       TODO: document in LRM
     *)
     if Filename.is_absolute f then Filename.realpath f
     else
