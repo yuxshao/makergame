@@ -2,6 +2,7 @@
 
 open Ast
 
+module Filename = Core.Core_filename
 module StringMap = Map.Make(String)
 
 (* Raise an exception if the given list has a duplicate *)

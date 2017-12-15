@@ -17,7 +17,7 @@ lib/libtestergame.o:
 	gcc -c lib/libtestergame.cpp -o lib/libtestergame.o -std=c++11
 
 makergame.native : src/*.ml src/*.mly src/*.mll clean
-	ocamlbuild -use-ocamlfind -pkgs llvm,llvm.analysis -cflags -w,+a-4 \
+	ocamlbuild -use-ocamlfind -pkgs llvm,core,llvm.analysis -cflags -w,+a-4 \
 		src/makergame.native
 
 # "make clean" removes all generated files

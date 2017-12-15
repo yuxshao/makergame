@@ -1,3 +1,4 @@
 S src/*
 B _build/*
 PKG llvm
+PKG core
