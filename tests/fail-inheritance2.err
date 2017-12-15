@@ -1,4 +1,4 @@
 Uncaught exception:
   
-  (Failure "inheritance cycle with S::S::B")
+  (Failure "inheritance cycle with main")
 

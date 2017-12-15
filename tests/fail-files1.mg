@@ -1,4 +1,4 @@
 // nonexistent file
-namespace c = open "test-helpers/nonexistent12345555.mg";
+namespace c = open "nonexistent12345555.mg";
 
 object main { }

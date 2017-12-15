@@ -1,3 +1,3 @@
-namespace c = open "test-helpers/circular.mg";
+namespace c = open "circular.mg";
 
 int x;

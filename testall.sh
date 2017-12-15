@@ -166,6 +166,7 @@ LLIFail() {
 }
 
 export OCAMLRUNPARAM=""
+export MAKERGAME_PATH="$(pwd)/lib"
 
 which "$LLI" >> $globallog || LLIFail
 

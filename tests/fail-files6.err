@@ -1,4 +1,4 @@
 Uncaught exception:
   
-  (Failure "namespace this_file::rec never resolves")
+  (Failure "circular file dependency with recursive.mg")
 

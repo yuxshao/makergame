@@ -1,2 +1,2 @@
-namespace S = open "test-helpers/circular-inherit1.mg";
+namespace S = open "circular-inherit1.mg";
 object B : S::A { }

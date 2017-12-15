@@ -1,3 +1,3 @@
-namespace one = open "test-helpers/simple.mg";
+namespace one = open "simple.mg";
 
 int x;

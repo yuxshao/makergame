@@ -1,5 +1,4 @@
 Uncaught exception:
   
-  (Failure
-   "unable to open file for namespace: 'test-helpers/nonexistent12345555.mg: No such file or directory'")
+  (Failure "unable to open file 'nonexistent12345555.mg' for namespace.")
 

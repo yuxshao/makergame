@@ -34,14 +34,39 @@ let check_assign_strict lvaluet rvalue rvaluet err =
   if lvaluet = rvaluet then (lvaluet, rvalue)
   else failwith err
 
-(* Build an AST given a filename. For use in namespaces for file-loading. *)
-let ast_of_file f =
+let resolve_file f curr_dir =
+  try
+    (* Attempt to resolve filenames in the following fashion:
+       1) If the path is absolute, load that.
+       2) If the path is relative, try:
+          a) The current directory of the file loading you.
+          c) MAKERGAME_PATH
+    *)
+    if Filename.is_absolute f then Filename.realpath f
+    else
+      let cdir_f = Filename.concat curr_dir f in
+      let sdir_f = Filename.concat (Sys.getenv "MAKERGAME_PATH") f in
+      if Sys.file_exists cdir_f then Filename.realpath cdir_f
+      else if Sys.file_exists sdir_f then Filename.realpath sdir_f
+      else raise Not_found
+  with
+  | Unix.Unix_error (e, _, _) ->
+    failwith ("unable to open file \'" ^ f ^ "\' for namespace: \'" ^ Unix.error_message e ^ "\'")
+  | Not_found | Sys_error _ ->
+    failwith ("unable to open file \'" ^ f ^ "\' for namespace.")
+
+(* Build an AST given a resolved filename. For use in namespaces for file-loading. *)
+let ast_of_file f short_f =
   let channel =
-    try open_in f with Sys_error s ->
-      failwith ("unable to open file for namespace: \'" ^ s ^ "\'")
+    try open_in f
+    with
+    | Unix.Unix_error (e, _, _) ->
+      failwith ("unable to open file \'" ^ f ^ "\' for namespace: \'" ^ Unix.error_message e ^ "\'")
+    | Not_found | Sys_error _ ->
+      failwith ("unable to open file \'" ^ f ^ "\' for namespace.")
   in
   try Parser.program Scanner.token (Lexing.from_channel channel)
-  with Parsing.Parse_error -> failwith ("failed to parse file " ^ f)
+  with Parsing.Parse_error -> failwith ("failed to parse file " ^ short_f)
 ;;
 
 (* Access a namespace inside another namespace (top) through a chain. Prevent
@@ -86,16 +111,24 @@ let rec namespace_of_chain top prev files can_private chain cname =
 (* Semantic checking of a namespace. Returns checked AST if successful, throws
    an exception if something is wrong.
 
+   - nname is used just for error output
+   - forbidden_files are files that if opened would cause a circular dependency
+   - files are a list of filename-namespace associations
+   - curr_dir is used for resolving file opens in this namespace
+
    Check each inner namespace, global variable, function, and then gameobj. *)
 
-let rec check_namespace (nname, namespace) files =
+let rec check_namespace (nname, namespace) forbidden_files files curr_dir =
   let { Namespace.variables = globals; functions ; gameobjs; namespaces = _ } = namespace in
 
   (**** Checking Namespaces ****)
   (* Add the standard namespace and mark private *)
   let namespace =
-    let namespaces = ("std", (true, Namespace.File "std.mg")) :: namespace.Namespace.namespaces in
-    { namespace with Namespace.namespaces }
+    if List.mem (resolve_file "std.mg" curr_dir) forbidden_files
+    then namespace
+    else
+      let namespaces = ("std", (true, Namespace.File "std.mg")) :: namespace.Namespace.namespaces in
+      { namespace with Namespace.namespaces }
   in
 
   report_duplicate (fun n -> "duplicate namespace " ^ nname ^ "::" ^ n)
@@ -108,21 +141,40 @@ let rec check_namespace (nname, namespace) files =
     let namespaces =
       let check_concrete = function
         | n, (p, Concrete ns) ->
-          let (n, ns), _ = check_namespace (n, ns) files in (n, (p, Concrete ns))
+          let (n, ns), _ = check_namespace (n, ns) forbidden_files files curr_dir in
+          (n, (p, Concrete ns))
         | _ as ns -> ns
       in
       List.map check_concrete namespace.namespaces
     in
     let namespace = { namespace with namespaces } in
     (* Update list of file-namespace associations by opening each file namespace *)
-    let check_file_ns accum = function
-      | _, (_is_private, File f) when not (List.mem_assoc f accum) ->
-        let { main = file_prog; files = _ } = ast_of_file f in
-        let _, files = check_namespace ("file-" ^ f, file_prog) ((f, file_prog) :: accum) in
-        files
-      | _ -> accum
+    let check_file_ns (accum, ns_accum) = function
+      | n, (is_private, File f) ->
+        (* Convert to absolute file path and use that in the namespace reference now *)
+        let abs_f = resolve_file f curr_dir in
+        let f_dir = Filename.dirname abs_f in
+        let new_accum =
+          if List.mem_assoc abs_f accum then accum
+          else
+            let { main = file_prog; files = _ } = ast_of_file abs_f f in
+            let new_forbidden =
+              if List.mem abs_f forbidden_files
+              then failwith ("circular file dependency with " ^ f)
+              else abs_f :: forbidden_files
+            in
+            let (_, file_prog), files =
+              check_namespace ("file-" ^ f, file_prog) new_forbidden accum f_dir
+            in
+            (abs_f, file_prog) :: files
+        in
+        new_accum, (n, (is_private, File abs_f)) :: ns_accum
+      | _ as next_ns -> accum, (next_ns :: ns_accum)
     in
-    let files = List.fold_left check_file_ns files namespaces in
+    let files, namespaces = List.fold_left check_file_ns (files, []) namespaces in
+    (* undo the reverse from the fold_left. should be right either way but this has fewer changes *)
+    let namespaces = List.rev namespaces in
+    let namespace = { namespace with namespaces } in
     (* Verify that each alias indeed resolves to a namespace *)
     let () =
       let aliases =
@@ -589,7 +641,7 @@ let rec check_namespace (nname, namespace) files =
   (nname, { Namespace.variables = globals; functions; gameobjs; namespaces }), files
 
 let check_program program =
-  let (_, main), files = check_namespace ("", program.main) program.files in
+  let (_, main), files = check_namespace ("", program.main) [] program.files (Sys.getcwd ()) in
 
   if not (List.mem_assoc "main" main.Namespace.gameobjs)
   then failwith "main game object must be defined"

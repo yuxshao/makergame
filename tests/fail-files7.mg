@@ -1,4 +1,4 @@
-
+// used to be able to have files include themselves. now forbidden.
 namespace c = open "test-helpers/circular.mg"; // includes itself
 
 object main {
