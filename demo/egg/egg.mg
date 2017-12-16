@@ -1,5 +1,3 @@
-sprite playerSprite;
-sprite eggSprite;
 sound boinkSound;
 int score;
 
@@ -9,27 +7,35 @@ bool egg_touching_player(Egg e, Player p) {
 }
 
 object Egg {
+  sprite spr;
   int x; int y;
-  event create { std::play_sound(boinkSound); } 
+  event create {
+    spr = std::load_image("egg.png");
+    std::play_sound(boinkSound);
+  }
+  
   event step {
     y = y + 5;
     if (hit_ground(this)) {
-      foreach (Egg o) destroy o;
-      foreach (Player p) destroy p;
-      foreach (Spawner s) destroy s;
-      foreach (main g) destroy g;
+      foreach (object o) destroy o;
       create Gameover;
     }
   }
   event draw {
-    std::draw_sprite(eggSprite, x-16, y-16);
+    std::draw_sprite(spr, x-16, y-16);
   }
 }
 
 object Player {
   int x; int y;
+  sprite spr;
 
-  event create { x = 300; y = 500; }
+  event create {
+    spr = std::load_image("player.png");
+    x = 300;
+    y = 500;
+  }
+
   event step { 
     if (std::key::is_down(std::key::Left)) x -= 5;
     if (std::key::is_down(std::key::Right)) x += 5;
@@ -44,7 +50,7 @@ object Player {
   }
 
   event draw {
-    std::draw_sprite(playerSprite, x-50, y-16);
+    std::draw_sprite(spr, x-50, y-16);
   }
 }
 
@@ -66,8 +72,6 @@ object main : std::room {
   event create {
     super();
     score = 0;
-    playerSprite = std::load_image("player.png");
-    eggSprite = std::load_image("egg.png");
     boinkSound = std::load_sound("boink.ogx");
     create Player;
     create Spawner;
@@ -75,7 +79,7 @@ object main : std::room {
 }
 
 object Gameover {
-  sprite s;
-  event create { s = std::load_image("gameover.png"); }
-  event draw { std::draw_sprite(s, 0, 0); }
+  sprite spr;
+  event create { spr = std::load_image("gameover.png"); }
+  event draw { std::draw_sprite(spr, 0, 0); }
 }

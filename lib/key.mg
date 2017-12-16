@@ -128,5 +128,6 @@ bool is_released(int x) {
 }
 
 void set_key() {
+  // check if checker exists. if not create
   p::c = create p::Checker;
 }
