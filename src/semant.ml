@@ -337,7 +337,7 @@ let rec check_namespace (nname, namespace) forbidden_files files curr_dir =
          let (_, e2'') = check_assign t1 e2' t2 err
          in Bool, Binop(e1', op, Float, e2'')
        | Equal | Neq when t1 = Int && t2 = Float ->
-         let (_, e1'') = check_assign t1 e2' t2 err
+         let (_, e1'') = check_assign t2 e1' t1 err
          in Bool, Binop(e1'', op, Float, e2')
        | Less | Leq | Greater | Geq when t1 = Int && t2 = Int -> Bool, Binop(e1', op, Int, e2')
        | Less | Leq | Greater | Geq when t1 = Float && t2 = Float -> Bool, Binop(e1', op, Float, e2')
@@ -345,7 +345,7 @@ let rec check_namespace (nname, namespace) forbidden_files files curr_dir =
          let (_, e2'') = check_assign t1 e2' t2 err
          in Bool, Binop(e1', op, Float, e2'')
        | Less | Leq | Greater | Geq when t1 = Int && t2 = Float ->
-         let (_, e1'') = check_assign t1 e2' t2 err
+         let (_, e1'') = check_assign t2 e1' t1 err
          in Bool, Binop(e1'', op, Float, e2')
        | And | Or when t1 = Bool && t2 = Bool -> Bool, Binop(e1', op, Bool, e2')
        | _ -> failwith err)
