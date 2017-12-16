@@ -1,9 +1,5 @@
 // TODO: make sure path is set
-// TODO: really need constants
-bool possible_pieces[7][4][3];
-
-void set_possible_pieces() {
-  possible_pieces = [
+bool possible_pieces[7][4][3] = [
   [[false, true , false], // long
    [false, true , false],
    [false, true , false],
@@ -38,7 +34,6 @@ void set_possible_pieces() {
    [true , true , true ],
    [false, false, false],
    [false, false, false]]];
-}
 
 object Block {
   int x; int y;
@@ -127,7 +122,6 @@ object Piece {
 object main : std::room {
   event create {
     super();
-    set_possible_pieces();
     create Piece(60);
   }
 }
