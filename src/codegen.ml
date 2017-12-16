@@ -330,6 +330,10 @@ let translate the_program files =
     in
     List.fold_left search top chain
   in
+  let gameobj_decl top (chain, oname) =
+    match (chain, oname) with
+    | _ -> StringMap.find oname (namespace_of_chain top chain).B.gameobjs
+  in
 
   (* Sort of janky way to set the gameobj bodies after making all the gameobjs. *)
   (* We're traversing the namespace tree again too... *)
@@ -339,9 +343,7 @@ let translate the_program files =
     let ll_members = List.map (fun (_, typ) -> ltype_of_typ typ) members in
     let parent_t = match g.A.Gameobj.parent with
       | None -> gameobj_t
-      | Some (chain, oname) ->
-        let p = StringMap.find oname (namespace_of_chain ns chain).B.gameobjs in
-        p.B.gtyp
+      | Some name -> (gameobj_decl ns name).B.gtyp
     in
     L.struct_set_body llg.B.gtyp (Array.of_list (parent_t :: node_t :: ll_members)) false;
   in
@@ -371,16 +373,14 @@ let translate the_program files =
       List.iter check_inner_ns namespaces
     in
     let namespace_of_chain = namespace_of_chain llns in
-
+    let gameobj_decl = gameobj_decl llns in
     let find_obj_event_decl (chain, oname) event =
-      try
-        let g = StringMap.find oname (namespace_of_chain chain).B.gameobjs in
-        StringMap.find event (g.B.events)
+      try StringMap.find event (gameobj_decl (chain, oname)).B.events
       with Not_found -> failwith ("event " ^ oname ^ "." ^ event)
     in
 
     let obj_end (chain, oname) =
-      try (StringMap.find oname (namespace_of_chain chain).B.gameobjs).B.ends
+      try (gameobj_decl (chain, oname)).B.ends
       with Not_found -> failwith ("end " ^ oname)
     in
 
@@ -396,7 +396,7 @@ let translate the_program files =
       (* Builds the StringMap assuming this object had name (chain, objname).
          Recurses for inheritance. *)
       let rec helper (chain, objname) =
-        let g = StringMap.find objname (namespace_of_chain chain).B.gameobjs in
+        let g = gameobj_decl (chain, objname) in
         let llobj =
           L.build_bitcast objptr (L.pointer_type g.B.gtyp) "objptr" builder
         in
@@ -417,7 +417,7 @@ let translate the_program files =
     (* What we really need is to augment gameobj_methods to also return
        virtual method pointers from the vtable. *)
     let rec gameobj_methods (chain, objname) =
-      let g = StringMap.find objname (namespace_of_chain chain).B.gameobjs in
+      let g = gameobj_decl (chain, objname) in
       let parent_methods = match g.B.semant.A.Gameobj.parent with
         | None -> StringMap.empty
         | Some (pchain, pname) -> gameobj_methods (pchain @ chain, pname)
@@ -425,8 +425,9 @@ let translate the_program files =
       parent_methods |> StringMap.fold StringMap.add g.B.methods
     in
 
+
     let build_object_loop builder the_function (chain, objname) ~body =
-      let g = StringMap.find objname (namespace_of_chain chain).B.gameobjs in
+      let g = gameobj_decl (chain, objname) in
       let body builder break_bb node =
         (* Calculating offsets to get the object pointer *)
         let obj = build_container_of g.B.gtyp 1 node objname context builder ~cast:gameobj_t in
@@ -560,7 +561,7 @@ let translate the_program files =
         in
         L.build_call fn.B.value (Array.of_list (obj :: actuals)) result builder
       | A.Create ((chain, objname), args) ->
-        let g = StringMap.find objname (namespace_of_chain chain).B.gameobjs in
+        let g = gameobj_decl (chain, objname) in
         (* Allocate memory for the object *)
         let llobj = L.build_malloc g.B.gtyp objname builder in
         let llobj_gen = L.build_bitcast llobj objptr_t (objname ^ "_gen") builder in
@@ -578,7 +579,7 @@ let translate the_program files =
             ignore (L.build_call list_add_func [|llnode; gameobj_head|] "" builder);
           | Some (pchain, pobjname) ->
             (* Get parent and make parent connections *)
-            let pobj = StringMap.find pobjname (namespace_of_chain pchain).B.gameobjs in
+            let pobj = gameobj_decl (pchain, pobjname) in
             let pllobj = L.build_struct_gep llobj 0 (objname ^ "_parent") builder in
             make_node_cons pobj pobjname pllobj
         in
@@ -737,7 +738,7 @@ let translate the_program files =
           | None -> gameobj_methods ([], obj)
           | Some (chain, pname) ->
             (* Add super(...) as a way to call the parent constructor. *)
-            let pobj = StringMap.find pname (namespace_of_chain chain).B.gameobjs in
+            let pobj = gameobj_decl (chain, pname) in
             gameobj_methods ([], obj)
             |> StringMap.add "super" (StringMap.find "create" pobj.B.events)
       in
@@ -772,7 +773,6 @@ let translate the_program files =
     in
     List.iter build_function functions;
 
-
     let build_obj_functions (gname, g) =
       let open A.Gameobj in
 
@@ -804,8 +804,7 @@ let translate the_program files =
         | None -> assert false    (* Semant ensures obj fns are not external *)
       in
       let find_obj_fn_decl (chain, oname) fname =
-        let g = StringMap.find oname (namespace_of_chain chain).B.gameobjs in
-        StringMap.find fname (g.B.methods)
+        StringMap.find fname (gameobj_decl (chain, oname)).B.methods
       in
       List.iter (build_fn find_obj_fn_decl) g.methods;
       List.iter (build_fn find_obj_event_decl) g.events;
