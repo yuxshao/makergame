@@ -13,6 +13,12 @@ extern int irandom(int x);
 
 namespace key = open "key.mg";
 
+bool is_alive (object o) {
+  foreach (object x)
+    if (x == o) return true;
+  return false;
+}
+
 void goto_room (room r) {
   // TODO: some kind of iteration over all objects
   // destroy the current room / all objects
