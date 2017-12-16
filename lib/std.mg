@@ -11,6 +11,10 @@ extern void play_sound(sound snd);
 extern void draw_sprite(sprite spr, float x, float y);
 extern int irandom(int x);
 
+extern void set_window_size(int w, int h);
+extern void set_window_clear(int r, int g, int b);
+extern void set_window_title(string x);
+
 namespace key = open "key.mg";
 
 bool is_alive (object o) {

@@ -46,6 +46,7 @@ sf::Sound *load_sound(const char *filename) {
 
 void set_window_size(int w, int h) { window.setSize(sf::Vector2u(w, h)); }
 void set_window_clear(int r, int g, int b) { clear_color = sf::Color(r, g, b); }
+void set_window_title(char *x) { window.setTitle(x); }
 
 void play_sound(sf::Sound *sound) { play_sound(sound, false); }
 void loop_sound(sf::Sound *sound) { play_sound(sound, true); }
@@ -69,9 +70,6 @@ void end_game() { close_window(&window); game_ended = true; }
 // TODO find a better place for libs
 int irandom(int x) { return rand() % x; }
 
-// TODO remove
-double to_dbl(int x) { return (double)x; }
-
 // TODO find better way. enums in our language? or namespaces?
 bool key_pressed(int code) {
   return sf::Keyboard::isKeyPressed(sf::Keyboard::Key(code));
@@ -87,7 +85,7 @@ int main() {
   global_create();
   if (game_ended) return 0;
 
-  window.create(sf::VideoMode(800, 600), "Hello World");
+  window.create(sf::VideoMode(800, 600), "MakerGame Game");
   window.setFramerateLimit(60);
 
   while (window.isOpen()) {

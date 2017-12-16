@@ -71,6 +71,7 @@ object Spawner {
 object main : std::room {
   event create {
     super();
+    std::set_window_title("egg game");
     score = 0;
     boinkSound = std::load_sound("boink.ogx");
     create Player;
