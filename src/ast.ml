@@ -61,7 +61,7 @@ type stmt =
   | Return of expr
   | If of expr * stmt * stmt
   | For of stmt * expr * expr * stmt
-  | Foreach of id_chain * string * stmt
+  | Foreach of Var.decl * stmt
   | While of expr * stmt
 and block = stmt list
 
@@ -241,8 +241,8 @@ let rec string_of_stmt = function
     "for (" ^ string_of_stmt s1 ^ " " ^ string_of_expr e2 ^ "; " ^
     string_of_expr e3  ^ ") " ^ string_of_stmt s2
   | While(e, s) -> "while (" ^ string_of_expr e ^ ") " ^ string_of_stmt s
-  | Foreach(obj_t, id, s) ->
-    "foreach (" ^ string_of_chain obj_t  ^ " " ^ id ^ ") " ^ string_of_stmt s
+  | Foreach((id, t), s) ->
+    "foreach (" ^ string_of_typ t  ^ " " ^ id ^ ") " ^ string_of_stmt s
 and string_of_block block =
   "{\n" ^ String.concat "\n" (List.map string_of_stmt block) ^ "\n}\n"
 
@@ -276,13 +276,13 @@ let string_of_gameobj (name, obj) =
     | None -> ""
   in
   name ^ par_str ^ " {\n" ^
-  String.concat "" (List.map string_of_vdecl obj.members) ^ "\n" ^
+  String.concat "\n" (List.map string_of_vdecl obj.members) ^ "\n" ^
   String.concat "" (List.map string_of_fdecl obj.methods) ^ "\n" ^
   String.concat "" (List.map string_of_edecl obj.events) ^ "\n" ^
   "}\n"
 
 let rec string_of_concrete_ns { Namespace.variables; functions; gameobjs; namespaces } =
-  String.concat "" (List.map string_of_vdecl variables) ^ "\n" ^
+  String.concat "\n" (List.map string_of_vdecl variables) ^ "\n" ^
   String.concat "\n" (List.map string_of_fdecl functions) ^
   String.concat "\n" (List.map string_of_gameobj gameobjs) ^
   String.concat "\n" (List.map string_of_ns_decl namespaces)

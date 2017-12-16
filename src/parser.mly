@@ -54,10 +54,13 @@ ndecl_base:
 
 decls:
    /* nothing */ { [],[],[],[] }
- | vdecl decls { Namespace.add_vdecl $2 $1 }
+ | global_vdecl decls { Namespace.add_vdecl $2 $1 }
  | fdecl decls { Namespace.add_fdecl $2 $1 }
  | odecl decls { Namespace.add_odecl $2 $1 }
  | ndecl decls { Namespace.add_ndecl $2 $1 }
+
+global_vdecl:
+ | global_bind SEMI { $1 }
 
 code_block:
    LCURLY stmt_list RCURLY { $2 }
@@ -68,8 +71,14 @@ array_list:
 
 /* arrays dimensions are done RtL so we fold right*/
 bind:
- | typ ID array_list
+ | global_bind { $1 }
+ | OBJECT ID array_list
+   { List.fold_right (fun l (name, typ) -> (name, Arr(typ, l))) $3 ($2, Object([], "object")) }
+
+global_bind:
+ | global_typ ID array_list
    { List.fold_right (fun l (name, typ) -> (name, Arr(typ, l))) $3 ($2, $1) }
+
 
 fdecl:
  | EXTERN bind LPAREN formals_opt RPAREN SEMI
@@ -106,7 +115,7 @@ formal_list:
     bind                   { [$1] }
   | bind COMMA formal_list { $1 :: $3 }
 
-typ:
+global_typ: /* excludes OBJECT, for shift/reduce conflict purposes */
     INT { Int }
   | BOOL { Bool }
   | SPRITE { Sprite }
@@ -136,12 +145,11 @@ stmt:
   | IF LPAREN expr RPAREN stmt %prec NOELSE { If($3, $5, Block([])) }
   | IF LPAREN expr RPAREN stmt ELSE stmt    { If($3, $5, $7) }
   | FOR LPAREN expr_opt SEMI expr SEMI expr_opt RPAREN stmt
-     { For (Expr($3), $5, $7, $9) } 
+     { For (Expr($3), $5, $7, $9) }
   | FOR LPAREN vdef expr SEMI expr_opt RPAREN stmt
      { For($3, $4, $6, $8) }
   | WHILE LPAREN expr RPAREN stmt { While($3, $5) }
-  | FOREACH LPAREN id_chain ID RPAREN stmt { Foreach($3, $4, $6) }
-  | FOREACH LPAREN OBJECT ID RPAREN stmt { Foreach(([], "object"), $4, $6) }
+  | FOREACH LPAREN bind RPAREN stmt { Foreach($3, $5) }
 
 expr_opt:
     /* nothing */ { Noexpr }

@@ -516,11 +516,14 @@ let rec check_namespace (nname, namespace) forbidden_files files curr_dir =
       | While(p, s) ->
         let p' = check_bool_expr scope p in let s', _ = stmt scope s in
         While(p', s'), scope
-      | Foreach(obj_t, id, s) ->
-        ignore(gameobj_decl obj_t);
-        let vscope, fscope = scope in
-        let s', _ = stmt (StringMap.add id (Object(obj_t)) vscope, fscope) s in
-        Foreach(obj_t, id, s'), scope
+      | Foreach((id, typ), s) ->
+        match typ with
+        | Object obj_t ->
+          ignore(gameobj_decl obj_t);
+          let vscope, fscope = scope in
+          let s', _ = stmt (StringMap.add id (Object(obj_t)) vscope, fscope) s in
+          Foreach((id, typ), s'), scope
+        | _ -> failwith ("can only use foreach loop on objects in " ^ (string_of_vdecl (id, typ)))
     in
 
     let _, block' =

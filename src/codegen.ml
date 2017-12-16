@@ -731,21 +731,24 @@ let translate the_program files =
           stmt fn break_bb ret_t (builder, scope) (A.Block while_stmts)
         in
         for_builder, scope
-      | A.Foreach (objname, name, body_stmt) ->
-        (* TODO: describe semantics. what if obj of type is destroyed or created in this? *)
-        let body builder break_bb objptr =
-          let id = L.build_load (L.build_struct_gep objptr 2 "" builder) "id" builder in
-          let obj = build_struct_assign (L.undef objref_t) [|Some id; Some objptr|] builder in
-          let objref = L.build_alloca objref_t "ref" builder in
-          ignore (L.build_store obj objref builder);
-          let builder, _ =
-            let vscope, fscope = scope in
-            let vscope' = StringMap.add name (objref, A.Object(objname)) vscope in
-            stmt fn break_bb ret_t (builder, (vscope', fscope)) body_stmt
+      | A.Foreach ((name, typ), body_stmt) ->
+        match typ with
+        | A.Object objname ->
+          (* TODO: describe semantics. what if obj of type is destroyed or created in this? *)
+          let body builder break_bb objptr =
+            let id = L.build_load (L.build_struct_gep objptr 2 "" builder) "id" builder in
+            let obj = build_struct_assign (L.undef objref_t) [|Some id; Some objptr|] builder in
+            let objref = L.build_alloca objref_t "ref" builder in
+            ignore (L.build_store obj objref builder);
+            let builder, _ =
+              let vscope, fscope = scope in
+              let vscope' = StringMap.add name (objref, A.Object(objname)) vscope in
+              stmt fn break_bb ret_t (builder, (vscope', fscope)) body_stmt
+            in
+            builder
           in
-          builder
-        in
-        build_object_loop builder fn objname ~body, scope
+          build_object_loop builder fn objname ~body, scope
+        | _ -> assert false
     in
 
     let build_function_body the_function formals block ?gameobj ?postwork return_type =
