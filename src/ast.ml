@@ -109,7 +109,7 @@ end
 module Namespace = struct
   type concrete = {
     namespaces : decl list;
-    variables : Var.decl list;
+    variables : (Var.decl * expr) list;
     functions : Func.decl list;
     gameobjs : Gameobj.decl list;
   }
@@ -225,6 +225,10 @@ let rec string_of_expr = function
   | Noexpr -> ""
 
 let string_of_vdecl (id, t) = string_of_typ t ^ " " ^ id ^ ";"
+let string_of_global_vdecl ((id, t), e) =
+  match e with
+  | Noexpr -> string_of_vdecl (id, t)
+  | _ -> string_of_typ t ^ " " ^ id ^ " = " ^ string_of_expr e
 
 let rec string_of_stmt = function
   | Decl d -> string_of_vdecl d
@@ -282,7 +286,7 @@ let string_of_gameobj (name, obj) =
   "}\n"
 
 let rec string_of_concrete_ns { Namespace.variables; functions; gameobjs; namespaces } =
-  String.concat "\n" (List.map string_of_vdecl variables) ^ "\n" ^
+  String.concat "\n" (List.map string_of_global_vdecl variables) ^ "\n" ^
   String.concat "\n" (List.map string_of_fdecl functions) ^
   String.concat "\n" (List.map string_of_gameobj gameobjs) ^
   String.concat "\n" (List.map string_of_ns_decl namespaces)

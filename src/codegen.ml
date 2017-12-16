@@ -284,13 +284,27 @@ let translate the_program files =
     List.fold_left function_decl StringMap.empty functions
   in
 
+  let rec const_expr = function
+    | A.Literal i -> L.const_int i32_t i
+    | A.BoolLit b -> L.const_int i1_t (if b then 1 else 0)
+    | A.FloatLit f -> L.const_float float_t f
+    | A.ArrayLit l ->
+      let lll = Array.of_list (List.map const_expr l) in
+      let typ = L.type_of (Array.get lll 0) in
+      L.const_array typ lll
+    | _ -> assert false
+  in
+
   let rec define_llns (nname, the_namespace) =
     let { A.Namespace.variables = globals;
           functions ; gameobjs ; namespaces } = the_namespace in
     let llvars =
-      let var m (n, t) =
+      let var m ((n, t), e) =
         let llname = "variable" ^ nname ^ "::" ^ n in
-        let init = L.const_null (ltype_of_typ t)
+        let init =
+          match e with
+          | A.Noexpr -> L.const_null (ltype_of_typ t)
+          | _ -> const_expr e
         in StringMap.add n (L.define_global llname init the_module, t) m
       in
       List.fold_left var StringMap.empty globals

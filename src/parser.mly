@@ -60,7 +60,8 @@ decls:
  | ndecl decls { Namespace.add_ndecl $2 $1 }
 
 global_vdecl:
- | global_bind SEMI { $1 }
+ | global_bind SEMI { $1, Noexpr }
+ | global_bind ASSIGN expr SEMI { $1, $3 }
 
 code_block:
    LCURLY stmt_list RCURLY { $2 }

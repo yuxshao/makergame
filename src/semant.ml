@@ -196,9 +196,40 @@ let rec check_namespace (nname, namespace) forbidden_files files curr_dir =
 
   (**** Checking Global Variables ****)
 
-  List.iter (check_not_void (fun n -> "illegal void global " ^ nname ^ "::" ^ n)) globals;
-
-  report_duplicate (fun n -> "duplicate global " ^ nname ^ "::" ^ n) (List.map fst globals);
+  let global_binds = List.map fst globals in
+  List.iter (check_not_void (fun n -> "illegal void global " ^ nname ^ "::" ^ n)) global_binds;
+  report_duplicate (fun n -> "duplicate global " ^ nname ^ "::" ^ n) (List.map fst global_binds);
+  let check_valid_const_assign v =
+    let str = string_of_global_vdecl v in
+    let (_, t), e = v in
+    let rec const_expr = function
+      | Literal _ -> Int
+      | BoolLit _ -> Bool
+      | FloatLit _ -> Float
+      (* | StringLit _ -> String *)   (* implementation isn't that trivial... *)
+      | ArrayLit l ->
+        (match l with
+         | [] -> failwith ("illegal empty array in " ^ str)
+         | hd :: tl ->
+           let lt = const_expr hd in
+           List.iter (fun l ->
+               let rt = const_expr l in
+               if rt <> lt then
+                 failwith ("array literal " ^ string_of_expr e ^
+                           " contains elements of unequal types "
+                           ^ string_of_typ lt ^ " and " ^ string_of_typ rt)) tl;
+           Arr (lt, List.length l))
+      | _ -> failwith ("illegal assignment to global variable: " ^ str)
+    in
+    match e with
+    | Noexpr -> ()
+    | _ ->
+      let lt = const_expr e in
+      if t = lt then () else
+        failwith ("literal (" ^ string_of_typ lt ^ ") and global (" ^
+                  string_of_typ t ^ ") type mismatch in " ^ str)
+  in
+  List.iter check_valid_const_assign globals;
 
   (**** Checking Functions ****)
 
@@ -279,7 +310,7 @@ let rec check_namespace (nname, namespace) forbidden_files files curr_dir =
   in
 
   (* Object types from inner namespaces need to include the outer calling
-     namespace to remain valid references. Anything expr that could resolve to a
+     namespace to remain valid references. Any expr that could resolve to a
      type defined in an inner namespace needs this added. *)
   let add_typ_ns chain = function
     | Object (c, n) -> Object (List.append chain c, n)
@@ -396,7 +427,9 @@ let rec check_namespace (nname, namespace) forbidden_files files curr_dir =
       let t =
         try match chain with
           | [] -> let vscope, _ = scope in StringMap.find name vscope
-          | _ -> add_typ_ns chain (List.assoc name (namespace_of_chain chain).Namespace.variables)
+          | _ ->
+            let var_decls = List.map fst (namespace_of_chain chain).Namespace.variables in
+            add_typ_ns chain (List.assoc name var_decls)
         with Not_found -> failwith ("undeclared identifier " ^ (string_of_chain (chain, name)))
       in t, e
     | Subscript(arr, ind) ->
@@ -650,7 +683,7 @@ let rec check_namespace (nname, namespace) forbidden_files files curr_dir =
   in
 
   let scope =
-    List.fold_left (add_to_scope ~loc:(nname ^ " globals")) StringMap.empty globals,
+    List.fold_left (add_to_scope ~loc:(nname ^ " globals")) StringMap.empty global_binds,
     global_functions
   in
   let functions = List.map (check_function ~objname:None ~scope) functions in
