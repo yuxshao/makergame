@@ -14,7 +14,7 @@ type gameobj = {
   ends: L.llvalue * L.llvalue;
   methods: func StringMap.t;
   events: func StringMap.t;
-  vtable: L.llvalue;
+  vtable: L.llvalue;            (* TODO: events are replaced even if they're not defined in child class. *)
   semant: Ast.Gameobj.t;
   (* TODO: here the ast obj is stored with the llobj. possibly in another place
      we do two separate lookups. unify *)

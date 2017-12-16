@@ -89,7 +89,7 @@ odecl:
  | OBJECT ID COLON id_chain LCURLY odecl_body RCURLY
      { Gameobj.make $2 $6 (Some $4) }
  | OBJECT ID LCURLY odecl_body RCURLY
-     { Gameobj.make $2 $4 None }
+     { Gameobj.make $2 $4 (Some ([], "object")) }
 
 odecl_body:
     /* nothing */ { [], [], [] }

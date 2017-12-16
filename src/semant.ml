@@ -216,8 +216,11 @@ let rec check_namespace (nname, namespace) forbidden_files files curr_dir =
             StringMap.empty gameobjs);
 
   let gameobj_decl (chain, s) =
-    try List.assoc s (namespace_of_chain chain).Namespace.gameobjs
-    with Not_found -> failwith ("unrecognized game object " ^ nname ^ "::" ^ s)
+    match (chain, s) with
+    | _, "object" -> Gameobj.generic
+    | _ ->
+      try List.assoc s (namespace_of_chain chain).Namespace.gameobjs
+      with Not_found -> failwith ("unrecognized game object " ^ nname ^ "::" ^ s)
   in
   let is_gameobj_parent p c =
     let pdecl = gameobj_decl p in
@@ -595,7 +598,7 @@ let rec check_namespace (nname, namespace) forbidden_files files curr_dir =
       let initial_vscope, initial_fscope = scope in
       let super_scope =
         match obj.parent with
-        | None -> StringMap.empty
+        | None | Some (_, "object") -> StringMap.empty
         | Some (pchain, pname) ->
           let func =
             let events = (gameobj_decl (pchain, pname)).events in

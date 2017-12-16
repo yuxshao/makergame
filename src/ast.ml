@@ -29,7 +29,7 @@ module Var = struct
 end
 
 type expr =
-    Literal of int
+  | Literal of int
   | BoolLit of bool
   | FloatLit of float
   | StringLit of string
@@ -100,6 +100,9 @@ module Gameobj = struct
 
   let add_edecl (vdecls, fdecls, edecls) edecl =
     (vdecls, fdecls, edecl :: edecls)
+
+  let generic =
+    let _, obj = make "object" ([], [], []) None in obj
 end
 
 module Namespace = struct

@@ -119,6 +119,30 @@ let translate the_program files =
   in
   let gameobj_end = make_node_end "gameobj" in
 
+  (* Make a B.gameobj for the generic game object *)
+  let empty_method =
+    let typ = L.function_type void_t [|objref_t|] in
+    let value = L.define_function "_empty_fn" typ the_module in
+    let return = A.Void in
+    ignore (L.build_ret_void (L.builder_at_end context (L.entry_block value)));
+    { B.value; typ; return; gameobj = (Some "object") }
+  in
+  let gameobj_struct =
+    let vtable_gen =
+      let fn = empty_method.B.value in
+      L.define_global ("object.vtable") (L.const_struct context [|fn; fn; fn|]) the_module
+    in
+    let events =
+      ["create"; "step"; "destroy"; "draw"]
+      |> List.fold_left (fun m x -> StringMap.add x empty_method m) StringMap.empty
+    in
+    { B.gtyp = gameobj_t;
+      ends = gameobj_end;
+      methods = StringMap.empty;
+      events; vtable = vtable_gen;
+      semant = A.Gameobj.generic }
+  in
+
   let global_objid = L.define_global "last_objid" (L.const_int i64_t 0) the_module in
 
   let rec ltype_of_typ = function
@@ -332,6 +356,7 @@ let translate the_program files =
   in
   let gameobj_decl top (chain, oname) =
     match (chain, oname) with
+    | _, "object" -> gameobj_struct
     | _ -> StringMap.find oname (namespace_of_chain top chain).B.gameobjs
   in
 
@@ -572,11 +597,14 @@ let translate the_program files =
           let obj_head, _ = obj.B.ends in
           ignore (L.build_call list_add_func [|llobjnode; obj_head|] "" builder);
           match obj.B.semant.A.Gameobj.parent with
-          | None ->
+          | None | Some (_, "object") ->
             (* Make gameobj connection *)
             let llnode = L.build_struct_gep llobj_gen 1 (objname ^ "_node") builder in
             let gameobj_head, _ = gameobj_end in
             ignore (L.build_call list_add_func [|llnode; gameobj_head|] "" builder);
+            (* As long as generic gameobj is parent of all, we can remove the
+               branch above and do nothing. But keeping this in case we want to
+               remove the universal parent later. *)
           | Some (pchain, pobjname) ->
             (* Get parent and make parent connections *)
             let pobj = gameobj_decl (pchain, pobjname) in
