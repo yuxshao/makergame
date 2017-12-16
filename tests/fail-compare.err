@@ -1,4 +1,4 @@
 Uncaught exception:
   
-  (Failure "illegal binary operator object(main) == object(main) in a == a")
+  (Failure "illegal binary operator sprite == sprite in a == a")
 

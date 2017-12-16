@@ -1,5 +1,5 @@
 object main {
-  main a;
+  sprite a;
   event create {
     bool x;
     x = (a == a);

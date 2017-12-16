@@ -209,6 +209,12 @@ let translate the_program files =
   (*   build_print "%s" [L.build_global_stringptr str "" builder] builder *)
   (* in *)
 
+  let build_obj_cmp ~eq e1 e2 name builder =
+    let lid = L.build_extractvalue e1 0 (name ^ "_lid") builder in
+    let rid = L.build_extractvalue e2 0 (name ^ "_rid") builder in
+    L.build_icmp (if eq then L.Icmp.Eq else L.Icmp.Ne) lid rid name builder
+  in
+
   let build_node_loop builder the_function ~ends ~body =
     let head, tail = ends in
     (* Keep track of curr and next in case curr is modified when body is run. *)
@@ -531,24 +537,36 @@ let translate the_program files =
       | A.Binop (e1, op, t, e2) ->
         let e1' = expr scope builder e1
         and e2' = expr scope builder e2 in
-        let (iop, fop) = (match op with
-            | A.Add     -> L.build_add, L.build_fadd
-            | A.Sub     -> L.build_sub, L.build_fsub
-            | A.Mult    -> L.build_mul, L.build_fmul
-            | A.Div     -> L.build_sdiv, L.build_fdiv
-            | A.Expo    -> failwith "not implemented"
-            | A.Modulo  -> failwith "not implemented"
-            | A.And     -> L.build_and, L.build_and (* TODO: SHOULD WE SHORT CIRCUIT? *)
-            | A.Or      -> L.build_or, L.build_or
-            | A.Equal   -> L.build_icmp L.Icmp.Eq, L.build_fcmp L.Fcmp.Oeq
-            | A.Neq     -> L.build_icmp L.Icmp.Ne, L.build_fcmp L.Fcmp.One
-            | A.Less    -> L.build_icmp L.Icmp.Slt, L.build_fcmp L.Fcmp.Olt
-            | A.Leq     -> L.build_icmp L.Icmp.Sle, L.build_fcmp L.Fcmp.Ole
-            | A.Greater -> L.build_icmp L.Icmp.Sgt, L.build_fcmp L.Fcmp.Ogt
-            | A.Geq     -> L.build_icmp L.Icmp.Sge, L.build_fcmp L.Fcmp.Oge
-          )
-        in
-        (match t with A.Int | A.Bool -> iop | A.Float -> fop | _ -> assert false) e1' e2' "tmp" builder
+        (match t with
+        | A.Int ->
+          (match op with
+           | A.Add     -> L.build_add | A.Sub -> L.build_sub
+           | A.Mult    -> L.build_mul | A.Div -> L.build_sdiv
+           | A.Expo    -> failwith "not implemented" (* TODO: Probably won't implement. cut from LRM *)
+           | A.Modulo  -> failwith "not implemented"
+           | A.Equal   -> L.build_icmp L.Icmp.Eq | A.Neq  -> L.build_icmp L.Icmp.Ne
+           | A.Less    -> L.build_icmp L.Icmp.Slt | A.Leq -> L.build_icmp L.Icmp.Sle
+           | A.Greater -> L.build_icmp L.Icmp.Sgt | A.Geq -> L.build_icmp L.Icmp.Sge
+           | _         -> assert false)
+        | A.Float ->
+          (match op with
+           | A.Add     -> L.build_fadd | A.Sub -> L.build_fsub
+           | A.Mult    -> L.build_fmul | A.Div -> L.build_fdiv
+           | A.Expo    -> failwith "not implemented" (* TODO: Probably won't implement. cut from LRM *)
+           | A.Modulo  -> failwith "not implemented"
+           | A.Equal   -> L.build_fcmp L.Fcmp.Oeq | A.Neq  -> L.build_fcmp L.Fcmp.One
+           | A.Less    -> L.build_fcmp L.Fcmp.Olt | A.Leq -> L.build_fcmp L.Fcmp.Ole
+           | A.Greater -> L.build_fcmp L.Fcmp.Ogt | A.Geq -> L.build_fcmp L.Fcmp.Oge
+           | _         -> assert false)
+        | A.Bool ->
+          (match op with (* TODO: SHOULD WE SHORT CIRCUIT? *)
+           | A.And -> L.build_and | A.Or -> L.build_or
+           | _     -> assert false)
+        | A.Object _ ->
+          (match op with
+           | A.Equal -> build_obj_cmp ~eq:true | A.Neq -> build_obj_cmp ~eq:false
+           | _ -> assert false)
+        | _ -> assert false) e1' e2' "tmp" builder
       | A.Unop(op, t, e) ->
         let e' = expr scope builder e in
         (match op with

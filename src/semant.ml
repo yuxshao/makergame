@@ -226,7 +226,7 @@ let rec check_namespace (nname, namespace) forbidden_files files curr_dir =
     let pdecl = gameobj_decl p in
     let rec helper c =
       let decl = gameobj_decl c in
-      if decl = pdecl then true
+      if decl == pdecl then true
       else match decl.Gameobj.parent with
         | None -> false
         | Some c -> helper c
@@ -234,7 +234,7 @@ let rec check_namespace (nname, namespace) forbidden_files files curr_dir =
     helper c
   in
 
-  (* Raise an exception of the given rvalue type cannot be assigned to
+  (* Raise an exception if the given rvalue type cannot be assigned to
      the given lvalue type, or else return a new expression with conversion. *)
   let check_assign lvaluet rvalue rvaluet err =
     match lvaluet, rvaluet with
@@ -318,6 +318,7 @@ let rec check_namespace (nname, namespace) forbidden_files files curr_dir =
          Arr (lt, List.length l), ArrayLit(hd' :: tl'))
     | Binop(e1, op, _, e2) ->
       let (t1, e1') = expr scope e1 and (t2, e2') = expr scope e2 in
+      let is_object t = match t with Object _ -> true | _ -> false in
       let err = "illegal binary operator " ^ string_of_typ t1 ^ " " ^ string_of_op op ^ " " ^
                 string_of_typ t2 ^ " in " ^ string_of_expr e
       in
@@ -333,6 +334,13 @@ let rec check_namespace (nname, namespace) forbidden_files files curr_dir =
        (* TODO: mention in LRM that we are not converting bools *)
        (* TODO: string, obj equality *)
        | Equal | Neq when t1 = t2 && (t1 = Float || t1 = Int) -> Bool, Binop(e1', op, t1, e2')
+       | Equal | Neq when is_object t1 && is_object t2 ->
+         (match t1, t2 with
+          | Object o1, Object o2 ->
+            if is_gameobj_parent o1 o2
+            then let (_, e2') = check_assign t1 e2' t2 err in Bool, Binop(e1', op, t1, e2')
+            else let (_, e1') = check_assign t2 e1' t1 err in Bool, Binop(e1', op, t2, e2')
+          | _ -> assert false)
        | Equal | Neq when t1 = Float && t2 = Int ->
          let (_, e2'') = check_assign t1 e2' t2 err
          in Bool, Binop(e1', op, Float, e2'')

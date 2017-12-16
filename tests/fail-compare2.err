@@ -1,0 +1,5 @@
+Uncaught exception:
+  
+  (Failure
+   "illegal binary operator object(aide) == object(helper) in a == h")
+
