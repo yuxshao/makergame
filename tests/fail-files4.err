@@ -1,4 +1,1 @@
-Uncaught exception:
-  
-  (Failure "attempted access to private namespace a in resolving n::a")
-
+Fatal error: exception Failure("attempted access to private namespace a in resolving n::a")

@@ -1,4 +1,1 @@
-Uncaught exception:
-  
-  (Failure "illegal assignment int = void in i = myvoid()")
-
+Fatal error: exception Failure("illegal assignment int = void in i = myvoid()")

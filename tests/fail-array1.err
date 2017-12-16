@@ -1,4 +1,1 @@
-Uncaught exception:
-  
-  (Failure "lvalue compute(5) expected in compute(5)[3] = 5")
-
+Fatal error: exception Failure("lvalue compute(5) expected in compute(5)[3] = 5")

@@ -1,4 +1,1 @@
-Uncaught exception:
-  
-  (Failure "main game object must be defined")
-
+Fatal error: exception Failure("main game object must be defined")

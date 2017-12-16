@@ -1,4 +1,1 @@
-Uncaught exception:
-  
-  (Failure "cannot shadow or overwrite identifier 'this' in  globals")
-
+Fatal error: exception Failure("cannot shadow or overwrite identifier 'this' in  globals")

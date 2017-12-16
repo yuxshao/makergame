@@ -1,4 +1,1 @@
-Uncaught exception:
-  
-  (Failure "unable to open file 'nonexistent12345555.mg' for namespace.")
-
+Fatal error: exception Failure("unable to open file 'nonexistent12345555.mg'")

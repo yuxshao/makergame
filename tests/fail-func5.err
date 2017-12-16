@@ -1,4 +1,1 @@
-Uncaught exception:
-  
-  (Failure "illegal void local b in ::bar")
-
+Fatal error: exception Failure("illegal void local b in ::bar")

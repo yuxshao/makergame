@@ -1,4 +1,1 @@
-Uncaught exception:
-  
-  (Failure "circular file dependency with circular.mg")
-
+Fatal error: exception Failure("circular file dependency with circular.mg")

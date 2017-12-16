@@ -1,5 +1,1 @@
-Uncaught exception:
-  
-  (Failure
-   "illegal binary operator object(aide) == object(helper) in a == h")
-
+Fatal error: exception Failure("illegal binary operator object(aide) == object(helper) in a == h")

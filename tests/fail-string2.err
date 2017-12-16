@@ -1,4 +1,1 @@
-Uncaught exception:
-  
-  (Failure "illegal assignment string = int in c = 4")
-
+Fatal error: exception Failure("illegal assignment string = int in c = 4")

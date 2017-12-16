@@ -1,4 +1,1 @@
-Uncaught exception:
-  
-  (Failure "illegal binary operator sprite == sprite in a == a")
-
+Fatal error: exception Failure("illegal binary operator sprite == sprite in a == a")

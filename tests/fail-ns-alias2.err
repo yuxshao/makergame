@@ -1,4 +1,1 @@
-Uncaught exception:
-  
-  (Failure "namespace A never resolves")
-
+Fatal error: exception Failure("namespace A never resolves")

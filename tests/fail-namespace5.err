@@ -1,4 +1,1 @@
-Uncaught exception:
-  
-  (Failure "unrecognized namespace a encountered when resolving a")
-
+Fatal error: exception Failure("unrecognized namespace a encountered when resolving a")

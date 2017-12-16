@@ -1,4 +1,1 @@
-Uncaught exception:
-  
-  (Failure "failed to parse file test-helpers/bad-parse.mg")
-
+Fatal error: exception Failure("failed to parse file test-helpers/bad-parse.mg")

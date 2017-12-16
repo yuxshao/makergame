@@ -1,4 +1,1 @@
-Uncaught exception:
-  
-  (Failure "duplicate namespace sp::a")
-
+Fatal error: exception Failure("duplicate namespace sp::a")

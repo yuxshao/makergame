@@ -1,4 +1,1 @@
-Uncaught exception:
-  
-  (Failure "lvalue 1 expected in 1")
-
+Fatal error: exception Failure("lvalue 1 expected in 1")

@@ -1,4 +1,1 @@
-Uncaught exception:
-  
-  (Failure "cannot destroy non-object")
-
+Fatal error: exception Failure("cannot destroy non-object")

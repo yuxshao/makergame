@@ -1,4 +1,1 @@
-Uncaught exception:
-  
-  (Failure "unrecognized function foo")
-
+Fatal error: exception Failure("unrecognized function foo")

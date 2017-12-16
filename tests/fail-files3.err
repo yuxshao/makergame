@@ -1,4 +1,1 @@
-Uncaught exception:
-  
-  (Failure "return gives string expected int in \"hello\"")
-
+Fatal error: exception Failure("return gives string expected int in \"hello\"")

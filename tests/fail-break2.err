@@ -1,4 +1,1 @@
-Uncaught exception:
-  
-  (Failure "cannot break in top level block of ::main::step")
-
+Fatal error: exception Failure("cannot break in top level block of ::main::step")

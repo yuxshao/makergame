@@ -1,5 +1,1 @@
-Uncaught exception:
-  
-  (Failure
-   "array literal [1, 2, true] contains elements of unequal types int and bool")
-
+Fatal error: exception Failure("array literal [1, 2, true] contains elements of unequal types int and bool")

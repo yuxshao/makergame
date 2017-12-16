@@ -1,4 +1,1 @@
-Uncaught exception:
-  
-  (Failure "illegal assignment int = void in x = destroy m")
-
+Fatal error: exception Failure("illegal assignment int = void in x = destroy m")

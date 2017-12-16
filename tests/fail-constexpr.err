@@ -1,4 +1,1 @@
-Uncaught exception:
-  
-  (Failure "illegal assignment to global variable: int x = 3 + 5")
-
+Fatal error: exception Failure("illegal assignment to global variable: int x = 3 + 5")

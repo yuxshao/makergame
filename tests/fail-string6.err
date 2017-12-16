@@ -1,4 +1,1 @@
-Uncaught exception:
-  
-  (Failure "illegal character \\'")
-
+Fatal error: exception Failure("illegal character \\'")

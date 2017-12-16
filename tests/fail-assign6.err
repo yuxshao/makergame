@@ -1,4 +1,1 @@
-Uncaught exception:
-  
-  (Failure "lvalue 3 + 4 expected in 3 + 4 = 7")
-
+Fatal error: exception Failure("lvalue 3 + 4 expected in 3 + 4 = 7")
