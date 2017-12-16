@@ -33,6 +33,7 @@ type expr =
   | BoolLit of bool
   | FloatLit of float
   | StringLit of string
+  | NoneObject
   | ArrayLit of expr list
   | Id of id_chain
   | Conv of typ * expr * typ
@@ -199,6 +200,7 @@ let rec string_of_expr = function
   | FloatLit(f) -> string_of_float f
   | BoolLit(true) -> "true"
   | BoolLit(false) -> "false"
+  | NoneObject -> "none"
   | ArrayLit l -> "[" ^ String.concat ", " (List.map string_of_expr l) ^ "]"
   | Id c -> string_of_chain c
   (* Conv (t, e, _) expresses a conversion of e to type t. _ tags e's original type. *)

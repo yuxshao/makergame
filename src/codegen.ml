@@ -520,6 +520,7 @@ let translate the_program files =
       | A.StringLit l -> L.build_global_stringptr l "literal" builder
       | A.FloatLit f -> L.const_float float_t f
       | A.Noexpr -> L.const_int i32_t 0
+      | A.NoneObject -> L.const_null objref_t
       | A.Id (_, n) | A.Member (_, _, n) as e -> L.build_load (lexpr scope builder e) n builder
       | A.Conv (t1, e, t2) ->
         let e' = expr scope builder e in

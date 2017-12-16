@@ -11,7 +11,7 @@ open Ast
 %token EQ NEQ LT LEQ GT GEQ TRUE FALSE AND OR
 %token BREAK RETURN IF ELSE FOR WHILE FOREACH
 %token INT BOOL FLOAT STRING SPRITE SOUND VOID
-%token OBJECT EVENT CREATE DESTROY DRAW STEP
+%token OBJECT NONE EVENT CREATE DESTROY DRAW STEP
 %token PRIVATE PUBLIC NAMESPACE EXTERN OPEN
 %token <int> LITERAL
 %token <string> ID
@@ -152,6 +152,7 @@ expr:
   | FLOATLIT           { FloatLit($1) }
   | TRUE               { BoolLit(true) }
   | FALSE              { BoolLit(false) }
+  | NONE               { NoneObject }
   | id_chain           { Id($1) }
   | expr PERIOD ID     { Member($1, ([], ""), $3) }
   | expr PLUS   expr   { Binop($1, Add, Void,  $3) }

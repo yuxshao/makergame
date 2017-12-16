@@ -60,6 +60,7 @@ rule token = parse
   | "sound"  { SOUND }
   (* game keywords *)
   | "object" { OBJECT }
+  | "none"   { NONE }
   | "event"  { EVENT }
   | "create" { CREATE }
   | "destroy" { DESTROY }

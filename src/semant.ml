@@ -223,15 +223,18 @@ let rec check_namespace (nname, namespace) forbidden_files files curr_dir =
       with Not_found -> failwith ("unrecognized game object " ^ nname ^ "::" ^ s)
   in
   let is_gameobj_parent p c =
-    let pdecl = gameobj_decl p in
-    let rec helper c =
-      let decl = gameobj_decl c in
-      if decl == pdecl then true
-      else match decl.Gameobj.parent with
-        | None -> false
-        | Some c -> helper c
-    in
-    helper c
+    match c with
+    | [], "none" -> true        (* None can be assigned to anything *)
+    | _ ->
+      let pdecl = gameobj_decl p in
+      let rec helper c =
+        let decl = gameobj_decl c in
+        if decl == pdecl then true
+        else match decl.Gameobj.parent with
+          | None -> false
+          | Some c -> helper c
+      in
+      helper c
   in
 
   (* Raise an exception if the given rvalue type cannot be assigned to
@@ -296,6 +299,7 @@ let rec check_namespace (nname, namespace) forbidden_files files curr_dir =
     | BoolLit _ -> Bool, e
     | FloatLit _ -> Float, e
     | StringLit _ -> String, e
+    | NoneObject -> Object([], "none"), e
     | Conv(t1, e, _) ->
       let (t2, e') = expr scope e in
       check_assign t1 e' t2 ("Cannot convert " ^ string_of_typ t2 ^ " to " ^
