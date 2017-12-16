@@ -1,6 +1,7 @@
 // SFML-independent environment for testing
 #include <cstdio>
 static bool game_ended = false;
+static const int max_steps = 1000;
 
 extern "C" {
 
@@ -28,9 +29,16 @@ void global_draw();
 int main() {
   global_create();
 
+  int num_steps = 0;
   while (!game_ended) {
     global_step();
     global_draw();
+    ++num_steps;
+    if (num_steps >= max_steps) {
+      fprintf(stderr, "FAILURE: Exceed max number of steps allowed for test. "
+              "Did you forget to call end_game()?\n");
+      return 1;
+    }
   }
 
   return 0;
