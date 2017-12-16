@@ -141,6 +141,7 @@ stmt:
      { For($3, $4, $6, $8) }
   | WHILE LPAREN expr RPAREN stmt { While($3, $5) }
   | FOREACH LPAREN id_chain ID RPAREN stmt { Foreach($3, $4, $6) }
+  | FOREACH LPAREN OBJECT ID RPAREN stmt { Foreach(([], "object"), $4, $6) }
 
 expr_opt:
     /* nothing */ { Noexpr }

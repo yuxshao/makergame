@@ -8,6 +8,7 @@ _build
 /*.mc
 /*.diff
 /*.out
+/*.err
 *.s
 a.out
 vgcore.*
