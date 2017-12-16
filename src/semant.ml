@@ -2,7 +2,6 @@
 
 open Ast
 
-module Filename = Core.Core_filename
 module StringMap = Map.Make(String)
 
 (* Raise an exception if the given list has a duplicate *)
@@ -33,28 +32,6 @@ let add_to_scope ?loc m (n, t) =
 let check_assign_strict lvaluet rvalue rvaluet err =
   if lvaluet = rvaluet then (lvaluet, rvalue)
   else failwith err
-
-let resolve_file f curr_dir =
-  try
-    (* Attempt to resolve filenames in the following fashion:
-       1) If the path is absolute, load that.
-       2) If the path is relative, try:
-          a) The current directory of the file loading you.
-          c) MAKERGAME_PATH
-       TODO: document in LRM
-    *)
-    if Filename.is_absolute f then Filename.realpath f
-    else
-      let cdir_f = Filename.concat curr_dir f in
-      let sdir_f = Filename.concat (Sys.getenv "MAKERGAME_PATH") f in
-      if Sys.file_exists cdir_f then Filename.realpath cdir_f
-      else if Sys.file_exists sdir_f then Filename.realpath sdir_f
-      else raise Not_found
-  with
-  | Unix.Unix_error (e, _, _) ->
-    failwith ("unable to open file \'" ^ f ^ "\' for namespace: \'" ^ Unix.error_message e ^ "\'")
-  | Not_found | Sys_error _ ->
-    failwith ("unable to open file \'" ^ f ^ "\' for namespace.")
 
 (* Build an AST given a resolved filename. For use in namespaces for file-loading. *)
 let ast_of_file f short_f =
@@ -125,7 +102,7 @@ let rec check_namespace (nname, namespace) forbidden_files files curr_dir =
   (**** Checking Namespaces ****)
   (* Add the standard namespace and mark private *)
   let namespace =
-    if List.mem (resolve_file "std.mg" curr_dir) forbidden_files
+    if List.mem (File.resolve_file "std.mg" curr_dir) forbidden_files
     then namespace
     else
       let namespaces = ("std", (true, Namespace.File "std.mg")) :: namespace.Namespace.namespaces in
@@ -153,8 +130,8 @@ let rec check_namespace (nname, namespace) forbidden_files files curr_dir =
     let check_file_ns (accum, ns_accum) = function
       | n, (is_private, File f) ->
         (* Convert to absolute file path and use that in the namespace reference now *)
-        let abs_f = resolve_file f curr_dir in
-        let f_dir = Filename.dirname abs_f in
+        let abs_f = File.resolve_file f curr_dir in
+        let f_dir = File.dirname abs_f in
         let new_accum =
           if List.mem_assoc abs_f accum then accum
           else
