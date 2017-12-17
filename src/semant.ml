@@ -456,8 +456,15 @@ let rec check_namespace (nname, namespace) forbidden_files files curr_dir =
       add_typ_ns ochain fd.Func.typ, MemberCall(e', (ochain, oname), fname, actuals')
     | Create(obj_type, actuals) ->
       let formals =
-        try (List.assoc "create" (gameobj_decl obj_type).Gameobj.events).Func.formals
-        with Not_found -> []
+        (* Find the create event formals, recursing up the inheritance chain. *)
+        let rec get_formals oname =
+          let decl = gameobj_decl oname in
+          if List.mem_assoc "create" decl.Gameobj.events
+          then (List.assoc "create" decl.Gameobj.events).Func.formals
+          else match decl.Gameobj.parent with
+            | None -> [] | Some pname -> get_formals pname
+        in
+        get_formals obj_type
       in
       let actuals' = check_call_actuals (string_of_expr e) actuals scope formals in
       Object(obj_type), Create(obj_type, actuals')
@@ -596,23 +603,30 @@ let rec check_namespace (nname, namespace) forbidden_files files curr_dir =
       (fun n -> "duplicate events " ^ n ^ " in " ^ name)
       (List.map fst obj.events);
 
-    let valid_events = ["create"; "step"; "draw"; "destroy"] in
-    let check_event (name, ev) =
+    let () =
       (* Precautionary checks that shouldn't happen b/c of parser *)
-      match (name, ev.Func.formals, ev.Func.typ) with
-      | name, _, Void when name = "create" -> ()
-      | name, args, Void when List.mem name valid_events && args = [] -> ()
-      | _ -> assert false
-    in
-    List.iter check_event obj.events;
-
-    let obj_fn_list =
-      let add_if_absent events evname =
-        if not (List.mem_assoc evname events)
-        then (evname, Func.make Void [] (Some name) []) :: events
-        else events
+      let valid_events = ["create"; "step"; "draw"; "destroy"] in
+      let check_event (name, ev) =
+        match (name, ev.Func.formals, ev.Func.typ) with
+        | name, _, Void when name = "create" -> ()
+        | name, args, Void when List.mem name valid_events && args = [] -> ()
+        | _ -> assert false
       in
-      List.fold_left add_if_absent obj.events valid_events
+      List.iter check_event obj.events
+    in
+
+    (* Adjust the event definitions so codegen has an easier time processing. *)
+    let adjusted_events =
+      obj.events
+      (* Every object must have a destroy event to unlink the node and call the
+         parent. Sort of janky to add it here and then fill in the contents in
+         codegen. But I guess it works for now. *)
+      |> (fun events ->
+          if List.mem_assoc "destroy" obj.events then events
+          else ("destroy", Func.make Void [] (Some name) []) :: events)
+      (* Every object create should also by default call their parent create.
+         EDIT: But this is already handled because events other than destroy are
+         inherited automatically. *)
     in
 
     (* Add "this" and gameobj members to scope *)
@@ -655,7 +669,7 @@ let rec check_namespace (nname, namespace) forbidden_files files curr_dir =
       | _ -> failwith ("illegal extern function " ^ nname ^ "::" ^ name ^ "::" ^ fname)
     in
     let methods' = List.map check_obj_fn obj.methods in
-    let events' = List.map check_obj_fn obj_fn_list in
+    let events' = List.map check_obj_fn adjusted_events in
     make name (obj.members, methods', events') obj.parent
   in
 

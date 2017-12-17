@@ -81,6 +81,14 @@ let build_while ~pred ~body context builder the_function =
   ignore (L.build_cond_br bool_val body_bb merge_bb pred_builder);
   L.builder_at_end context merge_bb
 
+let rec namespace_of_chain llfiles top chain =
+  let search ns n = match StringMap.find n ns.B.namespaces with
+    | B.Concrete c -> c
+    | B.Alias chain -> namespace_of_chain llfiles ns chain
+    | B.File f -> StringMap.find f llfiles
+  in
+  List.fold_left search top chain
+
 let translate the_program files =
   let context = L.global_context () in
   let the_module = L.create_module context "MicroC"
@@ -261,6 +269,7 @@ let translate the_program files =
     build_while context builder the_function ~pred:check_head ~body
   in
 
+  (* TODO: Should really be an association list for vtable positioning *)
   let fn_decls functions obj to_llname =
     let open A.Func in
     let function_decl m (name, func) =
@@ -295,9 +304,35 @@ let translate the_program files =
     | _ -> assert false
   in
 
-  let rec define_llns (nname, the_namespace) =
+  let gameobj_decl llfiles top (chain, oname) =
+    match (chain, oname) with
+    | _, "object" -> gameobj_struct
+    | _ -> StringMap.find oname (namespace_of_chain llfiles top chain).B.gameobjs
+  in
+
+  let rec define_llns (nname, the_namespace) llfiles =
     let { A.Namespace.variables = globals;
           functions ; gameobjs ; namespaces } = the_namespace in
+    let llnamespaces, llfiles =
+      let open A.Namespace in
+      let add_ns (m, llfiles) (n, (_private, ns)) = match ns with
+        | Concrete ns ->
+          let inner_llns, new_llfiles = define_llns (nname ^ "::" ^ n, ns) llfiles in
+          StringMap.add n (B.Concrete inner_llns) m, new_llfiles
+        | Alias chain -> StringMap.add n (B.Alias chain) m, llfiles
+        | File f      ->
+          let new_llfiles =
+            if StringMap.mem f llfiles then llfiles
+            else
+              let file_ns = List.assoc f files in
+              let new_ns, new_llfiles = define_llns (":file-" ^ f, file_ns) llfiles in
+              StringMap.add f new_ns new_llfiles
+          in
+          StringMap.add n (B.File f) m, new_llfiles
+      in
+      List.fold_left add_ns (StringMap.empty, llfiles) namespaces
+    in
+
     let llvars =
       let var m ((n, t), e) =
         let llname = "variable" ^ nname ^ "::" ^ n in
@@ -315,23 +350,53 @@ let translate the_program files =
       fn_decls functions None to_llname
     in
 
-    let llgameobjs =
-      let open A.Gameobj in
-
-      let make_llgameobj (gname, g) =
+    let llnamespace =
+      { B.variables = llvars; functions = llfns;
+        namespaces = llnamespaces; gameobjs = StringMap.empty }
+    in
+    let rec add_llgameobj ns (gname, g) =
+      if StringMap.mem gname ns.B.gameobjs then ns
+      else
+        let open A.Gameobj in
         (* Declare the struct type *)
         let to_llname pref ename =
           "object" ^ nname ^ "::" ^ gname ^ "." ^ pref ^ "." ^ ename
         in
-        let gt = L.named_struct_type context gname in
-
-        (* Setting its body is deferred until after all llgameobj types are declared *)
-        (* Due to namespace complications... *)
+        let gtyp = L.named_struct_type context gname in
 
         (* Define linked list heads for each object type *)
         let ends = make_node_end ("object" ^ nname ^ "::" ^ gname) in
 
-        let events = fn_decls g.events (Some gname) (to_llname "event") in
+        (* If I have a parent, get the ll information about my parent first.
+           Semant guarantees no loop. *)
+        let llparent, ns = match g.A.Gameobj.parent with
+          | None -> gameobj_struct, ns
+          | Some name ->
+            let new_ns =
+              match name with
+              | [], pname when pname <> "object" ->
+                add_llgameobj ns (pname, List.assoc pname gameobjs)
+              | _ -> ns
+            in
+            (gameobj_decl llfiles new_ns name), new_ns
+        in
+
+        (* Set body information *)
+        let members = g.A.Gameobj.members in
+        let ll_members = List.map (fun (_, typ) -> ltype_of_typ typ) members in
+        L.struct_set_body gtyp
+          (Array.of_list (llparent.B.gtyp :: node_t :: ll_members)) false;
+
+        (* Fill the event map with your events, and then events from parent *)
+        let events =
+          let initial = fn_decls g.events (Some gname) (to_llname "event") in
+          let add_from_parent events ev =
+            if StringMap.mem ev events then events
+            else StringMap.add ev (StringMap.find ev llparent.B.events) events
+          in
+          List.fold_left add_from_parent initial ["create"; "step"; "destroy"; "draw"]
+        in
+        (* Then fill the vtable *)
         let vtable =
           let fns =
             ["step"; "destroy"; "draw"]
@@ -341,68 +406,16 @@ let translate the_program files =
             (L.const_struct context (Array.of_list fns)) the_module
         in
 
-        { B.gtyp = gt; ends; vtable; events; semant = g;
-          methods = fn_decls g.methods (Some gname) (to_llname "function") }
-      in
-      let add_llgameobj m (gname, g) = StringMap.add gname (make_llgameobj (gname, g)) m in
-      List.fold_left add_llgameobj StringMap.empty gameobjs
+        let gameobj =
+          { B.gtyp; ends; vtable; events; semant = g;
+            methods = fn_decls g.methods (Some gname) (to_llname "function") }
+        in
+        { ns with B.gameobjs = StringMap.add gname gameobj ns.B.gameobjs }
     in
-
-    let llnamespaces =
-      let open A.Namespace in
-      let add_ns m (n, (_private, ns)) = match ns with
-        | Concrete ns -> StringMap.add n (B.Concrete (define_llns (nname ^ "::" ^ n, ns))) m
-        | Alias chain -> StringMap.add n (B.Alias chain) m
-        | File f      -> StringMap.add n (B.File f) m
-      in
-      List.fold_left add_ns StringMap.empty namespaces
-    in
-    { B.variables = llvars; functions = llfns; gameobjs = llgameobjs; namespaces = llnamespaces }
+    List.fold_left add_llgameobj llnamespace gameobjs, llfiles
   in
 
-  let llfiles =
-    List.fold_left (fun m (fname, ns) -> StringMap.add fname (define_llns (":file-" ^ fname, ns)) m)
-      StringMap.empty files
-  in
-  let llprogram = define_llns ("", the_program) in
-
-  let rec namespace_of_chain top chain =
-    let search ns n = match StringMap.find n ns.B.namespaces with
-      | B.Concrete c -> c
-      | B.Alias chain -> namespace_of_chain ns chain
-      | B.File f -> StringMap.find f llfiles
-    in
-    List.fold_left search top chain
-  in
-  let gameobj_decl top (chain, oname) =
-    match (chain, oname) with
-    | _, "object" -> gameobj_struct
-    | _ -> StringMap.find oname (namespace_of_chain top chain).B.gameobjs
-  in
-
-  (* Sort of janky way to set the gameobj bodies after making all the gameobjs. *)
-  (* We're traversing the namespace tree again too... *)
-  let set_gameobj_body ns _gameobj_name llg =
-    let g = llg.B.semant in
-    let members = g.A.Gameobj.members in
-    let ll_members = List.map (fun (_, typ) -> ltype_of_typ typ) members in
-    let parent_t = match g.A.Gameobj.parent with
-      | None -> gameobj_t
-      | Some name -> (gameobj_decl ns name).B.gtyp
-    in
-    L.struct_set_body llg.B.gtyp (Array.of_list (parent_t :: node_t :: ll_members)) false;
-  in
-  let rec set_gameobj_bodies ns =
-    StringMap.iter (set_gameobj_body ns) ns.B.gameobjs;
-    let check_inner_ns _ = function
-      | B.Concrete ns -> set_gameobj_bodies ns
-      | _ -> ()
-    in
-    StringMap.iter check_inner_ns ns.B.namespaces
-  in
-  StringMap.iter (fun _ x -> set_gameobj_bodies x) llfiles;
-  (* StringMap.iter (fun _ x -> StringMap.iter (set_gameobj_body x) x.B.gameobjs) llfiles; *)
-  set_gameobj_bodies llprogram;
+  let llprogram, llfiles = define_llns ("", the_program) StringMap.empty in
 
   let rec define_ns_contents llns (nname, the_namespace) =
     let { A.Namespace.variables = _;
@@ -417,8 +430,8 @@ let translate the_program files =
       in
       List.iter check_inner_ns namespaces
     in
-    let namespace_of_chain = namespace_of_chain llns in
-    let gameobj_decl = gameobj_decl llns in
+    let namespace_of_chain = namespace_of_chain llfiles llns in
+    let gameobj_decl = gameobj_decl llfiles llns in
     let find_obj_event_decl (chain, oname) event =
       try StringMap.find event (gameobj_decl (chain, oname)).B.events
       with Not_found -> failwith ("event " ^ oname ^ "." ^ event)
@@ -842,11 +855,15 @@ let translate the_program files =
 
       (* Postprocessing: removing nodes after a destroy function is called *)
       let destroy_postprocess builder (vscope, _fscope) =
-        let objrefptr, _typ = StringMap.find "this" vscope in
-        let objref = L.build_load objrefptr "objref" builder in
-        let objptr = L.build_extractvalue objref 1 "objptr" builder in
-        let obj = StringMap.find gname llns.B.gameobjs in
-        let llobj = L.build_bitcast objptr (L.pointer_type obj.B.gtyp) gname builder in
+        let objref =
+          let objrefptr, _typ = StringMap.find "this" vscope in
+          L.build_load objrefptr "objref" builder
+        in
+        let llobj =
+          let obj = StringMap.find gname llns.B.gameobjs in
+          let objptr = L.build_extractvalue objref 1 "objptr" builder in
+          L.build_bitcast objptr (L.pointer_type obj.B.gtyp) gname builder
+        in
         (* Disconnect particular object neighbours' node links. *)
         let llobjnode = L.build_struct_gep llobj 1 (gname ^ "_objnode") builder in
         ignore (L.build_call list_rem_func [|llobjnode|] "" builder);
