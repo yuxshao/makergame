@@ -44,7 +44,10 @@ sf::Sound *load_sound(const char *filename) {
   return new sf::Sound(sound_map[filename]);
 }
 
-void set_window_size(int w, int h) { window.setSize(sf::Vector2u(w, h)); }
+void set_window_size(int w, int h) {
+  window.setSize(sf::Vector2u(w, h));
+  window.setView(sf::View(sf::FloatRect(0, 0, w, h)));
+}
 void set_window_clear(int r, int g, int b) { clear_color = sf::Color(r, g, b); }
 void set_window_title(char *x) { window.setTitle(x); }
 
@@ -82,11 +85,11 @@ void global_draw();
 
 int main() {
   srand(time(NULL));
-  global_create();
-  if (game_ended) return 0;
 
   window.create(sf::VideoMode(800, 600), "MakerGame Game");
   window.setFramerateLimit(60);
+
+  global_create();
 
   while (window.isOpen()) {
     sf::Event event;
