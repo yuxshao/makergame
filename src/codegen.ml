@@ -432,6 +432,18 @@ let translate the_program files =
     in
     let namespace_of_chain = namespace_of_chain llfiles llns in
     let gameobj_decl = gameobj_decl llfiles llns in
+    (* Inheritance chain from oldest ancestor down. Semant guarantees no loop. *)
+    let inheritance_chain (chain, name) =
+      let rec helper (chain, name) accum =
+        let decl = gameobj_decl (chain, name) in
+        match decl.B.semant.A.Gameobj.parent with
+        | None -> decl :: accum
+        | Some (pchain, pname) ->
+          helper ((chain @ pchain), pname) (decl :: accum)
+      in
+      helper (chain, name) []
+    in
+
     let find_obj_event_decl (chain, oname) event =
       try StringMap.find event (gameobj_decl (chain, oname)).B.events
       with Not_found -> failwith ("event " ^ oname ^ "." ^ event)
@@ -449,38 +461,29 @@ let translate the_program files =
         let member_var = L.build_struct_gep llobj ind name builder in
         (StringMap.add name (member_var, typ) map, ind + 1)
       in
-
       let objptr = L.build_extractvalue objref 1 "objptr_gen" builder in
+
       (* Builds the StringMap assuming this object had name (chain, objname).
          Recurses for inheritance. *)
-      let rec helper (chain, objname) =
-        let g = gameobj_decl (chain, objname) in
+      let helper parent_map g =
         let llobj =
           L.build_bitcast objptr (L.pointer_type g.B.gtyp) "objptr" builder
         in
         let members = g.B.semant.A.Gameobj.members in
-        let parent_map = match g.B.semant.A.Gameobj.parent with
-          | None -> StringMap.empty
-          | Some (pchain, pname) -> helper (pchain @ chain, pname)
-        in
         let (members, _) =
           (* object type struct: gameobj_t :: node_t :: members *)
           List.fold_left (add_member llobj) (parent_map, 2) members
         in
         members
       in
-      helper oname
+      List.fold_left helper StringMap.empty (inheritance_chain oname)
     in
 
     (* What we really need is to augment gameobj_methods to also return
        virtual method pointers from the vtable. *)
-    let rec gameobj_methods (chain, objname) =
-      let g = gameobj_decl (chain, objname) in
-      let parent_methods = match g.B.semant.A.Gameobj.parent with
-        | None -> StringMap.empty
-        | Some (pchain, pname) -> gameobj_methods (pchain @ chain, pname)
-      in
-      parent_methods |> StringMap.fold StringMap.add g.B.methods
+    let gameobj_methods oname =
+      List.fold_left (fun acc g -> StringMap.fold StringMap.add g.B.methods acc)
+        StringMap.empty (inheritance_chain oname)
     in
 
 
@@ -566,35 +569,35 @@ let translate the_program files =
         let e1' = expr scope builder e1
         and e2' = expr scope builder e2 in
         (match t with
-        | A.Int ->
-          (match op with
-           | A.Add     -> L.build_add | A.Sub -> L.build_sub
-           | A.Mult    -> L.build_mul | A.Div -> L.build_sdiv
-           | A.Expo    -> failwith "not implemented" (* TODO: Probably won't implement. cut from LRM *)
-           | A.Modulo  -> failwith "not implemented"
-           | A.Equal   -> L.build_icmp L.Icmp.Eq | A.Neq  -> L.build_icmp L.Icmp.Ne
-           | A.Less    -> L.build_icmp L.Icmp.Slt | A.Leq -> L.build_icmp L.Icmp.Sle
-           | A.Greater -> L.build_icmp L.Icmp.Sgt | A.Geq -> L.build_icmp L.Icmp.Sge
-           | _         -> assert false)
-        | A.Float ->
-          (match op with
-           | A.Add     -> L.build_fadd | A.Sub -> L.build_fsub
-           | A.Mult    -> L.build_fmul | A.Div -> L.build_fdiv
-           | A.Expo    -> failwith "not implemented" (* TODO: Probably won't implement. cut from LRM *)
-           | A.Modulo  -> failwith "not implemented"
-           | A.Equal   -> L.build_fcmp L.Fcmp.Oeq | A.Neq  -> L.build_fcmp L.Fcmp.One
-           | A.Less    -> L.build_fcmp L.Fcmp.Olt | A.Leq -> L.build_fcmp L.Fcmp.Ole
-           | A.Greater -> L.build_fcmp L.Fcmp.Ogt | A.Geq -> L.build_fcmp L.Fcmp.Oge
-           | _         -> assert false)
-        | A.Bool ->
-          (match op with (* TODO: SHOULD WE SHORT CIRCUIT? *)
-           | A.And -> L.build_and | A.Or -> L.build_or
-           | _     -> assert false)
-        | A.Object _ ->
-          (match op with
-           | A.Equal -> build_obj_cmp ~eq:true | A.Neq -> build_obj_cmp ~eq:false
-           | _ -> assert false)
-        | _ -> assert false) e1' e2' "tmp" builder
+         | A.Int ->
+           (match op with
+            | A.Add     -> L.build_add | A.Sub -> L.build_sub
+            | A.Mult    -> L.build_mul | A.Div -> L.build_sdiv
+            | A.Expo    -> failwith "not implemented" (* TODO: Probably won't implement. cut from LRM *)
+            | A.Modulo  -> failwith "not implemented"
+            | A.Equal   -> L.build_icmp L.Icmp.Eq | A.Neq  -> L.build_icmp L.Icmp.Ne
+            | A.Less    -> L.build_icmp L.Icmp.Slt | A.Leq -> L.build_icmp L.Icmp.Sle
+            | A.Greater -> L.build_icmp L.Icmp.Sgt | A.Geq -> L.build_icmp L.Icmp.Sge
+            | _         -> assert false)
+         | A.Float ->
+           (match op with
+            | A.Add     -> L.build_fadd | A.Sub -> L.build_fsub
+            | A.Mult    -> L.build_fmul | A.Div -> L.build_fdiv
+            | A.Expo    -> failwith "not implemented" (* TODO: Probably won't implement. cut from LRM *)
+            | A.Modulo  -> failwith "not implemented"
+            | A.Equal   -> L.build_fcmp L.Fcmp.Oeq | A.Neq  -> L.build_fcmp L.Fcmp.One
+            | A.Less    -> L.build_fcmp L.Fcmp.Olt | A.Leq -> L.build_fcmp L.Fcmp.Ole
+            | A.Greater -> L.build_fcmp L.Fcmp.Ogt | A.Geq -> L.build_fcmp L.Fcmp.Oge
+            | _         -> assert false)
+         | A.Bool ->
+           (match op with (* TODO: SHOULD WE SHORT CIRCUIT? *)
+            | A.And -> L.build_and | A.Or -> L.build_or
+            | _     -> assert false)
+         | A.Object _ ->
+           (match op with
+            | A.Equal -> build_obj_cmp ~eq:true | A.Neq -> build_obj_cmp ~eq:false
+            | _ -> assert false)
+         | _ -> assert false) e1' e2' "tmp" builder
       | A.Unop(op, t, e) ->
         let e' = expr scope builder e in
         (match op with
@@ -637,27 +640,23 @@ let translate the_program files =
         let llobj = L.build_malloc g.B.gtyp objname builder in
         let llobj_gen = L.build_bitcast llobj objptr_t (objname ^ "_gen") builder in
         (* Set up linked list connections *)
-        let rec make_node_cons obj objname llobj =
-          (* Make self connection *)
+        let make_node_cons (llobj, objname) g =
           let llobjnode = L.build_struct_gep llobj 1 (objname ^ "_objnode") builder in
-          let obj_head, _ = obj.B.ends in
+          let obj_head, _ = g.B.ends in
           ignore (L.build_call list_add_func [|llobjnode; obj_head|] "" builder);
-          match obj.B.semant.A.Gameobj.parent with
-          | None | Some (_, "object") ->
-            (* Make gameobj connection *)
-            let llnode = L.build_struct_gep llobj_gen 1 (objname ^ "_node") builder in
-            let gameobj_head, _ = gameobj_end in
-            ignore (L.build_call list_add_func [|llnode; gameobj_head|] "" builder);
-            (* As long as generic gameobj is parent of all, we can remove the
-               branch above and do nothing. But keeping this in case we want to
-               remove the universal parent later. *)
-          | Some (pchain, pobjname) ->
-            (* Get parent and make parent connections *)
-            let pobj = gameobj_decl (pchain, pobjname) in
-            let pllobj = L.build_struct_gep llobj 0 (objname ^ "_parent") builder in
-            make_node_cons pobj pobjname pllobj
+          let pobjname =
+            match g.B.semant.A.Gameobj.parent with
+            | None -> "" | Some (_, pobjname) -> pobjname
+          in
+          L.build_struct_gep llobj 0 (objname ^ "_parent") builder, pobjname
         in
-        make_node_cons g objname llobj;
+        let chain_from_bottom = List.rev (inheritance_chain (chain, objname)) in
+        ignore (List.fold_left make_node_cons (llobj, objname) chain_from_bottom);
+        (* As long as generic gameobj is parent of all, we don't need to also
+           specifically set its connections. *)
+        (* let llnode = L.build_struct_gep llobj_gen 1 (objname ^ "_node") builder in *)
+        (* let gameobj_head, _ = gameobj_end in *)
+        (* ignore (L.build_call list_add_func [|llnode; gameobj_head|] "" builder); *)
         (* Update ID and ID counter *)
         let llid = L.build_load global_objid "old_id" builder in
         let llid = L.build_add llid (L.const_int i64_t 1) "new_id" builder in
@@ -665,7 +664,6 @@ let translate the_program files =
         (* Event function pointers *)
         build_struct_ptr_assign llobj_gen [|Some g.B.vtable; None; Some llid|] builder;
         let objref = build_struct_assign (L.undef objref_t) [|Some llid; Some llobj_gen|] builder in
-        (* TODO: need to call parent create *)
         let create_event = (find_obj_event_decl (chain, objname) "create").B.value in
         (* TODO: include something in LRM about non-initialized values *)
         let actuals = List.map (expr scope builder) args in

@@ -230,19 +230,27 @@ let rec check_namespace (nname, namespace) forbidden_files files curr_dir =
       try List.assoc s (namespace_of_chain chain).Namespace.gameobjs
       with Not_found -> failwith ("unrecognized game object " ^ nname ^ "::" ^ s)
   in
+
+  (* Inheritance chain from oldest ancestor down. *)
+  let inheritance_chain (chain, name) =
+    let rec helper (chain, name) accum =
+      let decl = gameobj_decl (chain, name) in
+      (* Physical equality as a kind of 'comparing handles' *)
+      (if List.memq decl accum
+       then failwith ("inheritance cycle with " ^ string_of_chain (chain, name))
+       else ());
+      match decl.Gameobj.parent with
+      | None -> decl :: accum
+      | Some (pchain, pname) ->
+        helper ((chain @ pchain), pname) (decl :: accum)
+    in
+    helper (chain, name) []
+  in
+
   let is_gameobj_parent p c =
     match c with
     | [], "none" -> true        (* None can be assigned to anything *)
-    | _ ->
-      let pdecl = gameobj_decl p in
-      let rec helper c =
-        let decl = gameobj_decl c in
-        if decl == pdecl then true
-        else match decl.Gameobj.parent with
-          | None -> false
-          | Some c -> helper c
-      in
-      helper c
+    | _ -> List.exists ((==) (gameobj_decl p)) (inheritance_chain c)
   in
 
   (* Raise an exception if the given rvalue type cannot be assigned to
@@ -258,39 +266,30 @@ let rec check_namespace (nname, namespace) forbidden_files files curr_dir =
   in
 
   (* Helper for getting a set of things from a gameobj and its parents. *)
-  let rec gscope_helper name retrieve so_far loc =
-    let chain, _ = name in
-    let decl = gameobj_decl name in
-    (* Physical equality as a kind of 'comparing handles' *)
-    (if List.memq decl so_far
-     then failwith ("inheritance cycle with " ^ string_of_chain name)
-     else ());
-    let indiv_scope =
-      List.fold_left (add_to_scope ~loc:(nname ^ "::" ^ string_of_chain name ^ " " ^ loc))
-        StringMap.empty (retrieve decl)
+  let gscope_helper name retrieve loc =
+    let gscope parent_scope decl =
+      let indiv_scope =
+        List.fold_left (add_to_scope ~loc:(nname ^ "::" ^ string_of_chain name ^ " " ^ loc))
+          StringMap.empty (retrieve decl)
+      in
+      StringMap.fold StringMap.add indiv_scope parent_scope
     in
-    let parent_scope =
-      match decl.Gameobj.parent with
-      | Some (pchain, pname) ->
-        gscope_helper ((chain @ pchain), pname) retrieve (decl :: so_far) loc
-      | None -> StringMap.empty
-    in
-    StringMap.fold StringMap.add indiv_scope parent_scope
+    List.fold_left gscope StringMap.empty (inheritance_chain name)
   in
 
   let gameobj_functions name =
-    gscope_helper name (fun x -> x.Gameobj.methods) [] "method declarations"
+    gscope_helper name (fun x -> x.Gameobj.methods) "method declarations"
   in
 
   let gameobj_scope name =
-    gscope_helper name (fun x -> x.Gameobj.members) [] "members"
+    gscope_helper name (fun x -> x.Gameobj.members) "members"
   in
 
   (* Object types from inner namespaces need to include the outer calling
      namespace to remain valid references. Any expr that could resolve to a
      type defined in an inner namespace needs this added. *)
   let add_typ_ns chain = function
-    | Object (c, n) -> Object (List.append chain c, n)
+    | Object (c, n) -> Object (chain @ c, n)
     | _ as t -> t
   in
   (* Check that the expression can indeed be assigned to *)
@@ -322,9 +321,9 @@ let rec check_namespace (nname, namespace) forbidden_files files curr_dir =
          let tl' = List.map (fun l ->
              let t, e' = expr scope l in
              let _, e'' = check_assign_strict lt e' t
-               ("array literal " ^ string_of_expr e ^
-                " contains elements of unequal types "
-                ^ string_of_typ lt ^ " and " ^ string_of_typ t)
+                 ("array literal " ^ string_of_expr e ^
+                  " contains elements of unequal types "
+                  ^ string_of_typ lt ^ " and " ^ string_of_typ t)
              in e'') tl
          in
          Arr (lt, List.length l), ArrayLit(hd' :: tl'))
@@ -457,14 +456,12 @@ let rec check_namespace (nname, namespace) forbidden_files files curr_dir =
     | Create(obj_type, actuals) ->
       let formals =
         (* Find the create event formals, recursing up the inheritance chain. *)
-        let rec get_formals oname =
-          let decl = gameobj_decl oname in
+        let get_formals formals decl =
           if List.mem_assoc "create" decl.Gameobj.events
           then (List.assoc "create" decl.Gameobj.events).Func.formals
-          else match decl.Gameobj.parent with
-            | None -> [] | Some pname -> get_formals pname
+          else formals
         in
-        get_formals obj_type
+        List.fold_left get_formals [] (inheritance_chain obj_type)
       in
       let actuals' = check_call_actuals (string_of_expr e) actuals scope formals in
       Object(obj_type), Create(obj_type, actuals')
@@ -615,6 +612,10 @@ let rec check_namespace (nname, namespace) forbidden_files files curr_dir =
       List.iter check_event obj.events
     in
 
+    (* Checks that no members are named 'this', and that the parent, if set,
+       exists. Also detects inheritance cycles. *)
+    ignore (gameobj_scope ([], name));
+
     (* Adjust the event definitions so codegen has an easier time processing. *)
     let adjusted_events =
       obj.events
@@ -630,22 +631,22 @@ let rec check_namespace (nname, namespace) forbidden_files files curr_dir =
     in
 
     (* Add "this" and gameobj members to scope *)
-    (* gameobj_scope also checks that no members are named 'this' *)
-    (* gameobj_scope also checks that the parent, if set, exists *)
     (* For creation, also add super() *)
     let scope, create_scope =
       let initial_vscope, initial_fscope = scope in
       let super_scope =
         match obj.parent with
         | None | Some (_, "object") -> StringMap.empty
-        | Some (pchain, pname) ->
-          let func =
-            let events = (gameobj_decl (pchain, pname)).events in
-            if List.mem_assoc "create" events
-            then List.assoc "create" events
-            else Func.make Void [] (Some pname) []
+        | Some pname ->
+          (* Find the create event, recursing up the inheritance chain. *)
+          let get_create formals decl =
+            if List.mem_assoc "create" decl.Gameobj.events
+            then List.assoc "create" decl.Gameobj.events
+            else formals
           in
-          StringMap.singleton "super" func
+          let empty_create = Func.make Void [] (Some "object") [] in
+          let create = List.fold_left get_create empty_create (inheritance_chain pname) in
+          StringMap.singleton "super" create
       in
       let vscope =
         initial_vscope
