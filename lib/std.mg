@@ -23,20 +23,11 @@ bool is_alive (object o) {
   return false;
 }
 
-void goto_room (room r) {
-  // TODO: some kind of iteration over all objects
-  // destroy the current room / all objects
-  // create the new room
-}
-
+// Game room initialization
 object room {
   event create {
-    // destroy all rooms but myself
+    foreach (object r) { if (r != this) destroy r; }
     key::set_key();
-  }
-
-  event destroy {
-    // destroy all objects
   }
 }
 

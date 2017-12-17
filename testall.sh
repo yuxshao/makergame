@@ -96,7 +96,7 @@ Check() {
     generatedfiles="$generatedfiles ${basename}.ll ${basename}.s ${basename}.exe ${basename}.out" &&
     Run "$makergame" "<" $1 ">" "${basename}.ll" &&
     Run "$LLC" "${basename}.ll" ">" "${basename}.s" &&
-    Run "$CC" "-o" "${basename}.exe" "${basename}.s" "lib/libtestergame.o" &&
+    Run "$CC" "-o" "${basename}.exe" "${basename}.s" "runtime/libtestergame.o" &&
     Run "./${basename}.exe" > "${basename}.out" &&
     Compare ${basename}.out ${reffile}.out ${basename}.diff
 
@@ -170,7 +170,7 @@ export MAKERGAME_PATH="$(pwd)/lib"
 
 which "$LLI" >> $globallog || LLIFail
 
-if [ ! -f lib/libtestergame.o ]
+if [ ! -f runtime/libtestergame.o ]
 then
     echo "Could not find libtestergame.o"
     echo "Try \"make libtestergame.o\""
