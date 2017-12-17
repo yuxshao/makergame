@@ -18,6 +18,16 @@ module B = Llast
 
 module StringMap = Map.Make(String)
 
+module Gconfig = struct
+  type scoped_block_builder =
+    (L.llbuilder -> (B.L.llvalue * A.Var.t) StringMap.t * B.func StringMap.t -> L.llbuilder)
+  type t = {
+    obj: string;
+    postwork: scoped_block_builder option;
+    super: string option;
+  }
+end
+
 (* Helper function for assigning struct values. *)
 let build_struct_assign str values builder =
   let assign (llv, ind) value =
@@ -776,14 +786,14 @@ let translate the_program files =
         | _ -> assert false
     in
 
-    let build_function_body the_function formals block ?gameobj ?postwork return_type =
+    let build_function_body the_function formals block ?gconfig return_type =
       let entry = L.entry_block the_function in
       let builder = L.builder_at_end context entry in
 
       (* If this is a function in a gameobj, add 'this' to the arguments *)
       let formals =
-        match gameobj with
-        | Some obj -> ("this", A.Object([], obj)) :: formals
+        match gconfig with
+        | Some { Gconfig.obj; _ } -> ("this", A.Object([], obj)) :: formals
         | None -> formals
       in
       let formal_scope =
@@ -797,25 +807,25 @@ let translate the_program files =
           (Array.to_list (L.params the_function))
       in
       let member_scope =
-        match gameobj with
-        | Some obj ->
+        match gconfig with
+        | Some { Gconfig.obj; _ } ->
           let this, _ = StringMap.find "this" formal_scope in
           let this = L.build_load this "thisref" builder in
           gameobj_members this ([], obj) builder
         | None -> StringMap.empty
       in
       let method_scope =
-        match gameobj with
+        match gconfig with
         | None -> StringMap.empty
-        | Some obj ->
+        | Some { Gconfig.obj; super; _ } ->
           let g = StringMap.find obj llns.B.gameobjs in
-          match g.B.semant.A.Gameobj.parent with
-          | None -> gameobj_methods ([], obj)
-          | Some (chain, pname) ->
-            (* Add super(...) as a way to call the parent constructor. *)
+          match g.B.semant.A.Gameobj.parent, super with
+          | None, _ | _, None -> gameobj_methods ([], obj)
+          | Some (chain, pname), Some super_method ->
+            (* Add super(...) as a way to call the parent method, if allowed. *)
             let pobj = gameobj_decl (chain, pname) in
             gameobj_methods ([], obj)
-            |> StringMap.add "super" (StringMap.find "create" pobj.B.events)
+            |> StringMap.add "super" (StringMap.find super_method pobj.B.events)
       in
       let add_to_scope to_add = StringMap.fold StringMap.add to_add in
       let scope =
@@ -828,9 +838,10 @@ let translate the_program files =
       in
 
       (* Possibly add some code at the end *)
-      let builder = match postwork with
+      let builder = match gconfig with
         | None -> builder
-        | Some p -> p builder scope
+        | Some { Gconfig.postwork; _ } ->
+          match postwork with Some p -> p builder scope | None -> builder
       in
 
       (* Add a precautionary return to the end *)
@@ -878,8 +889,11 @@ let translate the_program files =
         let llfn = (find_fn ([], gname) fname).B.value in
         match block with
         | Some block ->
+          (* Add postprocessing and super into scope on case-by-case basis *)
           let postwork = if fname = "destroy" then Some destroy_postprocess else None in
-          build_function_body llfn formals block typ ?postwork ~gameobj:gname
+          let super = match fname with "create" | "step" | "draw" -> Some fname | _ -> None in
+          let gconfig = { Gconfig.obj = gname; postwork; super } in
+          build_function_body llfn formals block typ ~gconfig
         | None -> assert false    (* Semant ensures obj fns are not external *)
       in
       let find_obj_fn_decl (chain, oname) fname =

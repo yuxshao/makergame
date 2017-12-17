@@ -630,24 +630,25 @@ let rec check_namespace (nname, namespace) forbidden_files files curr_dir =
          inherited automatically. *)
     in
 
-    (* Add "this" and gameobj members to scope *)
-    (* For creation, also add super() *)
-    let scope, create_scope =
+    (* For events, also add super() *)
+    let super_scope event (vscope, fscope) =
+      match obj.parent with
+      | None | Some (_, "object") -> vscope, fscope
+      | Some pname ->
+        (* Find the event, recursing up the inheritance chain. *)
+        let get_event formals decl =
+          if List.mem_assoc event decl.Gameobj.events
+          then List.assoc event decl.Gameobj.events
+          else formals
+        in
+        let empty_event = Func.make Void [] (Some "object") [] in
+        let event = List.fold_left get_event empty_event (inheritance_chain pname) in
+        vscope, StringMap.add "super" event fscope
+    in
+
+    let scope =
       let initial_vscope, initial_fscope = scope in
-      let super_scope =
-        match obj.parent with
-        | None | Some (_, "object") -> StringMap.empty
-        | Some pname ->
-          (* Find the create event, recursing up the inheritance chain. *)
-          let get_create formals decl =
-            if List.mem_assoc "create" decl.Gameobj.events
-            then List.assoc "create" decl.Gameobj.events
-            else formals
-          in
-          let empty_create = Func.make Void [] (Some "object") [] in
-          let create = List.fold_left get_create empty_create (inheritance_chain pname) in
-          StringMap.singleton "super" create
-      in
+      (* Add "this" and gameobj members to scope *)
       let vscope =
         initial_vscope
         |> StringMap.fold StringMap.add (gameobj_scope ([], name))
@@ -657,14 +658,15 @@ let rec check_namespace (nname, namespace) forbidden_files files curr_dir =
         initial_fscope
         |> StringMap.fold StringMap.add (gameobj_functions ([], name))
       in
-      (vscope, fscope), (vscope, fscope |> StringMap.fold StringMap.add super_scope)
+      (vscope, fscope)
     in
 
     let check_obj_fn (fname, func) =
       match func.Func.block with
       | Some _ ->
         let scope =
-          if fname = "create" then create_scope else scope
+          if List.mem fname ["create"; "step"; "draw"]
+          then super_scope fname scope else scope
         in
         check_function ~scope ~objname:(Some name) (fname, func)
       | _ -> failwith ("illegal extern function " ^ nname ^ "::" ^ name ^ "::" ^ fname)

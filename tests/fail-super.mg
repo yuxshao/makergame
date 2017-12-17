@@ -1,5 +1,5 @@
 object child : parent {
-  event step { super(3); } // super() forbidden outside of create
+  event step { super(3); } // super for step takes no arguments
 }
 
 object parent {
@@ -7,4 +7,3 @@ object parent {
 }
 
 object main { }
-
