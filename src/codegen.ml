@@ -23,7 +23,7 @@ module Gconfig = struct
     (L.llbuilder -> (B.L.llvalue * A.Var.t) StringMap.t * B.func StringMap.t -> L.llbuilder)
   type t = {
     obj: string;
-    postwork: scoped_block_builder option;
+    postwork: scoped_block_builder option; (* Unused now. Used to be for removing nodes. *)
     super: string option;
   }
 end
@@ -123,7 +123,7 @@ let translate the_program files =
   L.struct_set_body objref_t [|i64_t; objptr_t|] false;
 
   let eventptr_t = L.pointer_type (L.function_type void_t [|objref_t|]) in
-  let gameobj_vtable = L.struct_type context [|eventptr_t; eventptr_t; eventptr_t|] in
+  let gameobj_vtable = L.struct_type context [|eventptr_t; eventptr_t; eventptr_t; eventptr_t|] in
   let vtableptr_t = L.pointer_type gameobj_vtable in
   L.struct_set_body gameobj_t [|vtableptr_t; node_t; i64_t|] false;
 
@@ -136,30 +136,6 @@ let translate the_program files =
     h, t
   in
   let gameobj_end = make_node_end "gameobj" in
-
-  (* Make a B.gameobj for the generic game object *)
-  let empty_method =
-    let typ = L.function_type void_t [|objref_t|] in
-    let value = L.define_function "_empty_fn" typ the_module in
-    let return = A.Void in
-    ignore (L.build_ret_void (L.builder_at_end context (L.entry_block value)));
-    { B.value; typ; return; gameobj = (Some "object") }
-  in
-  let gameobj_struct =
-    let vtable_gen =
-      let fn = empty_method.B.value in
-      L.define_global ("object.vtable") (L.const_struct context [|fn; fn; fn|]) the_module
-    in
-    let events =
-      ["create"; "step"; "destroy"; "draw"]
-      |> List.fold_left (fun m x -> StringMap.add x empty_method m) StringMap.empty
-    in
-    { B.gtyp = gameobj_t;
-      ends = gameobj_end;
-      methods = StringMap.empty;
-      events; vtable = vtable_gen;
-      semant = A.Gameobj.generic }
-  in
 
   let global_objid = L.define_global "last_objid" (L.const_int i64_t 0) the_module in
 
@@ -214,6 +190,59 @@ let translate the_program files =
     let prev_next = L.build_struct_gep prev 1 "prev_next" builder in
     ignore (L.build_store next prev_next builder);
     ignore (L.build_ret_void builder); f
+  in
+
+  let delete_function ltyp =
+    let name = "delete_" ^ L.string_of_lltype ltyp in
+    match L.lookup_function name the_module with
+    | Some f -> f
+    | None ->
+      let f =
+        let t = L.function_type void_t [|objref_t|] in
+        L.define_function name t the_module
+      in
+      let builder = L.builder_at_end context (L.entry_block f) in
+      let llobj =
+        let objptr = L.build_extractvalue (L.param f 0) 1 "objptr" builder in
+        L.build_bitcast objptr (L.pointer_type ltyp) "" builder
+      in
+      let rec helper llobj =
+        (* print_endline (L.string_of_lltype (L.type_of llobj)); *)
+        (* Disconnect particular object neighbours' node links. *)
+        let llobjnode = L.build_struct_gep llobj 1 "objnode" builder in
+        ignore (L.build_call list_rem_func [|llobjnode|] "" builder);
+        (* Call parent destroy *)
+        let next = L.build_struct_gep llobj 0 "" builder in
+        if L.type_of llobj = (L.pointer_type gameobj_t)
+        then ignore (L.build_ret_void builder)
+        else helper next
+      in
+      helper llobj; f
+  in
+
+  (* Make a B.gameobj for the generic game object *)
+  let empty_method =
+    let typ = L.function_type void_t [|objref_t|] in
+    let value = L.define_function "_empty_fn" typ the_module in
+    let return = A.Void in
+    ignore (L.build_ret_void (L.builder_at_end context (L.entry_block value)));
+    { B.value; typ; return; gameobj = (Some "object") }
+  in
+  let gameobj_struct =
+    let vtable_gen =
+      let fn = empty_method.B.value in
+      let del_fn = delete_function gameobj_t in
+      L.define_global ("object.vtable") (L.const_struct context [|fn; fn; fn; del_fn|]) the_module
+    in
+    let events =
+      ["create"; "step"; "destroy"; "draw"]
+      |> List.fold_left (fun m x -> StringMap.add x empty_method m) StringMap.empty
+    in
+    { B.gtyp = gameobj_t;
+      ends = gameobj_end;
+      methods = StringMap.empty;
+      events; vtable = vtable_gen;
+      semant = A.Gameobj.generic }
   in
 
   (* let printf_t = L.var_arg_function_type i32_t [| L.pointer_type i8_t |] in *)
@@ -412,6 +441,7 @@ let translate the_program files =
             ["step"; "destroy"; "draw"]
             |> List.map (fun event -> (StringMap.find event events).B.value)
           in
+          let fns = fns @ [delete_function gtyp] in (* Add a function for removing nodes *)
           L.define_global (gname ^ ".vtable")
             (L.const_struct context (Array.of_list fns)) the_module
         in
@@ -700,14 +730,16 @@ let translate the_program files =
         let objref = expr scope builder e in
         let objptr = L.build_extractvalue objref 1 "objptr" builder in
         (* Call its destroy event *)
-        let destroy_event =
+        let destroy_event, delete_event =
           (* Assuming vtable is at front *)
           let tbl =
             L.build_load (L.build_bitcast objptr (L.pointer_type vtableptr_t) "" builder) "tbl" builder
           in
-          L.build_load (L.build_struct_gep tbl 1 "eventptr" builder) "event" builder
+          L.build_load (L.build_struct_gep tbl 1 "eventptr" builder) "event" builder,
+          L.build_load (L.build_struct_gep tbl 3 "eventptr" builder) "event" builder
         in
         ignore (L.build_call destroy_event [|objref|] "" builder);
+        ignore (L.build_call delete_event [|objref|] "" builder);
         (* Mark its id as 0 *)
         let idptr = L.build_struct_gep objptr 2 "id" builder in
         ignore (L.build_store (L.const_int i64_t 0) idptr builder);
@@ -862,37 +894,13 @@ let translate the_program files =
     let build_obj_functions (gname, g) =
       let open A.Gameobj in
 
-      (* Postprocessing: removing nodes after a destroy function is called *)
-      let destroy_postprocess builder (vscope, _fscope) =
-        let objref =
-          let objrefptr, _typ = StringMap.find "this" vscope in
-          L.build_load objrefptr "objref" builder
-        in
-        let llobj =
-          let obj = StringMap.find gname llns.B.gameobjs in
-          let objptr = L.build_extractvalue objref 1 "objptr" builder in
-          L.build_bitcast objptr (L.pointer_type obj.B.gtyp) gname builder
-        in
-        (* Disconnect particular object neighbours' node links. *)
-        let llobjnode = L.build_struct_gep llobj 1 (gname ^ "_objnode") builder in
-        ignore (L.build_call list_rem_func [|llobjnode|] "" builder);
-        (* Call parent destroy *)
-        (match g.A.Gameobj.parent with
-         | None -> ()
-         | Some p ->
-           let parent_destroy = (find_obj_event_decl p "destroy").B.value in
-           ignore (L.build_call parent_destroy [|objref|] "" builder));
-        builder
-      in
-
       let build_fn find_fn (fname, { A.Func.typ; formals; block; gameobj = _ }) =
         let llfn = (find_fn ([], gname) fname).B.value in
         match block with
         | Some block ->
-          (* Add postprocessing and super into scope on case-by-case basis *)
-          let postwork = if fname = "destroy" then Some destroy_postprocess else None in
-          let super = match fname with "create" | "step" | "draw" -> Some fname | _ -> None in
-          let gconfig = { Gconfig.obj = gname; postwork; super } in
+          (* Add super into scope on case-by-case basis. Casework used to be more complicated. *)
+          let super = match fname with "create" | "step" | "draw" | "destroy" -> Some fname | _ -> None in
+          let gconfig = { Gconfig.obj = gname; postwork = None; super } in
           build_function_body llfn formals block typ ~gconfig
         | None -> assert false    (* Semant ensures obj fns are not external *)
       in

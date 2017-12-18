@@ -616,20 +616,6 @@ let rec check_namespace (nname, namespace) forbidden_files files curr_dir =
        exists. Also detects inheritance cycles. *)
     ignore (gameobj_scope ([], name));
 
-    (* Adjust the event definitions so codegen has an easier time processing. *)
-    let adjusted_events =
-      obj.events
-      (* Every object must have a destroy event to unlink the node and call the
-         parent. Sort of janky to add it here and then fill in the contents in
-         codegen. But I guess it works for now. *)
-      |> (fun events ->
-          if List.mem_assoc "destroy" obj.events then events
-          else ("destroy", Func.make Void [] (Some name) []) :: events)
-      (* Every object create should also by default call their parent create.
-         EDIT: But this is already handled because events other than destroy are
-         inherited automatically. *)
-    in
-
     (* For events, also add super() *)
     let super_scope event (vscope, fscope) =
       match obj.parent with
@@ -665,14 +651,14 @@ let rec check_namespace (nname, namespace) forbidden_files files curr_dir =
       match func.Func.block with
       | Some _ ->
         let scope =
-          if List.mem fname ["create"; "step"; "draw"]
+          if List.mem fname ["create"; "step"; "draw"; "destroy"]
           then super_scope fname scope else scope
         in
         check_function ~scope ~objname:(Some name) (fname, func)
       | _ -> failwith ("illegal extern function " ^ nname ^ "::" ^ name ^ "::" ^ fname)
     in
     let methods' = List.map check_obj_fn obj.methods in
-    let events' = List.map check_obj_fn adjusted_events in
+    let events' = List.map check_obj_fn obj.events in
     make name (obj.members, methods', events') obj.parent
   in
 
