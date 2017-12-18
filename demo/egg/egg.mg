@@ -11,50 +11,52 @@ namespace key    = std::key;
 namespace window = std::window;
 namespace game   = std::game;
 
+namespace Num = open "draw_numbers.mg";
+Num::Draw numbers;
+
 sound boinkSound;
 int score;
 
-bool hit_ground(Egg e) { return (e.y > 600); }
-bool egg_touching_player(Egg e, Player p) {
-  return (e.x < p.x + 50 && e.x > p.x - 50 && e.y < p.y + 10 && e.y > p.y - 10);
-}
+object Egg : game::obj {
+  int points;
 
-object Gameobj {
-  sprite spr;
-  float x; float y;
-  float hspeed; float vspeed;
-  float origin_x; float origin_y;
-
-  event create(float x, float y, string sprite_name) {
-    this.x = x; this.y = y;
-    spr = spr::load(sprite_name);
-    origin_x = spr::width(spr) * 0.5;
-    origin_y = spr::height(spr) * 0.5;
-  }
-  event draw {
-    x += hspeed; y += vspeed;
-    spr::render(spr, x-origin_x, y-origin_y);
-  }
-}
-
-object Egg : Gameobj {
   event create(float x, float y) {
+    std::print::s("hello");
     super(x, y, "egg.png");
-    vspeed = 5;
+    vspeed = 4 + std::math::frandom();
+    points = vspeed * 10;
     snd::play(boinkSound);
+    center_hitbox_prop(0.9, 0.9);
   }
 
   event step {
-    if (hit_ground(this)) {
-      foreach (object o) destroy o;
-      create Gameover;
-    }
+    if (y > 600) create gameover; // go to the room
   }
 }
 
-object Player : Gameobj {
+object SineEgg : Egg {
+  int timer;
+
+  event create(float x, float y) {
+    super(x, y);
+    points *= 1.5;
+    timer = 0;
+    spr = spr::load("flying-egg.png");
+    hitbox_offx = -spr::width(spr)/2;
+    hitbox_offy = -spr::height(spr)/2;
+  }
+
+  event step {
+    super();
+    ++timer;
+    hspeed = 5 * std::math::sin(timer * 0.1);
+  }
+}
+
+object Player : game::obj {
   event create {
     super(300, 500, "player.png");
+    center_hitbox_prop(0.9, 0.6);
   }
 
   event step { 
@@ -62,9 +64,10 @@ object Player : Gameobj {
     if (key::is_down(key::Right)) x += 5;
 
     foreach (Egg egg) {
-      if (egg_touching_player(egg, this)) {
+      if (game::colliding(egg, this)) {
+        score += egg.points;
+        numbers.n = score;
         destroy egg;
-        score += 5;
         std::print::i(score);
       }
     }
@@ -78,7 +81,10 @@ object Spawner {
     --timer;
     if (timer == 0) {
       timer = 50;
-      Egg egg = create Egg(100 + 700 * std::math::frandom(), 0);
+      int range = 300;
+      int x = 400 + (range * std::math::frandom() - range * 0.5);
+      if (std::math::irandom(5) == 0) create SineEgg(x, 0);
+      else create Egg(x, 0);
     }
   }
 }
@@ -91,11 +97,15 @@ object main : game::room {
     boinkSound = snd::load("boink.ogx");
     create Player;
     create Spawner;
+    numbers = create Num::Draw(0, 10, 10);
   }
 }
 
-object Gameover : game::room {
+object gameover : game::room {
   sprite spr;
-  event create { spr = spr::load("gameover.png"); }
+  event create {
+    super();
+    spr = spr::load("gameover.png");
+  }
   event draw { spr::render(spr, 0, 0); }
 }
