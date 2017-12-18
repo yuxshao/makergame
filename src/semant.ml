@@ -415,13 +415,18 @@ let rec check_namespace (nname, namespace) forbidden_files files curr_dir =
       in t'', Assign(l', r'')
     | Asnop(e1, opasn, _, e2) ->
       check_lvalue (string_of_expr e1) e1;
-      let (t1, e1') = expr scope e1 and (t2, e2') = expr scope e2 in
+      let (t1, e1) = expr scope e1 and (t2, e2) = expr scope e2 in
+      let err =
+        "illegal assign operator " ^
+        string_of_typ t1 ^ " " ^ string_of_asnop opasn ^ " " ^
+        string_of_typ t2 ^ " in " ^ string_of_expr e
+      in
       (match t1, t2 with
-       | Int, Int     -> Int,   Asnop(e1', opasn, Int, e2')
-       | Float, Float -> Float, Asnop(e1', opasn, Float, e2')
-       | _ -> failwith ("illegal assign operator " ^
-                        string_of_typ t1 ^ " " ^ string_of_asnop opasn ^ " " ^
-                        string_of_typ t2 ^ " in " ^ string_of_expr e))
+       | Int, Int | Float, Float -> t1, Asnop(e1, opasn, t1, e2)
+       | Float, Int | Int, Float ->
+         let t2, e2 = check_assign t1 e2 t2 err in
+         assert (t1 = t2); t1, Asnop(e1, opasn, t1, e2)
+       | _ -> failwith err)
     | Id (chain, name) ->
       let t =
         try match chain with
