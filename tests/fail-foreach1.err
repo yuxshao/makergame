@@ -1,1 +1,1 @@
-Fatal error: exception Failure("can only use foreach loop on objects in int x;")
+Fatal error: exception Failure("can only use foreach loop on objects in int x")

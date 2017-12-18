@@ -181,21 +181,22 @@ let string_of_asnop = function
   | Multasn -> "*="
   | Divasn -> "/="
 
+let rec string_of_typ_ps = function
+    Int -> "int", ""
+  | Bool -> "bool", ""
+  | Void -> "void", ""
+  | Float -> "float", ""
+  | Sprite -> "sprite", ""
+  | Sound -> "sound", ""
+  | Object (_, "object") -> "object", ""
+  | Object obj_t -> string_of_chain obj_t, ""
+  | Arr(typ, len) ->
+    let pref, suf = string_of_typ_ps typ in
+    pref, "[" ^ (string_of_int len) ^ "]" ^ suf
+  | String -> "string", ""
+
 let string_of_typ t =
   (* Split by prefix and suffix so array dims are in the right order *)
-  let rec string_of_typ_ps = function
-      Int -> "int", ""
-    | Bool -> "bool", ""
-    | Void -> "void", ""
-    | Float -> "float", ""
-    | Sprite -> "sprite", ""
-    | Sound -> "sound", ""
-    | Object obj_t -> "object(" ^ string_of_chain obj_t ^ ")", ""
-    | Arr(typ, len) ->
-      let pref, suf = string_of_typ_ps typ in
-      pref, "[" ^ (string_of_int len) ^ "]" ^ suf
-    | String -> "string", ""
-  in
   let p, s = string_of_typ_ps t in
   p ^ s
 
@@ -230,15 +231,15 @@ let rec string_of_expr = function
   | Delete o -> "delete " ^ (string_of_expr o)
   | Noexpr -> ""
 
-let string_of_vdecl (id, t) = string_of_typ t ^ " " ^ id ^ ";"
-let string_of_global_vdecl ((id, t), e) =
+let string_of_vdecl (id, t) = let p, s = string_of_typ_ps t in p ^ " " ^ id ^ s
+let string_of_global_vdecl (d, e) =
   match e with
-  | Noexpr -> string_of_vdecl (id, t)
-  | _ -> string_of_typ t ^ " " ^ id ^ " = " ^ string_of_expr e
+  | Noexpr -> string_of_vdecl d
+  | _ -> string_of_vdecl d ^ " = " ^ string_of_expr e
 
 let rec string_of_stmt = function
-  | Decl d -> string_of_vdecl d
-  | Vdef((id, t), e) -> string_of_typ t ^ " " ^ id ^ " = " ^ string_of_expr e ^ ";"
+  | Decl d -> string_of_vdecl d ^ ";"
+  | Vdef(d, e) -> string_of_vdecl d ^ " = " ^ string_of_expr e ^ ";"
   | Block(blk) -> string_of_block blk
   | Expr(expr) -> string_of_expr expr ^ ";"
   | Break -> "break;"
@@ -251,8 +252,8 @@ let rec string_of_stmt = function
     "for (" ^ string_of_stmt s1 ^ " " ^ string_of_expr e2 ^ "; " ^
     string_of_expr e3  ^ ") " ^ string_of_stmt s2
   | While(e, s) -> "while (" ^ string_of_expr e ^ ") " ^ string_of_stmt s
-  | Foreach((id, t), s) ->
-    "foreach (" ^ string_of_typ t  ^ " " ^ id ^ ") " ^ string_of_stmt s
+  | Foreach(d, s) ->
+    "foreach (" ^ string_of_vdecl d ^ ") " ^ string_of_stmt s
 and string_of_block block =
   "{\n" ^ String.concat "\n" (List.map string_of_stmt block) ^ "\n}\n"
 
@@ -265,9 +266,9 @@ let string_of_edecl (name, func) =
   in
   let arg_str = match func.formals with
     | [] -> ""
-    | _ as args -> "(" ^ String.concat ", " (List.map fst args) ^ ")"
+    | _ as args -> "(" ^ String.concat ", " (List.map string_of_vdecl args) ^ ")"
   in
-  "event " ^ string_of_typ func.typ ^ " " ^ name ^ arg_str ^ "\n" ^ block_str
+  "event " ^ name ^ arg_str ^ "\n" ^ block_str
 
 let string_of_fdecl (name, func) =
   let open Func in
@@ -276,17 +277,19 @@ let string_of_fdecl (name, func) =
     | None -> "extern ", ""
     | Some block -> "", string_of_block block
   in
-  prefix ^ string_of_typ func.typ ^ " " ^ name ^ "(" ^
-  String.concat ", " (List.map fst func.formals) ^ ")\n" ^ suffix
+  prefix ^ string_of_vdecl (name, func.typ) ^ "(" ^
+  String.concat ", " (List.map string_of_vdecl func.formals) ^ ")\n" ^ suffix
+
+let with_semi string_of x = string_of x ^ ";";;
 
 let string_of_gameobj (name, obj) =
   let open Gameobj in
   let par_str = match obj.parent with
+    | None | Some (_, "object")-> ""
     | Some p -> " : " ^ string_of_chain p
-    | None -> ""
   in
-  name ^ par_str ^ " {\n" ^
-  String.concat "\n" (List.map string_of_vdecl obj.members) ^ "\n" ^
+  "object " ^ name ^ par_str ^ " {\n" ^
+  String.concat "\n" (List.map (with_semi string_of_vdecl) obj.members) ^ "\n" ^
   String.concat "" (List.map string_of_fdecl obj.methods) ^ "\n" ^
   String.concat "" (List.map string_of_edecl obj.events) ^ "\n" ^
   "}\n"
@@ -298,7 +301,7 @@ let string_of_udecl (priv, ns) =
 let rec string_of_concrete_ns
     { Namespace.variables; functions; gameobjs; namespaces; usings } =
   String.concat "\n" (List.map string_of_udecl usings) ^ "\n" ^
-  String.concat "\n" (List.map string_of_global_vdecl variables) ^ "\n" ^
+  String.concat "\n" (List.map (with_semi string_of_global_vdecl) variables) ^ "\n" ^
   String.concat "\n" (List.map string_of_fdecl functions) ^
   String.concat "\n" (List.map string_of_gameobj gameobjs) ^
   String.concat "\n" (List.map string_of_ns_decl namespaces)
