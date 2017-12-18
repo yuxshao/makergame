@@ -6,6 +6,18 @@ bool egg_touching_player(Egg e, Player p) {
   return (e.x < p.x + 50 && e.x > p.x - 50 && e.y < p.y + 10 && e.y > p.y - 10);
 }
 
+object Gameobj {
+  sprite spr;
+  float x; float y;
+  float hspeed; float vspeed;
+  int origin_x; int origin_y;
+
+  event draw {
+    x += hspeed; y += vspeed;
+    std::draw_sprite(spr, x-origin_x, y-origin_y);
+  }
+}
+
 object Egg {
   sprite spr;
   int x; int y;

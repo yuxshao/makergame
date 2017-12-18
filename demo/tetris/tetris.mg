@@ -36,7 +36,7 @@ bool possible_pieces[7][4][3] = [
    [false, false, false]]];
 
 int boardOffsetX = 11;
-int boardOffsetY = 2;
+int boardOffsetY = 0;
 
 object Block {
   int x; int y;
@@ -135,9 +135,10 @@ object Piece {
       blocks[i].settlePosition(board);
       blocks[i].piece = none;
     }
-    // board.checkRows();
-    create Piece(board, 60);
+    board.checkRows();
     destroy this;
+    foreach (game_over g) { return; } // janky: dont create if in gameover
+    create Piece(board, 60);
   }
 
   event step {
