@@ -465,10 +465,14 @@ let rec check_namespace (nname, namespace) forbidden_files files curr_dir =
       in
       let actuals' = check_call_actuals (string_of_expr e) actuals scope formals in
       Object(obj_type), Create(obj_type, actuals')
-    | Destroy(e, _) ->
-      match expr scope e with
-      | Object n, e' -> Void, Destroy(e', n)
-      | _ -> failwith ("cannot destroy non-object")
+    | Destroy e ->
+      (match expr scope e with
+       | Object _, e' -> Void, Destroy e'
+       | _ -> failwith ("cannot destroy non-object"))
+    | Delete e ->
+      (match expr scope e with
+       | Object _, e' -> Void, Delete e'
+       | _ -> failwith ("cannot delete non-object"))
   and check_call_actuals loc actuals scope formals =
     if List.length actuals != List.length formals then
       failwith ("expecting " ^ string_of_int (List.length formals) ^

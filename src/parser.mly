@@ -11,7 +11,7 @@ open Ast
 %token EQ NEQ LT LEQ GT GEQ TRUE FALSE AND OR
 %token BREAK RETURN IF ELSE FOR WHILE FOREACH
 %token INT BOOL FLOAT STRING SPRITE SOUND VOID
-%token OBJECT NONE EVENT CREATE DESTROY DRAW STEP
+%token OBJECT NONE EVENT CREATE DESTROY DRAW STEP DELETE
 %token PRIVATE PUBLIC NAMESPACE EXTERN OPEN
 %token <int> LITERAL
 %token <string> ID
@@ -26,7 +26,7 @@ open Ast
 %left AND
 %left EQ NEQ
 %left LT GT LEQ GEQ
-%right CREATE DESTROY
+%right CREATE DESTROY DELETE
 %left PLUS MINUS
 %left TIMES DIVIDE
 %left EXPONENT MODULO
@@ -194,7 +194,8 @@ expr:
   | expr PERIOD ID LPAREN actuals_opt RPAREN { MemberCall($1, ([], ""), $3, $5) }
   | CREATE id_chain                           { Create($2, []) }
   | CREATE id_chain LPAREN actuals_opt RPAREN { Create($2, $4) }
-  | DESTROY expr       { Destroy($2, ([], "")) }
+  | DESTROY expr       { Destroy($2) }
+  | DELETE expr        { Delete($2) }
   | LPAREN expr RPAREN { $2 }
 
 expr_list:

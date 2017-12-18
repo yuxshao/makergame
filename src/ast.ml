@@ -49,7 +49,8 @@ type expr =
   | MemberCall of expr * id_chain * string * expr list
   | Call of id_chain * expr list
   | Create of id_chain * expr list
-  | Destroy of expr * id_chain
+  | Destroy of expr
+  | Delete of expr              (* Remove the object without calling the destroy event. *)
   | Noexpr
 
 type stmt =
@@ -221,7 +222,8 @@ let rec string_of_expr = function
     (match args with
      | [] -> "create " ^ string_of_chain c
      | _ -> "create " ^ string_of_expr(Call(c, args)))
-  | Destroy (o, _) -> "destroy " ^ (string_of_expr o)
+  | Destroy o -> "destroy " ^ (string_of_expr o)
+  | Delete o -> "delete " ^ (string_of_expr o)
   | Noexpr -> ""
 
 let string_of_vdecl (id, t) = string_of_typ t ^ " " ^ id ^ ";"

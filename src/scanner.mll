@@ -63,6 +63,7 @@ rule token = parse
   | "none"   { NONE }
   | "event"  { EVENT }
   | "create" { CREATE }
+  | "delete" { DELETE }
   | "destroy" { DESTROY }
   | "draw"   { DRAW }
   | "step"   { STEP }

@@ -262,6 +262,42 @@ let translate the_program files =
     L.build_icmp (if eq then L.Icmp.Eq else L.Icmp.Ne) lid rid name builder
   in
 
+  let build_delete ~destroy objref builder =
+    (* Deletion is lazy in that it involves just removing the
+       object-specific link from an node's neighbours (i.e. used for foreach)
+       and setting id to 0. When the main event loop encounters an object with
+       id 0, it looks ahead to the next node and deletes the current. Other
+       loops ignore 0-id objects.
+
+       This way, a kind of induction can show that there's always a forward
+       path from such an object to the head of the list (its neighbours don't
+       point to it, but it still points to what it thinks are its neighbours
+       have a forward path). So a loop like a foreach that might end up on a
+       dead object still behaves well. The main event loop is guaranteed to
+       run outside of any other loops, so it's safe to actually delete the
+       nodes there. *)
+    (* TODO: describe setup and effects in LRM. destroyed objs are immediately
+       invisible to loops but refs to them still work until at least end of
+       event. *)
+    let objptr = L.build_extractvalue objref 1 "objptr" builder in
+    (* Call its destroy event *)
+    let destroy_event, delete_event =
+      (* Assuming vtable is at front *)
+      let tbl =
+        L.build_load (L.build_bitcast objptr (L.pointer_type vtableptr_t) "" builder) "tbl" builder
+      in
+      L.build_load (L.build_struct_gep tbl 1 "eventptr" builder) "event" builder,
+      L.build_load (L.build_struct_gep tbl 3 "eventptr" builder) "event" builder
+    in
+    (if not destroy then ()
+     else ignore (L.build_call destroy_event [|objref|] "" builder));
+    ignore (L.build_call delete_event [|objref|] "" builder);
+    (* Mark its id as 0 *)
+    let idptr = L.build_struct_gep objptr 2 "id" builder in
+    ignore (L.build_store (L.const_int i64_t 0) idptr builder);
+    builder
+  in
+
   let build_node_loop builder the_function ~ends ~body =
     let head, tail = ends in
     (* Keep track of curr and next in case curr is modified when body is run. *)
@@ -709,40 +745,13 @@ let translate the_program files =
         let actuals = List.map (expr scope builder) args in
         ignore (L.build_call create_event (Array.of_list (objref :: actuals)) "" builder);
         objref
-      (* TODO: remove type annotation on Destroy. Since it's unreliable now anyway *)
-      | A.Destroy (e, _) ->
-        (* Destruction is lazy in that it involves just removing the
-           object-specific link from an node's neighbours (i.e. used for foreach)
-           and setting id to 0. When the main event loop encounters an object with
-           id 0, it looks ahead to the next node and deletes the current. Other
-           loops ignore 0-id objects.
-
-           This way, a kind of induction can show that there's always a forward
-           path from such an object to the head of the list (its neighbours don't
-           point to it, but it still points to what it thinks are its neighbours
-           have a forward path). So a loop like a foreach that might end up on a
-           dead object still behaves well. The main event loop is guaranteed to
-           run outside of any other loops, so it's safe to actually delete the
-           nodes there. *)
-        (* TODO: describe setup and effects in LRM. destroyed objs are immediately
-           invisible to loops but refs to them still work until at least end of
-           event. *)
+      | A.Destroy e ->
         let objref = expr scope builder e in
-        let objptr = L.build_extractvalue objref 1 "objptr" builder in
-        (* Call its destroy event *)
-        let destroy_event, delete_event =
-          (* Assuming vtable is at front *)
-          let tbl =
-            L.build_load (L.build_bitcast objptr (L.pointer_type vtableptr_t) "" builder) "tbl" builder
-          in
-          L.build_load (L.build_struct_gep tbl 1 "eventptr" builder) "event" builder,
-          L.build_load (L.build_struct_gep tbl 3 "eventptr" builder) "event" builder
-        in
-        ignore (L.build_call destroy_event [|objref|] "" builder);
-        ignore (L.build_call delete_event [|objref|] "" builder);
-        (* Mark its id as 0 *)
-        let idptr = L.build_struct_gep objptr 2 "id" builder in
-        ignore (L.build_store (L.const_int i64_t 0) idptr builder);
+        ignore (build_delete objref builder ~destroy:true);
+        expr scope builder (A.Noexpr) (* considered Void in semant *)
+      | A.Delete e ->
+        let objref = expr scope builder e in
+        ignore (build_delete objref builder ~destroy:false);
         expr scope builder (A.Noexpr) (* considered Void in semant *)
     in
 

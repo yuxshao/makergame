@@ -12,9 +12,17 @@ object daughter : parent {
 
 object main {
   event create {
+    std::printstr("destroy");
     create son;
     create daughter;
     foreach (parent p) destroy p;
+
+    std::printstr("delete");
+    create son;
+    create daughter;
+    create parent;
+    foreach (parent p) delete p;
+
     std::end_game();
   }
 }
