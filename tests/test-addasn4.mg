@@ -5,6 +5,6 @@ event create
   x = 0;
   std::print::i((x += 2) += 2);
   std::print::i(x);
-  std::end_game();
+  std::game::end();
 }
 }

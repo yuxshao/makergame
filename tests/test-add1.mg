@@ -8,6 +8,6 @@ event create
 {
   std::print::i( add(17, 25) );
 
-  std::end_game();
+  std::game::end();
 }
 }

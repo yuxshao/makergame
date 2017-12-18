@@ -197,7 +197,7 @@ object Board {
   }
 }
 
-object game_over : std::room {
+object game_over : game::room {
   event create {
     super();
     std::window::set_clear(255, 0, 0);
@@ -205,7 +205,7 @@ object game_over : std::room {
   }
 }
 
-object main : std::room {
+object main : game::room {
   event create {
     super();
     std::window::set_title("Tetris");

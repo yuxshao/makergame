@@ -10,7 +10,7 @@ event create
 {
   foo(73);
   std::print::i(a);
-  std::end_game();
+  std::game::end();
   return;
 }
 }

@@ -10,6 +10,6 @@ event create
   a = 42;
   a = a + 5;
   std::print::i(a);
-  std::end_game();
+  std::game::end();
 }
 }

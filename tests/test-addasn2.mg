@@ -6,6 +6,6 @@ event create
   x += 3.0;
   std::print::f( x );
 
-  std::end_game();
+  std::game::end();
 }
 }

@@ -15,6 +15,6 @@ object main {
     i = 0;
     foreach (child c) ++i;
     std::print::i(i);
-    std::end_game();
+    std::game::end();
   }
 }

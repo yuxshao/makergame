@@ -14,7 +14,7 @@ event create
   fun(i = 2, i = i+1);
 
   std::print::i(i);
-  std::end_game();
+  std::game::end();
   return;
 }
 }

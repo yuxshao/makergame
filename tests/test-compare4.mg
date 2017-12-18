@@ -11,6 +11,6 @@ object main {
 
     aide a = none;
     std::print::b(a == none);
-    std::end_game();
+    std::game::end();
   }
 }

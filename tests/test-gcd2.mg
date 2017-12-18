@@ -11,7 +11,7 @@ event create
   std::print::i(gcd(14,21));
   std::print::i(gcd(8,36));
   std::print::i(gcd(99,121));
-  std::end_game();
+  std::game::end();
   return;
 }
 }

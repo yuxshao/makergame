@@ -8,7 +8,7 @@ event create
   i = 42;
   j = 10;
   std::print::i(i + j);
-  std::end_game();
+  std::game::end();
   return;
 }
 }

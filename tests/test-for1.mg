@@ -6,7 +6,7 @@ event create
     std::print::i(i);
   }
   std::print::i(42);
-  std::end_game();
+  std::game::end();
   return;
 }
 }

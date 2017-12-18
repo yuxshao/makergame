@@ -16,7 +16,7 @@ object main {
   }
 
   event step {
-    if (i >= 1) { destroy c; std::end_game(); }
+    if (i >= 1) { destroy c; std::game::end(); }
     else ++i;
   }
 }

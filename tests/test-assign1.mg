@@ -26,6 +26,6 @@ object main {
     (h.x = 5) = 6;
     std::print::i(h.x);
 
-    std::end_game();
+    std::game::end();
   }
 }

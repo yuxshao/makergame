@@ -6,6 +6,6 @@ object main {
     helper h;
     aide a;
     std::print::b(a == h); // cannot compare unrelated objects
-    std::end_game();
+    std::game::end();
   }
 }

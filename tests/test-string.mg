@@ -7,7 +7,7 @@ event create {
   std::print::s("this is \"right\"");
   std::print::s("Either\\or is okay");
   std::print::s("multiple\nlines");
-  std::end_game();
+  std::game::end();
   return;
 }
 }

@@ -13,6 +13,6 @@ object main {
     foreach (helper h) { std::print::s("still exists!"); }
     /* refs to destroyed objects still work until at least end of event */
     std::print::i(h.i);
-    std::end_game();
+    std::game::end();
   }
 }

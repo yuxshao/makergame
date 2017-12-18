@@ -13,7 +13,7 @@ object main {
 event create
 {
   std::print::i(foo(7));
-  std::end_game();
+  std::game::end();
   return;
 }
 }

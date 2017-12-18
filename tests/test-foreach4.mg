@@ -19,7 +19,7 @@ object main {
 
     print_obj_count();
 
-    std::end_game();
+    std::game::end();
   }
 }
 

@@ -13,6 +13,6 @@ object main {
       std::print::i(i);
       i = i + 1;
     }
-    std::end_game();
+    std::game::end();
   }
 }

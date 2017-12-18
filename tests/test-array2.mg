@@ -12,6 +12,6 @@ object main {
     int i = 3;
     int j[10] = make_ten_of(5);
     std::print::i(j[i]);
-    std::end_game();
+    std::game::end();
   }
 }

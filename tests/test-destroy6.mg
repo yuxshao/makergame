@@ -9,6 +9,6 @@ object main {
       std::print::i(i);
       create main;
     }
-    else std::end_game();
+    else std::game::end();
   }
 }

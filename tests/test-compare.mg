@@ -8,6 +8,6 @@ object main {
       foreach (helper g)
         if (h == g) ++i;
     std::print::i(i);
-    std::end_game();
+    std::game::end();
   }
 }

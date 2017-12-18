@@ -10,6 +10,6 @@ object main {
     i = 0; /* count # helpers */
     foreach (helper h) { i = i + 1; }
     std::print::i(i);
-    std::end_game();
+    std::game::end();
   }
 }

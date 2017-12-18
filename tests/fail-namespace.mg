@@ -7,6 +7,6 @@ namespace sp {
 object main {
   event create {
     std::print::s("hey");
-    std::end_game();
+    std::game::end();
   }
 }

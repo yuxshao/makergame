@@ -7,7 +7,7 @@ event create
 
   i = 42;
   std::print::i(i + i);
-  std::end_game();
+  std::game::end();
   return;
 }
 }

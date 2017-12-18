@@ -12,7 +12,7 @@ event create
   std::print::i(gcd(2,14));
   std::print::i(gcd(3,15));
   std::print::i(gcd(99,121));
-  std::end_game();
+  std::game::end();
   return;
 }
 }

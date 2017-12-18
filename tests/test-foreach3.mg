@@ -18,7 +18,7 @@ object main {
     foreach (child c) ++i; // 10 parents total
     std::print::i(i);
 
-    std::end_game();
+    std::game::end();
   }
 }
 

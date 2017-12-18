@@ -7,6 +7,6 @@ object main {
     x = 5;
     std::print::i(this.x);
     std::print::i(x);
-    std::end_game();
+    std::game::end();
   }
 }

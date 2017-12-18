@@ -20,6 +20,6 @@ object main {
     create granddaughter(4); // create with arguments from grandparent
     create son;
     create grandson;
-    std::end_game();
+    std::game::end();
   }
 }

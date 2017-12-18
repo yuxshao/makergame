@@ -35,5 +35,5 @@ object main {
     create daughter;
   }
 
-  event step { std::end_game(); }
+  event step { std::game::end(); }
 }

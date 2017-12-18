@@ -4,6 +4,6 @@ object main {
   event create {
     a = 5;
     std::print::i(a);
-    std::end_game();
+    std::game::end();
   }
 }

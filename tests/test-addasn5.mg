@@ -8,6 +8,6 @@ object main {
     y -= 3; // turns to 10.0 - 3.0 = 7.0
     std::print::i(x);
     std::print::f(y);
-    std::end_game();
+    std::game::end();
   }
 }

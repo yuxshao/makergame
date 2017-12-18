@@ -8,6 +8,6 @@ object main {
   event create {
     set(this);
     std::print::i(this.x);
-    std::end_game();
+    std::game::end();
   }
 }

@@ -13,7 +13,7 @@ event create
   std::print::i(fib(3));
   std::print::i(fib(4));
   std::print::i(fib(5));
-  std::end_game();
+  std::game::end();
   return;
 }
 }

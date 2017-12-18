@@ -23,6 +23,6 @@ object main {
     A::z = 5;
     z = 10; // does not overwrite A::z
     A::compute2(20); // A2 20 5
-    std::end_game();
+    std::game::end();
   }
 }

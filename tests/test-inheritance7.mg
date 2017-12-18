@@ -9,6 +9,6 @@ object main {
   event create {
     A::A::D obj = create B;
     std::print::s("success!");
-    std::end_game();
+    std::game::end();
   }
 }

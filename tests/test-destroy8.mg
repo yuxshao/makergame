@@ -20,6 +20,6 @@ object main {
     // run this thing for 6 steps
     ++j;
     if (j >= 6)
-      std::end_game();
+      std::game::end();
   }
 }

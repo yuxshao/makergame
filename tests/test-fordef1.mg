@@ -3,7 +3,7 @@ object main {
   {
     for (int i = 0 ; i < 5 ; i = i + 1)
       std::print::i(i);
-    std::end_game();
+    std::game::end();
     return;
   }
 }

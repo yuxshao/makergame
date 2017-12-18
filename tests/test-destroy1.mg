@@ -2,7 +2,7 @@
 object helper {
   int y;
   event create { this.y = 3; }
-  event destroy { std::print::i(this.y); std::end_game(); }
+  event destroy { std::print::i(this.y); std::game::end(); }
 }
 
 object main {

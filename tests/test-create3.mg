@@ -11,7 +11,7 @@ object main {
     helper h;
     h = create helper(4);
     std::print::i(h.x);
-    std::end_game();
+    std::game::end();
   }
 }
 

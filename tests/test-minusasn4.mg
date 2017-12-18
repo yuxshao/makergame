@@ -9,7 +9,7 @@ event create
 {
   std::print::i( minusAsn(0) );
 
-  std::end_game();
+  std::game::end();
   return;
 }
 }

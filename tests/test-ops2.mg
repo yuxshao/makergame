@@ -15,6 +15,6 @@ event create
   std::print::b(!true);
   std::print::i(-10);
   std::print::i(-(-42));
-  std::end_game();
+  std::game::end();
 }
 }

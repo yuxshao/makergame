@@ -21,6 +21,6 @@ object main {
     // manipulates global x
     set_global(1);
     std::print::i(get_global());
-    std::end_game();
+    std::game::end();
   }
 }

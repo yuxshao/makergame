@@ -14,6 +14,6 @@ object main {
 event create
 {
   compute();
-  std::end_game();
+  std::game::end();
 }
 }

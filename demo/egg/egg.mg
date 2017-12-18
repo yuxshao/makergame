@@ -1,8 +1,15 @@
 // make relevant namespaces more easily accessible
-namespace spr = std::spr;
-namespace snd = std::snd;
-namespace key = std::key;
+// the best way is slightly verbose right now, since
+// "using" does not make inner namespaces available
+// (for deeper language design reasons... since declaration
+//  order does not matter, it will be tough to decide how
+//  to get using inner inner namespaces after using an inner
+//  namespace.)
+namespace spr    = std::spr;
+namespace snd    = std::snd;
+namespace key    = std::key;
 namespace window = std::window;
+namespace game   = std::game;
 
 sound boinkSound;
 int score;
@@ -18,7 +25,8 @@ object Gameobj {
   float hspeed; float vspeed;
   float origin_x; float origin_y;
 
-  event create(string sprite_name) {
+  event create(float x, float y, string sprite_name) {
+    this.x = x; this.y = y;
     spr = spr::load(sprite_name);
     origin_x = spr::width(spr) * 0.5;
     origin_y = spr::height(spr) * 0.5;
@@ -29,34 +37,24 @@ object Gameobj {
   }
 }
 
-object Egg {
-  sprite spr;
-  int x; int y;
-  event create {
-    spr = spr::load("egg.png");
+object Egg : Gameobj {
+  event create(float x, float y) {
+    super(x, y, "egg.png");
+    vspeed = 5;
     snd::play(boinkSound);
   }
 
   event step {
-    y = y + 5;
     if (hit_ground(this)) {
       foreach (object o) destroy o;
       create Gameover;
     }
   }
-  event draw {
-    spr::render(spr, x-16, y-16);
-  }
 }
 
-object Player {
-  int x; int y;
-  sprite spr;
-
+object Player : Gameobj {
   event create {
-    spr = spr::load("player.png");
-    x = 300;
-    y = 500;
+    super(300, 500, "player.png");
   }
 
   event step { 
@@ -71,10 +69,6 @@ object Player {
       }
     }
   }
-
-  event draw {
-    spr::render(spr, x-50, y-16);
-  }
 }
 
 object Spawner {
@@ -84,17 +78,15 @@ object Spawner {
     --timer;
     if (timer == 0) {
       timer = 50;
-      Egg egg = create Egg;
-      egg.x = 100 + 100 * std::math::irandom(7);
-      egg.y = 0;
+      Egg egg = create Egg(100 + 700 * std::math::frandom(), 0);
     }
   }
 }
 
-object main : std::room {
+object main : game::room {
   event create {
     super();
-    std::window::set_title("egg game");
+    window::set_title("egg game");
     score = 0;
     boinkSound = snd::load("boink.ogx");
     create Player;
@@ -102,7 +94,7 @@ object main : std::room {
   }
 }
 
-object Gameover {
+object Gameover : game::room {
   sprite spr;
   event create { spr = spr::load("gameover.png"); }
   event draw { spr::render(spr, 0, 0); }

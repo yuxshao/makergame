@@ -13,7 +13,7 @@ event create
 {
  std::print::i(cond(true));
  std::print::i(cond(false));
- std::end_game();
+ std::game::end();
  return;
 }
 }

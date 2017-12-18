@@ -18,7 +18,7 @@ object main {
     }
   }
   event step {
-    if (this.j > 100) std::end_game();
+    if (this.j > 100) std::game::end();
     this.j = this.j + 1;
   }
 }

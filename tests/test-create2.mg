@@ -21,7 +21,7 @@ object main {
     }
     else {
       create aide; // causes an 'aide' call right before the end
-      std::end_game();
+      std::game::end();
     }
   }
 }

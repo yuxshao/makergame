@@ -14,6 +14,6 @@ object main {
     i[1] = 2;
     i[2] = 3;
     std::print::i(sum(i));
-    std::end_game();
+    std::game::end();
   }
 }

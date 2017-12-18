@@ -19,6 +19,6 @@ event create
   else {
     std::print::s("3.0 != 3\n");
   }
-  std::end_game();
+  std::game::end();
 }
 }

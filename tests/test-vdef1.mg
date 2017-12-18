@@ -4,6 +4,6 @@ object main {
     int a = 1 + 1;
     std::print::i( a );
 
-    std::end_game();
+    std::game::end();
   }
 }

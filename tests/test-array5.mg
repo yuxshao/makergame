@@ -5,6 +5,6 @@ object main {
     for (i = 0; i < 5; ++i)
       sum += x[i];
     std::print::i(sum);
-    std::end_game();
+    std::game::end();
   }
 }

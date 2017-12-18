@@ -10,7 +10,7 @@ object main {
 event create
 {
   foo(true);
-  std::end_game();
+  std::game::end();
   return;
 }
 }

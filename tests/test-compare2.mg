@@ -12,6 +12,6 @@ object main {
     std::print::b(h == H);
     std::print::b(h == P);
     std::print::b(P == h);
-    std::end_game();
+    std::game::end();
   }
 }

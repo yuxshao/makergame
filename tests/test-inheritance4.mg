@@ -19,6 +19,6 @@ object main {
 
     p = c;
     p.compute(); // parent compute, despite pointing to child, since non-virtual
-    std::end_game();
+    std::game::end();
   }
 }

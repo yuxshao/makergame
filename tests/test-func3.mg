@@ -10,7 +10,7 @@ object main {
 event create
 {
   printem(42,17,192,8);
-  std::end_game();
+  std::game::end();
   return;
 }
 }

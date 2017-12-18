@@ -9,7 +9,7 @@ object parent {
 object main {
   event create {
     create child(3);
-    std::end_game();
+    std::game::end();
   }
 }
 

@@ -11,7 +11,7 @@ event create
   int d;
   d = add(52, 10);
   std::print::i(d);
-  std::end_game();
+  std::game::end();
   return;
 }
 }

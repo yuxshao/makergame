@@ -5,6 +5,6 @@ event create {
     if (i == 2) { break; } // breaks out of loop
     std::print::i(i);
   }
-  std::end_game();
+  std::game::end();
 }
 }

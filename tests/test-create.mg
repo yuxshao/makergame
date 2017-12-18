@@ -14,6 +14,6 @@ object main {
     std::print::i(y);
     std::print::i(this.y);
     std::print::i(this.h.y);
-    std::end_game();
+    std::game::end();
   }
 }

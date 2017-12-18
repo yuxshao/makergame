@@ -17,6 +17,6 @@ object main {
   event step {
     i -= 1; // run for 2 steps
     if (i == 0)
-      std::end_game();
+      std::game::end();
   }
 }

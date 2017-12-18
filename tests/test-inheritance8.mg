@@ -23,6 +23,6 @@ object main {
     create parent;
     foreach (parent p) delete p;
 
-    std::end_game();
+    std::game::end();
   }
 }

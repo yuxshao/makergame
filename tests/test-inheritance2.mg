@@ -18,6 +18,6 @@ object main {
     c.x = 5;
     c.compute();
     create child2;
-    std::end_game();
+    std::game::end();
   }
 }

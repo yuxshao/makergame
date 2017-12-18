@@ -6,7 +6,7 @@ int foo(int a)
 object main {
 event create
 {
-  std::end_game();
+  std::game::end();
   return;
 }
 }

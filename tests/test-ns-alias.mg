@@ -25,6 +25,6 @@ object main {
     std::print::i(a::D::x);
     std::print::i(D::x);
     std::print::i(DD::x);
-    std::end_game();
+    std::game::end();
   }
 }

@@ -8,6 +8,6 @@ object main {
     print::f(6 % 2.5);
     print::f(5.5 % 2);
     print::f(5.5 % 2.5);
-    end_game();
+    std::game::end();
   }
 }

@@ -6,7 +6,7 @@ object main {
 event create
 {
   std::print::i(bar(17, false, 25));
-  std::end_game();
+  std::game::end();
   return;
 }
 }

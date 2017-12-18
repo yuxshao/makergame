@@ -36,6 +36,6 @@ object main {
     // returning an object defined inside a ns inside the ns of the call
     std::print::i(a::b.inner().x);
     std::print::i(a::b.inner().compute());
-    std::end_game();
+    std::game::end();
   }
 }

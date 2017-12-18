@@ -5,6 +5,6 @@ object main {
     for (i = 0; i < 10; ++i)
       j[i] = i;
     std::print::i(j[3]);
-    std::end_game();
+    std::game::end();
   }
 }

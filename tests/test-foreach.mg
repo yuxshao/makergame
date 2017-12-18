@@ -18,6 +18,6 @@ object main {
       std::print::i(h.y);
     }
 
-    std::end_game();
+    std::game::end();
   }
 }

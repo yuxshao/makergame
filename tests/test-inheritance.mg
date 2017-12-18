@@ -1,7 +1,7 @@
 object main {
   event create {
     std::print::s("success");
-    std::end_game();
+    std::game::end();
   }
 }
 

@@ -25,6 +25,6 @@ event create
   std::print::b(1 >= 2);
   std::print::b(1 >= 1);
   std::print::b(2 >= 1); 
-  std::end_game();
+  std::game::end();
 }
 }

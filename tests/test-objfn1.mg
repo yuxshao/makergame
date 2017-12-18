@@ -19,6 +19,6 @@ object main {
     std::print::i(h.get_number());
     std::print::i(number()); // number is not shadowed in object main
 
-    std::end_game();
+    std::game::end();
   }
 }

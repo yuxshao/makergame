@@ -11,6 +11,6 @@ object main {
     std::print::i(one::x);
     std::print::i(two::one::x); // two::one refers to the same as one
     std::print::i(two::x);
-    std::end_game();
+    std::game::end();
   }
 }

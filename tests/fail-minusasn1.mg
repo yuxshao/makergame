@@ -8,6 +8,6 @@ event create
 {
   std::print::i( minusAsn(1) );
 
-  std::end_game();
+  std::game::end();
 }
 }

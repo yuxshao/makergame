@@ -6,6 +6,6 @@ int addAsn(int x)
 object main {
   event create {
     std::print::i( addAsn(1) );
-    std::end_game();
+    std::game::end();
   }
 }

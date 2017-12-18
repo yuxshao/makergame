@@ -8,6 +8,6 @@ object main {
     for (i = 0; i < 3; ++i)
       for (j = 0; j < 3; ++j)
         std::print::i(x[i][j]);
-    std::end_game();
+    std::game::end();
   }
 }

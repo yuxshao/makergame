@@ -13,6 +13,6 @@ object main {
         destroy y;
       }
     }
-    std::end_game();
+    std::game::end();
   }
 }

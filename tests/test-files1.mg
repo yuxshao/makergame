@@ -7,6 +7,6 @@ object main {
     // set a value defined in that file
     n::x = 3;
     std::print::i(n::x);
-    std::end_game();
+    std::game::end();
   }
 }

@@ -27,7 +27,7 @@ event create
   incab();
   printA();
   printB();
-  std::end_game();
+  std::game::end();
   return;
 }
 }
