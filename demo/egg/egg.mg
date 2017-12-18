@@ -1,3 +1,9 @@
+// make relevant namespaces more easily accessible
+namespace spr = std::spr;
+namespace snd = std::snd;
+namespace key = std::key;
+namespace window = std::window;
+
 sound boinkSound;
 int score;
 
@@ -13,13 +19,13 @@ object Gameobj {
   float origin_x; float origin_y;
 
   event create(string sprite_name) {
-    spr = std::spr::load(sprite_name);
-    origin_x = std::spr::width(spr) * 0.5;
-    origin_y = std::spr::height(spr) * 0.5;
+    spr = spr::load(sprite_name);
+    origin_x = spr::width(spr) * 0.5;
+    origin_y = spr::height(spr) * 0.5;
   }
   event draw {
     x += hspeed; y += vspeed;
-    std::spr::render(spr, x-origin_x, y-origin_y);
+    spr::render(spr, x-origin_x, y-origin_y);
   }
 }
 
@@ -27,8 +33,8 @@ object Egg {
   sprite spr;
   int x; int y;
   event create {
-    spr = std::spr::load("egg.png");
-    std::snd::play(boinkSound);
+    spr = spr::load("egg.png");
+    snd::play(boinkSound);
   }
 
   event step {
@@ -39,7 +45,7 @@ object Egg {
     }
   }
   event draw {
-    std::spr::render(spr, x-16, y-16);
+    spr::render(spr, x-16, y-16);
   }
 }
 
@@ -48,14 +54,14 @@ object Player {
   sprite spr;
 
   event create {
-    spr = std::spr::load("player.png");
+    spr = spr::load("player.png");
     x = 300;
     y = 500;
   }
 
   event step { 
-    if (std::key::is_down(std::key::Left)) x -= 5;
-    if (std::key::is_down(std::key::Right)) x += 5;
+    if (key::is_down(key::Left)) x -= 5;
+    if (key::is_down(key::Right)) x += 5;
 
     foreach (Egg egg) {
       if (egg_touching_player(egg, this)) {
@@ -67,7 +73,7 @@ object Player {
   }
 
   event draw {
-    std::spr::render(spr, x-50, y-16);
+    spr::render(spr, x-50, y-16);
   }
 }
 
@@ -90,7 +96,7 @@ object main : std::room {
     super();
     std::window::set_title("egg game");
     score = 0;
-    boinkSound = std::snd::load("boink.ogx");
+    boinkSound = snd::load("boink.ogx");
     create Player;
     create Spawner;
   }
@@ -98,6 +104,6 @@ object main : std::room {
 
 object Gameover {
   sprite spr;
-  event create { spr = std::spr::load("gameover.png"); }
-  event draw { std::spr::render(spr, 0, 0); }
+  event create { spr = spr::load("gameover.png"); }
+  event draw { spr::render(spr, 0, 0); }
 }
