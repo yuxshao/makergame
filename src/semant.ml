@@ -468,7 +468,7 @@ let rec check_namespace (nname, namespace) forbidden_files files curr_dir =
           | _ -> List.assoc fname (namespace_of_chain chain).Namespace.functions
         with Not_found -> failwith ("unrecognized function " ^ (string_of_chain (chain, fname)))
       in
-      let actuals' = check_call_actuals (string_of_expr call) actuals scope fd.Func.formals in
+      let actuals' = check_call_actuals chain (string_of_expr call) actuals scope fd.Func.formals in
       add_typ_ns chain fd.Func.typ, Call((chain, fname), actuals')
     | MemberCall(e, _, fname, actuals) as call ->
       let fd, (ochain, oname), e' = match expr scope e with
@@ -479,9 +479,9 @@ let rec check_namespace (nname, namespace) forbidden_files files curr_dir =
                        string_of_expr e ^ " of type " ^ string_of_chain s))
         | _ -> failwith ("cannot get member of non-object " ^ (string_of_expr e))
       in
-      let actuals' = check_call_actuals (string_of_expr call) actuals scope fd.Func.formals in
+      let actuals' = check_call_actuals ochain (string_of_expr call) actuals scope fd.Func.formals in
       add_typ_ns ochain fd.Func.typ, MemberCall(e', (ochain, oname), fname, actuals')
-    | Create(obj_type, actuals) ->
+    | Create((ochain, oname), actuals) ->
       let formals =
         (* Find the create event formals, recursing up the inheritance chain. *)
         let get_formals formals decl =
@@ -489,10 +489,10 @@ let rec check_namespace (nname, namespace) forbidden_files files curr_dir =
           then (List.assoc "create" decl.Gameobj.events).Func.formals
           else formals
         in
-        List.fold_left get_formals [] (inheritance_chain obj_type)
+        List.fold_left get_formals [] (inheritance_chain (ochain, oname))
       in
-      let actuals' = check_call_actuals (string_of_expr e) actuals scope formals in
-      Object(obj_type), Create(obj_type, actuals')
+      let actuals' = check_call_actuals ochain (string_of_expr e) actuals scope formals in
+      Object(ochain, oname), Create((ochain, oname), actuals')
     | Destroy e ->
       (match expr scope e with
        | Object _, e' -> Void, Destroy e'
@@ -501,11 +501,12 @@ let rec check_namespace (nname, namespace) forbidden_files files curr_dir =
       (match expr scope e with
        | Object _, e' -> Void, Delete e'
        | _ -> failwith ("cannot delete non-object"))
-  and check_call_actuals loc actuals scope formals =
+  and check_call_actuals chain loc actuals scope formals =
     if List.length actuals != List.length formals then
       failwith ("expecting " ^ string_of_int (List.length formals) ^
                 " arguments in " ^ loc)
     else
+      let formals = List.map (fun (n, t) -> n, add_typ_ns chain t) formals in
       List.map2
         (fun (_, ft) ex -> let (et, ex') = expr scope ex in
           let (_, ex'') = check_assign ft ex' et
