@@ -357,12 +357,12 @@ let rec check_namespace (nname, namespace) forbidden_files files curr_dir =
                 string_of_typ t2 ^ " in " ^ string_of_expr e
       in
       (match op with
-       | Add | Sub | Mult | Div when t1 = Int && t2 = Int -> Int, Binop(e1', op, Int, e2')
-       | Add | Sub | Mult | Div when t1 = Float && t2 = Float -> Float, Binop(e1', op, Float, e2')
-       | Add | Sub | Mult | Div when t1 = Float && t2 = Int ->
+       | Add | Sub | Mult | Div | Modulo when t1 = Int && t2 = Int -> Int, Binop(e1', op, Int, e2')
+       | Add | Sub | Mult | Div | Modulo when t1 = Float && t2 = Float -> Float, Binop(e1', op, Float, e2')
+       | Add | Sub | Mult | Div | Modulo when t1 = Float && t2 = Int ->
          let (_, e2'') = check_assign t1 e2' t2 err
          in Float, Binop(e1', op, Float, e2'')
-       | Add | Sub | Mult | Div when t1 = Int && t2 = Float ->
+       | Add | Sub | Mult | Div | Modulo when t1 = Int && t2 = Float ->
          let (_, e1'') = check_assign t2 e1' t1 err
          in Float, Binop(e1'', op, Float, e2')
        (* TODO: mention in LRM that we are not converting bools *)

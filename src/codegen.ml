@@ -420,6 +420,7 @@ let translate the_program files =
       in
       List.fold_left add_llvar StringMap.empty usings
     in
+
     let llvars =
       let var m ((n, t), e) =
         let llname = "variable" ^ nname ^ "::" ^ n in
@@ -662,9 +663,7 @@ let translate the_program files =
          | A.Int ->
            (match op with
             | A.Add     -> L.build_add | A.Sub -> L.build_sub
-            | A.Mult    -> L.build_mul | A.Div -> L.build_sdiv
-            | A.Expo    -> failwith "not implemented" (* TODO: Probably won't implement. cut from LRM *)
-            | A.Modulo  -> failwith "not implemented"
+            | A.Mult    -> L.build_mul | A.Div -> L.build_sdiv | A.Modulo -> L.build_srem
             | A.Equal   -> L.build_icmp L.Icmp.Eq | A.Neq  -> L.build_icmp L.Icmp.Ne
             | A.Less    -> L.build_icmp L.Icmp.Slt | A.Leq -> L.build_icmp L.Icmp.Sle
             | A.Greater -> L.build_icmp L.Icmp.Sgt | A.Geq -> L.build_icmp L.Icmp.Sge
@@ -672,17 +671,15 @@ let translate the_program files =
          | A.Float ->
            (match op with
             | A.Add     -> L.build_fadd | A.Sub -> L.build_fsub
-            | A.Mult    -> L.build_fmul | A.Div -> L.build_fdiv
-            | A.Expo    -> failwith "not implemented" (* TODO: Probably won't implement. cut from LRM *)
-            | A.Modulo  -> failwith "not implemented"
+            | A.Mult    -> L.build_fmul | A.Div -> L.build_fdiv | A.Modulo -> L.build_frem
+            (* TODO: cut exponent from LRM *)
             | A.Equal   -> L.build_fcmp L.Fcmp.Oeq | A.Neq  -> L.build_fcmp L.Fcmp.One
             | A.Less    -> L.build_fcmp L.Fcmp.Olt | A.Leq -> L.build_fcmp L.Fcmp.Ole
             | A.Greater -> L.build_fcmp L.Fcmp.Ogt | A.Geq -> L.build_fcmp L.Fcmp.Oge
             | _         -> assert false)
          | A.Bool ->
            (match op with (* TODO: SHOULD WE SHORT CIRCUIT? *)
-            | A.And -> L.build_and | A.Or -> L.build_or
-            | _     -> assert false)
+            | A.And -> L.build_and | A.Or -> L.build_or | _ -> assert false)
          | A.Object _ ->
            (match op with
             | A.Equal -> build_obj_cmp ~eq:true | A.Neq -> build_obj_cmp ~eq:false

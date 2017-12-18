@@ -24,7 +24,6 @@ rule token = parse
   | '-'      { MINUS }
   | '*'      { TIMES }
   | '/'      { DIVIDE }
-  | '^'      { EXPONENT }
   | '%'      { MODULO }
   | "++"     { INCREMENT }
   | "--"     { DECREMENT }

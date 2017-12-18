@@ -5,7 +5,7 @@ open Ast
 %}
 
 %token SEMI LPAREN RPAREN LBRACK RBRACK LCURLY RCURLY COMMA PERIOD COLON DBCOLON
-%token PLUS MINUS TIMES DIVIDE EXPONENT MODULO ASSIGN NOT
+%token PLUS MINUS TIMES DIVIDE MODULO ASSIGN NOT
 %token INCREMENT DECREMENT
 %token ADDASN MINUSASN TIMEASN DIVASN
 %token EQ NEQ LT LEQ GT GEQ TRUE FALSE AND OR
@@ -29,7 +29,7 @@ open Ast
 %right CREATE DESTROY DELETE
 %left PLUS MINUS
 %left TIMES DIVIDE
-%left EXPONENT MODULO
+%left MODULO
 %right NOT NEG
 %left INCREMENT DECREMENT
 %left PERIOD LBRACK RBRACK
@@ -174,7 +174,6 @@ expr:
   | expr MINUS  expr   { Binop($1, Sub, Void,  $3) }
   | expr TIMES  expr   { Binop($1, Mult, Void, $3) }
   | expr DIVIDE expr   { Binop($1, Div, Void,  $3) }
-  | expr EXPONENT expr { Binop($1, Expo, Void,  $3) }
   | expr MODULO expr   { Binop($1, Modulo, Void,  $3) }
   | expr EQ     expr   { Binop($1, Equal, Void,   $3) }
   | INCREMENT   expr   { Idop(Inc, Void, $2) }
