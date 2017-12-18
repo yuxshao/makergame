@@ -3,9 +3,9 @@ event create
 {
   int i;
   for (i = 0 ; i < 5 ; i = i + 1) {
-    std::print(i);
+    std::print::i(i);
   }
-  std::print(42);
+  std::print::i(42);
   std::end_game();
   return;
 }

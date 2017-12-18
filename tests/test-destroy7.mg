@@ -11,10 +11,10 @@ object main {
     int i = 0;
     foreach (child c) c.detonate();
     foreach (parent c) ++i;
-    std::print(i);
+    std::print::i(i);
     i = 0;
     foreach (child c) ++i;
-    std::print(i);
+    std::print::i(i);
     std::end_game();
   }
 }

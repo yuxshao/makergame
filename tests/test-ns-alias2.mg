@@ -5,7 +5,7 @@ namespace a { int x; }
 object main {
   event create {
     a::x = 1;
-    std::print(A::x);
+    std::print::i(A::x);
     std::end_game();
   }
 }

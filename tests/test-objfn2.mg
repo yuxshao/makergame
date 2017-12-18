@@ -10,17 +10,17 @@ object main {
 
     // manipulates local x
     int x = x + 1;
-    std::print(x);
+    std::print::i(x);
   }
 
   event create {
     // manipulates member x
     set(2);
-    std::print(x); 
+    std::print::i(x); 
 
     // manipulates global x
     set_global(1);
-    std::print(get_global());
+    std::print::i(get_global());
     std::end_game();
   }
 }

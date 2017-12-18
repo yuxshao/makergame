@@ -5,7 +5,7 @@ object aide { }
 void print_obj_count() {
   int i = 0;
   foreach (object o) ++i;
-  std::print(i);
+  std::print::i(i);
 }
 
 object main {

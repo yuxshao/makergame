@@ -43,7 +43,7 @@ object Block {
   sprite s;
   Piece piece; // need to set piece to none at some point
   event create(int x, int y, Piece p) {
-    s = std::load_image("block.png");
+    s = std::spr::load("block.png");
     this.x = x; this.y = y; piece = p;
   }
 
@@ -74,7 +74,7 @@ object Block {
     draw_x += boardOffsetX;
     draw_y += boardOffsetY;
     draw_x *= 20; draw_y *= 20;
-    std::draw_sprite(s, draw_x, draw_y);
+    std::spr::render(s, draw_x, draw_y);
   }
 }
 
@@ -89,7 +89,7 @@ object Piece {
     curr_timer = this.interval = interval;
     x = 5; y = 0;
 
-    int choice = std::irandom(7);
+    int choice = std::math::irandom(7);
     int k = 0;
     for (int y = 0; y < 4; ++y)
       for (int x = 0; x < 3; ++x)
@@ -200,21 +200,21 @@ object Board {
 object game_over : std::room {
   event create {
     super();
-    std::set_window_clear(255, 0, 0);
-    std::printstr("game over");
+    std::window::set_clear(255, 0, 0);
+    std::print::s("game over");
   }
 }
 
 object main : std::room {
   event create {
     super();
-    std::set_window_title("Tetris");
+    std::window::set_title("Tetris");
     Board b = create Board;
     create Piece(b, 60);
   }
 
   event step {
     super();
-    std::set_window_size(640, 480);
+    std::window::set_size(640, 480);
   }
 }

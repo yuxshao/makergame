@@ -6,7 +6,7 @@ event create {
   f2 = 2.5;
   float sum;
   sum = f1 + f2;
-  std::print_float(sum);
+  std::print::f(sum);
   std::end_game();
 }
 }

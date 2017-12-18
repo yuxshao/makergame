@@ -11,20 +11,20 @@ object main {
     // not just chains of identifiers
 
     make().x = 3;
-    foreach (helper h) { std::print(h.x); destroy h; }
+    foreach (helper h) { std::print::i(h.x); destroy h; }
 
     (create helper).x = 4;
-    foreach (helper h) { std::print(h.x); destroy h; }
+    foreach (helper h) { std::print::i(h.x); destroy h; }
 
-    std::print(make().x);
+    std::print::i(make().x);
 
     helper h;
     (h = create helper).x = 4;
-    std::print(h.x);
+    std::print::i(h.x);
 
     // assignments are also lvalues
     (h.x = 5) = 6;
-    std::print(h.x);
+    std::print::i(h.x);
 
     std::end_game();
   }

@@ -5,8 +5,8 @@ object main {
   event step {
     int x;
     x = 5;
-    std::print(this.x);
-    std::print(x);
+    std::print::i(this.x);
+    std::print::i(x);
     std::end_game();
   }
 }

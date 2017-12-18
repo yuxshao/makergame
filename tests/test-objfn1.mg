@@ -13,11 +13,11 @@ object main {
     h = make(); // self member function test
     h = this.make();
 
-    std::print(h.number()); // other member function test
-    std::print((create helper).number()); 
+    std::print::i(h.number()); // other member function test
+    std::print::i((create helper).number()); 
 
-    std::print(h.get_number());
-    std::print(number()); // number is not shadowed in object main
+    std::print::i(h.get_number());
+    std::print::i(number()); // number is not shadowed in object main
 
     std::end_game();
   }

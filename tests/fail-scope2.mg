@@ -6,7 +6,7 @@ event create {
     int y;
     y = 4;
   }
-  std::print(x);
-  std::print(y); /* error: y not in outer scope */
+  std::print::i(x);
+  std::print::i(y); /* error: y not in outer scope */
 }
 }

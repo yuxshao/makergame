@@ -17,14 +17,14 @@ namespace DD = a::D; // alias to alias of inner ns
 object main {
   event create {
     a::b::x = 1;
-    std::print(B::x);
-    std::print(BB::x);
+    std::print::i(B::x);
+    std::print::i(BB::x);
     a::c::x = 2;
-    std::print(C::x);
+    std::print::i(C::x);
     a::c::d::x = 3;
-    std::print(a::D::x);
-    std::print(D::x);
-    std::print(DD::x);
+    std::print::i(a::D::x);
+    std::print::i(D::x);
+    std::print::i(DD::x);
     std::end_game();
   }
 }

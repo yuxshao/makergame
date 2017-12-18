@@ -1,9 +1,9 @@
 object main {
 event create
 {
-  std::print(42);
-  std::print(71);
-  std::print(1);
+  std::print::i(42);
+  std::print::i(71);
+  std::print::i(1);
   std::end_game();
   return;
 }

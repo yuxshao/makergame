@@ -10,7 +10,7 @@ object main {
     i = 0;
     foreach (helper h) {
       if (i == 2) break;
-      std::print(i);
+      std::print::i(i);
       i = i + 1;
     }
     std::end_game();

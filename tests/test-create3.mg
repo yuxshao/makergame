@@ -10,7 +10,7 @@ object main {
   event create {
     helper h;
     h = create helper(4);
-    std::print(h.x);
+    std::print::i(h.x);
     std::end_game();
   }
 }

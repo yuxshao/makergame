@@ -20,9 +20,17 @@ void set_sprite_position(void *s, double x, double y) { }
 void draw_sprite(void *sprite) { }
 void end_game() { game_ended = true; }
 bool key_pressed(int code) { return false; }
+
 void global_create();
 void global_step();
 void global_draw();
+
+void set_window_size(int w, int h) { }
+void set_window_clear(int r, int g, int b) { }
+void set_window_title(char *x) { }
+
+int sprite_width() { return 0; }
+int sprite_height() { return 0; }
 
 }
 

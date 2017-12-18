@@ -24,18 +24,18 @@ namespace a {
 object main {
   event create {
     // no namespace specified gives regular fn
-    std::print(compute());
+    std::print::i(compute());
     // appropriate outer namespace call
-    std::print(a::compute());
+    std::print::i(a::compute());
     // returning an object defined in the namespace of the call
-    std::print(a::b.make().compute());
+    std::print::i(a::b.make().compute());
     // member call from namespace
-    std::print(a::b.compute());
+    std::print::i(a::b.compute());
     // member variable from namespace
-    std::print(a::b.make().x);
+    std::print::i(a::b.make().x);
     // returning an object defined inside a ns inside the ns of the call
-    std::print(a::b.inner().x);
-    std::print(a::b.inner().compute());
+    std::print::i(a::b.inner().x);
+    std::print::i(a::b.inner().compute());
     std::end_game();
   }
 }

@@ -8,7 +8,7 @@ namespace A {
 object main {
   event create {
     A::A::D obj = create B;
-    std::printstr("success!");
+    std::print::s("success!");
     std::end_game();
   }
 }

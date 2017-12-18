@@ -4,7 +4,7 @@ object main {
     int i;
     for (i = 0; i < 10; ++i)
       j[i] = i;
-    std::print(j[3]);
+    std::print::i(j[3]);
     std::end_game();
   }
 }

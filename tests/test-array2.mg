@@ -11,7 +11,7 @@ object main {
   event create {
     int i = 3;
     int j[10] = make_ten_of(5);
-    std::print(j[i]);
+    std::print::i(j[i]);
     std::end_game();
   }
 }

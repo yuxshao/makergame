@@ -1,5 +1,5 @@
 
-object aide { event create { std::printstr("aide"); } }
+object aide { event create { std::print::s("aide"); } }
 
 object main {
   bool created;

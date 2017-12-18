@@ -6,7 +6,7 @@ object main {
     if (i < 5) {
       destroy this;
       i += 1;
-      std::print(i);
+      std::print::i(i);
       create main;
     }
     else std::end_game();

@@ -1,5 +1,5 @@
 object main {
 event create {
-  std::printstr("is "this" wrong?");
+  std::print::s("is "this" wrong?");
 }
 }

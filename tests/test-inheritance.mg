@@ -1,6 +1,6 @@
 object main {
   event create {
-    std::printstr("success");
+    std::print::s("success");
     std::end_game();
   }
 }

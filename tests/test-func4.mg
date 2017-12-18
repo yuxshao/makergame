@@ -10,7 +10,7 @@ event create
 {
   int d;
   d = add(52, 10);
-  std::print(d);
+  std::print::i(d);
   std::end_game();
   return;
 }

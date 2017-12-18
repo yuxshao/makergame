@@ -10,11 +10,16 @@ object Gameobj {
   sprite spr;
   float x; float y;
   float hspeed; float vspeed;
-  int origin_x; int origin_y;
+  float origin_x; float origin_y;
 
+  event create(string sprite_name) {
+    spr = std::spr::load(sprite_name);
+    origin_x = std::spr::width(spr) * 0.5;
+    origin_y = std::spr::height(spr) * 0.5;
+  }
   event draw {
     x += hspeed; y += vspeed;
-    std::draw_sprite(spr, x-origin_x, y-origin_y);
+    std::spr::render(spr, x-origin_x, y-origin_y);
   }
 }
 
@@ -22,10 +27,10 @@ object Egg {
   sprite spr;
   int x; int y;
   event create {
-    spr = std::load_image("egg.png");
-    std::play_sound(boinkSound);
+    spr = std::spr::load("egg.png");
+    std::snd::play(boinkSound);
   }
-  
+
   event step {
     y = y + 5;
     if (hit_ground(this)) {
@@ -34,7 +39,7 @@ object Egg {
     }
   }
   event draw {
-    std::draw_sprite(spr, x-16, y-16);
+    std::spr::render(spr, x-16, y-16);
   }
 }
 
@@ -43,7 +48,7 @@ object Player {
   sprite spr;
 
   event create {
-    spr = std::load_image("player.png");
+    spr = std::spr::load("player.png");
     x = 300;
     y = 500;
   }
@@ -56,13 +61,13 @@ object Player {
       if (egg_touching_player(egg, this)) {
         destroy egg;
         score += 5;
-        std::print(score);
+        std::print::i(score);
       }
     }
   }
 
   event draw {
-    std::draw_sprite(spr, x-50, y-16);
+    std::spr::render(spr, x-50, y-16);
   }
 }
 
@@ -74,7 +79,7 @@ object Spawner {
     if (timer == 0) {
       timer = 50;
       Egg egg = create Egg;
-      egg.x = 100 + 100 * std::irandom(7);
+      egg.x = 100 + 100 * std::math::irandom(7);
       egg.y = 0;
     }
   }
@@ -83,9 +88,9 @@ object Spawner {
 object main : std::room {
   event create {
     super();
-    std::set_window_title("egg game");
+    std::window::set_title("egg game");
     score = 0;
-    boinkSound = std::load_sound("boink.ogx");
+    boinkSound = std::snd::load("boink.ogx");
     create Player;
     create Spawner;
   }
@@ -93,6 +98,6 @@ object main : std::room {
 
 object Gameover {
   sprite spr;
-  event create { spr = std::load_image("gameover.png"); }
-  event draw { std::draw_sprite(spr, 0, 0); }
+  event create { spr = std::spr::load("gameover.png"); }
+  event draw { std::spr::render(spr, 0, 0); }
 }

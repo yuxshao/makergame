@@ -4,7 +4,7 @@ object main {
   event create {
     for (int i = 0; i < 3; ++i)
       for (int j = 0; j < 5; ++j)
-        std::print(x[i][j]);
+        std::print::i(x[i][j]);
     std::end_game();
   }
 }

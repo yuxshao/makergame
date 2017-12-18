@@ -9,7 +9,7 @@ object main {
     int i;
     i = 0; /* count # helpers */
     foreach (helper h) { i = i + 1; }
-    std::print(i);
+    std::print::i(i);
     std::end_game();
   }
 }

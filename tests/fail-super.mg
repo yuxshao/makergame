@@ -3,7 +3,7 @@ object child : parent {
 }
 
 object parent {
-  event create(int x) { std::print(x); }
+  event create(int x) { std::print::i(x); }
 }
 
 object main { }

@@ -6,7 +6,7 @@ int add(int x, int y)
 object main {
 event create
 {
-  std::print( add(17, 25) );
+  std::print::i( add(17, 25) );
 
   std::end_game();
 }

@@ -8,7 +8,7 @@ event create
 {
   int a;
   a = add(39, 3);
-  std::print(a);
+  std::print::i(a);
   std::end_game();
   return;
 }

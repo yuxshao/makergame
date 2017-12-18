@@ -11,9 +11,9 @@ object main {
   event step {
     int y;
     y = 5;
-    std::print(y);
-    std::print(this.y);
-    std::print(this.h.y);
+    std::print::i(y);
+    std::print::i(this.y);
+    std::print::i(this.h.y);
     std::end_game();
   }
 }

@@ -9,7 +9,7 @@ object main {
 event create
 {
   foo(73);
-  std::print(a);
+  std::print::i(a);
   std::end_game();
   return;
 }

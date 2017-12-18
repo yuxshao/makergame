@@ -7,7 +7,7 @@ object main {
     foreach (helper h)
       foreach (helper g)
         if (h == g) ++i;
-    std::print(i);
+    std::print::i(i);
     std::end_game();
   }
 }

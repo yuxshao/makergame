@@ -15,7 +15,7 @@ object main {
       create helper;
 
     foreach (helper h) {
-      std::print(h.y);
+      std::print::i(h.y);
     }
 
     std::end_game();

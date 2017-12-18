@@ -1,6 +1,6 @@
 void foo(int a)
 {
-  std::print(a + 3);
+  std::print::i(a + 3);
 }
 
 object main {

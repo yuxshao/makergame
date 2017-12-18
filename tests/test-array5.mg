@@ -4,7 +4,7 @@ object main {
     int i; int sum = 0;
     for (i = 0; i < 5; ++i)
       sum += x[i];
-    std::print(sum);
+    std::print::i(sum);
     std::end_game();
   }
 }

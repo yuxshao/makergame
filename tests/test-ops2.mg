@@ -1,20 +1,20 @@
 object main {
 event create
 {
-  std::printb(true);
-  std::printb(false);
-  std::printb(true && true);
-  std::printb(true && false);
-  std::printb(false && true);
-  std::printb(false && false);
-  std::printb(true || true);
-  std::printb(true || false);
-  std::printb(false || true);
-  std::printb(false || false);
-  std::printb(!false);
-  std::printb(!true);
-  std::print(-10);
-  std::print(-(-42));
+  std::print::b(true);
+  std::print::b(false);
+  std::print::b(true && true);
+  std::print::b(true && false);
+  std::print::b(false && true);
+  std::print::b(false && false);
+  std::print::b(true || true);
+  std::print::b(true || false);
+  std::print::b(false || true);
+  std::print::b(false || false);
+  std::print::b(!false);
+  std::print::b(!true);
+  std::print::i(-10);
+  std::print::i(-(-42));
   std::end_game();
 }
 }

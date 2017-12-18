@@ -7,7 +7,7 @@ object main {
   int x;
   event create {
     set(this);
-    std::print(this.x);
+    std::print::i(this.x);
     std::end_game();
   }
 }

@@ -13,7 +13,7 @@ object main {
     i[0] = 1;
     i[1] = 2;
     i[2] = 3;
-    std::print(sum(i));
+    std::print::i(sum(i));
     std::end_game();
   }
 }

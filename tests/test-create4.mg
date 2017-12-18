@@ -1,9 +1,9 @@
 object child : parent {
-  event create(int x) { super(x+1); std::print(x); }
+  event create(int x) { super(x+1); std::print::i(x); }
 }
 
 object parent {
-  event create(int x) { std::print(x); }
+  event create(int x) { std::print::i(x); }
 }
 
 object main {

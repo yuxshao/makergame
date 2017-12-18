@@ -7,7 +7,7 @@ int minusAsn(int x)
 object main {
 event create
 {
-  std::print( minusAsn(2) );
+  std::print::i( minusAsn(2) );
 
   std::end_game();
   return;

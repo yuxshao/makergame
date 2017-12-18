@@ -1,9 +1,9 @@
 object parent {
-  event step { std::printstr("hello!"); }
+  event step { std::print::s("hello!"); }
 }
 
 object child : parent {
-  event step { std::printstr("hey!"); } 
+  event step { std::print::s("hey!"); } 
 }
 
 object main {

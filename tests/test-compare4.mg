@@ -5,12 +5,12 @@ object main {
   event create {
     helper h = create helper;
     helper g = none;
-    std::printb(h == g);
-    std::printb(h == none);
-    std::printb(g == none);
+    std::print::b(h == g);
+    std::print::b(h == none);
+    std::print::b(g == none);
 
     aide a = none;
-    std::printb(a == none);
+    std::print::b(a == none);
     std::end_game();
   }
 }

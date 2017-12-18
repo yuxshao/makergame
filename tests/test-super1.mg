@@ -1,11 +1,11 @@
 object son : parent {
   event step {
-    std::printstr("child step");
+    std::print::s("child step");
     super();
   }
 
   event draw {
-    std::printstr("child draw");
+    std::print::s("child draw");
     super();
   }
 }
@@ -13,18 +13,18 @@ object son : parent {
 object daughter : parent {
   event step {
     super();
-    std::printstr("daughter step");
+    std::print::s("daughter step");
   }
 
   event draw {
     super();
-    std::printstr("daughter draw");
+    std::print::s("daughter draw");
   }
 }
 
 object parent {
-  event step { std::printstr("parent step"); }
-  event draw { std::printstr("parent draw"); }
+  event step { std::print::s("parent step"); }
+  event draw { std::print::s("parent draw"); }
 }
 
 object main {

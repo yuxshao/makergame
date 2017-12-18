@@ -3,12 +3,12 @@ int b;
 
 void printA()
 {
-  std::print(a);
+  std::print::i(a);
 }
 
 void printB()
 {
-  std::print(b);
+  std::print::i(b);
 }
 
 void incab()

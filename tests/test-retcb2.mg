@@ -3,11 +3,11 @@ int compute() {
   int i;  
 
   i = 15;
-  std::print(i);
+  std::print::i(i);
   return i;
 
   i = 32; /* code after a return is ok */
-  std::print(i);
+  std::print::i(i);
 }
 
 object main {

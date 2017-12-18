@@ -1,5 +1,5 @@
 object main {
 event create {
-  std::print("hello");
+  std::print::i("hello");
 }
 }

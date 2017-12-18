@@ -7,7 +7,7 @@ object main {
     int i; int j;
     for (i = 0; i < 3; ++i)
       for (j = 0; j < 3; ++j)
-        std::print(x[i][j]);
+        std::print::i(x[i][j]);
     std::end_game();
   }
 }

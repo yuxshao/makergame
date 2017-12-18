@@ -13,7 +13,7 @@ event create
 
   fun(i = 2, i = i+1);
 
-  std::print(i);
+  std::print::i(i);
   std::end_game();
   return;
 }

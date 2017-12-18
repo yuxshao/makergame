@@ -5,9 +5,9 @@ object main {
     aide a = create aide;
     create aide;
 
-    std::printb(std::is_alive(a));
+    std::print::b(std::is_alive(a));
     destroy(a);
-    std::printb(std::is_alive(a));
+    std::print::b(std::is_alive(a));
 
     std::end_game();
   }

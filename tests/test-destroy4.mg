@@ -10,9 +10,9 @@ object main {
     h = create helper;
     destroy h;
     /* destroyed objects are immediately invisible to loops */
-    foreach (helper h) { std::printstr("still exists!"); }
+    foreach (helper h) { std::print::s("still exists!"); }
     /* refs to destroyed objects still work until at least end of event */
-    std::print(h.i);
+    std::print::i(h.i);
     std::end_game();
   }
 }

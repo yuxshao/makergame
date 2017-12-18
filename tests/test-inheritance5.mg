@@ -1,8 +1,8 @@
 object parent {
-  event create  { std::printstr("create"); }
-  event step    { std::printstr("step"); }
-  event draw    { std::printstr("draw"); }
-  event destroy { std::printstr("destroy"); }
+  event create  { std::print::s("create"); }
+  event step    { std::print::s("step"); }
+  event draw    { std::print::s("draw"); }
+  event destroy { std::print::s("destroy"); }
 }
 
 object child : parent { } // nothing should be overridden

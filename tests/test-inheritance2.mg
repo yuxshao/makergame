@@ -1,6 +1,6 @@
 object parent {
   int x;
-  void compute() { std::print(x); }
+  void compute() { std::print::i(x); }
 }
 
 object child : parent {
@@ -8,7 +8,7 @@ object child : parent {
 }
 
 object child2 : parent {
-  void compute() { std::print(10); }
+  void compute() { std::print::i(10); }
   event create { compute(); } // calls own compute
 }
 

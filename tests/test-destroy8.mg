@@ -15,7 +15,7 @@ object main {
     int i = 0;
     foreach (child c) c.detonate();
     foreach (parent c) ++i;
-    std::print(i);
+    std::print::i(i);
 
     // run this thing for 6 steps
     ++j;

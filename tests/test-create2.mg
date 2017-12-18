@@ -1,19 +1,19 @@
 
 object helper {
   // should run before main's second step
-  event step { std::printstr("helper"); }
+  event step { std::print::s("helper"); }
 }
 
 object aide {
   // should run before main's second step
-  event step { std::printstr("aide"); }
+  event step { std::print::s("aide"); }
 }
 
 object main {
   bool created;
   event create { this.created = false; create aide; }
   event step {
-    std::printstr("main");
+    std::print::s("main");
     if (!this.created) {
       create helper;
       create helper;

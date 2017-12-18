@@ -10,7 +10,7 @@ int foo(int a, bool b)
 
 object main {
 event create {
- std::print(foo(37, false));
+ std::print::i(foo(37, false));
  std::end_game();
  return;
 }

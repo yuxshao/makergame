@@ -1,11 +1,11 @@
 object parent {
-  void compute() { std::printstr("parent compute"); }
-  event create { std::printstr("parent create"); }
+  void compute() { std::print::s("parent compute"); }
+  event create { std::print::s("parent create"); }
 }
 
 object child : parent {
-  void compute() { std::printstr("child compute"); }
-  event create { std::printstr("child create"); } 
+  void compute() { std::print::s("child compute"); }
+  event create { std::print::s("child create"); } 
 }
 
 object main {

@@ -9,7 +9,7 @@ event create
   int a;
   a = 42;
   a = a + 5;
-  std::print(a);
+  std::print::i(a);
   std::end_game();
 }
 }

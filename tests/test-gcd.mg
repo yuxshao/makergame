@@ -9,9 +9,9 @@ int gcd(int a, int b) {
 object main {
 event create
 {
-  std::print(gcd(2,14));
-  std::print(gcd(3,15));
-  std::print(gcd(99,121));
+  std::print::i(gcd(2,14));
+  std::print::i(gcd(3,15));
+  std::print::i(gcd(99,121));
   std::end_game();
   return;
 }

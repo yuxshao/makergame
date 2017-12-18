@@ -11,8 +11,8 @@ int cond(bool b)
 object main {
 event create
 {
- std::print(cond(true));
- std::print(cond(false));
+ std::print::i(cond(true));
+ std::print::i(cond(false));
  std::end_game();
  return;
 }

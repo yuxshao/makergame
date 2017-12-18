@@ -3,7 +3,7 @@ event create
 {
   int a;
   a = 42;
-  std::print(a);
+  std::print::i(a);
   std::end_game();
   return;
 }

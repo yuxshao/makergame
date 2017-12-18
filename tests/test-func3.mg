@@ -1,9 +1,9 @@
 void printem(int a, int b, int c, int d)
 {
-  std::print(a);
-  std::print(b);
-  std::print(c);
-  std::print(d);
+  std::print::i(a);
+  std::print::i(b);
+  std::print::i(c);
+  std::print::i(d);
 }
 
 object main {
