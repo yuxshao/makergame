@@ -86,6 +86,31 @@ let rec namespace_of_chain top prev files can_private chain cname =
     namespace_of_chain top' prev' files private' chain' cname
 ;;
 
+let namespace_scope namespace_of_chain nname =
+  let rec helper chain can_private =
+    let nname = List.fold_left (fun acc x -> acc ^ "::" ^ x) nname chain in
+    let open Namespace in
+    let ns = namespace_of_chain chain in
+    let add_ns_scope (v, f) (priv, inner_chain) =
+      match can_private, priv with
+      (* TODO might not work with the way codegen works *)
+      (* Don't include private usings *)
+      (* | false, true -> v, f *)
+      | _ ->
+        let vs, fs = helper (chain @ inner_chain) false in
+        StringMap.fold StringMap.add vs v, StringMap.fold StringMap.add fs f
+    in
+    let vscope, fscope =
+      List.fold_left add_ns_scope (StringMap.empty, StringMap.empty) ns.usings
+    in
+    let global_binds = List.map fst ns.variables in
+    let functions = ns.functions in
+    List.fold_left (add_to_scope ~loc:(nname ^ " globals")) vscope global_binds,
+    List.fold_left (add_to_scope ~loc:(nname ^ " fn decls")) fscope functions
+  in
+  helper [] true
+;;
+
 (* Semantic checking of a namespace. Returns checked AST if successful, throws
    an exception if something is wrong.
 
@@ -97,7 +122,7 @@ let rec namespace_of_chain top prev files can_private chain cname =
    Check each inner namespace, global variable, function, and then gameobj. *)
 
 let rec check_namespace (nname, namespace) forbidden_files files curr_dir =
-  let { Namespace.variables = globals; functions ; gameobjs; namespaces = _ } = namespace in
+  let { Namespace.variables = globals; functions ; gameobjs; namespaces = _; usings = _ } = namespace in
 
   (**** Checking Namespaces ****)
   (* Add the standard namespace and mark private *)
@@ -173,9 +198,12 @@ let rec check_namespace (nname, namespace) forbidden_files files curr_dir =
 
   (**** Checking Global Variables ****)
 
-  let global_binds = List.map fst globals in
-  List.iter (check_not_void (fun n -> "illegal void global " ^ nname ^ "::" ^ n)) global_binds;
-  report_duplicate (fun n -> "duplicate global " ^ nname ^ "::" ^ n) (List.map fst global_binds);
+  let () =
+    let global_binds = List.map fst globals in
+    List.iter (check_not_void (fun n -> "illegal void global " ^ nname ^ "::" ^ n)) global_binds;
+    report_duplicate (fun n -> "duplicate global " ^ nname ^ "::" ^ n) (List.map fst global_binds)
+  in
+
   let check_valid_const_assign v =
     let str = string_of_global_vdecl v in
     let (_, t), e = v in
@@ -212,11 +240,6 @@ let rec check_namespace (nname, namespace) forbidden_files files curr_dir =
 
   report_duplicate (fun n -> "duplicate function " ^ nname ^ "::" ^ n) (List.map fst functions);
   report_duplicate (fun n -> "duplicate gameobj " ^ nname ^ "::" ^ n) (List.map fst gameobjs);
-
-  let global_functions =
-    List.fold_left (add_to_scope ~loc:(nname ^ " function declarations"))
-      StringMap.empty functions
-  in
 
   (* TODO: stop using add_to_scope *)
   (* Check each gameobj declaration *)
@@ -666,15 +689,17 @@ let rec check_namespace (nname, namespace) forbidden_files files curr_dir =
     make name (obj.members, methods', events') obj.parent
   in
 
-  let scope =
-    List.fold_left (add_to_scope ~loc:(nname ^ " globals")) StringMap.empty global_binds,
-    global_functions
+  let usings =
+    List.iter (fun (_priv, ns) -> ignore (namespace_of_chain ns)) namespace.Namespace.usings;
+    namespace.Namespace.usings
   in
+  let scope = namespace_scope namespace_of_chain nname in
   let functions = List.map (check_function ~objname:None ~scope) functions in
   let gameobjs = List.map (check_gameobj ~scope) gameobjs in
   let namespaces = namespace.Namespace.namespaces in
 
-  (nname, { Namespace.variables = globals; functions; gameobjs; namespaces }), files
+  (nname, { Namespace.variables = globals; functions; gameobjs; namespaces; usings }), files
+;;
 
 let check_program program =
   let (_, main), files = check_namespace ("", program.main) [] program.files (Sys.getcwd ()) in

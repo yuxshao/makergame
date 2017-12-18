@@ -12,7 +12,7 @@ open Ast
 %token BREAK RETURN IF ELSE FOR WHILE FOREACH
 %token INT BOOL FLOAT STRING SPRITE SOUND VOID
 %token OBJECT NONE EVENT CREATE DESTROY DRAW STEP DELETE
-%token PRIVATE PUBLIC NAMESPACE EXTERN OPEN
+%token PRIVATE PUBLIC NAMESPACE USING EXTERN OPEN
 %token <int> LITERAL
 %token <string> ID
 %token <string> STRLIT
@@ -52,9 +52,14 @@ ndecl_base:
  | NAMESPACE ID ASSIGN id_chain SEMI { $2, Namespace.Alias (fst $4 @ [snd $4]) }
  | NAMESPACE ID ASSIGN OPEN STRLIT SEMI { $2, Namespace.File $5 }
 
+udecl:
+ | USING id_chain SEMI         { (false, fst $2 @ [snd $2]) }
+ /* | USING PRIVATE id_chain SEMI { (true, fst $3 @ [snd $3]) } */ /* no private using for now */
+
 decls:
-   /* nothing */ { [],[],[],[] }
+   /* nothing */ { [],[],[],[],[] }
  | global_vdecl decls { Namespace.add_vdecl $2 $1 }
+ | udecl decls { Namespace.add_udecl $2 $1 }
  | fdecl decls { Namespace.add_fdecl $2 $1 }
  | odecl decls { Namespace.add_odecl $2 $1 }
  | ndecl decls { Namespace.add_ndecl $2 $1 }

@@ -386,7 +386,7 @@ let translate the_program files =
   in
 
   let rec define_llns (nname, the_namespace) llfiles =
-    let { A.Namespace.variables = globals;
+    let { A.Namespace.variables = globals; usings;
           functions ; gameobjs ; namespaces } = the_namespace in
     let llnamespaces, llfiles =
       let open A.Namespace in
@@ -408,6 +408,18 @@ let translate the_program files =
       List.fold_left add_ns (StringMap.empty, llfiles) namespaces
     in
 
+    let llnamespace =
+      { B.variables = StringMap.empty; functions = StringMap.empty;
+        namespaces = llnamespaces; gameobjs = StringMap.empty }
+    in
+
+    let using_decls get_decl =
+      let add_llvar accum (_priv, chain) =
+        let ns = namespace_of_chain llfiles llnamespace chain in
+        StringMap.fold StringMap.add (get_decl ns) accum
+      in
+      List.fold_left add_llvar StringMap.empty usings
+    in
     let llvars =
       let var m ((n, t), e) =
         let llname = "variable" ^ nname ^ "::" ^ n in
@@ -417,17 +429,19 @@ let translate the_program files =
           | _ -> const_expr e
         in StringMap.add n (L.define_global llname init the_module, t) m
       in
-      List.fold_left var StringMap.empty globals
+      List.fold_left var (using_decls (fun x -> x.B.variables)) globals
     in
 
     let llfns =
       let to_llname name = "function" ^ nname ^ "::" ^ name in
-      fn_decls functions None to_llname
+      let my_fns = fn_decls functions None to_llname in
+      StringMap.fold StringMap.add my_fns (using_decls (fun x -> x.B.functions))
     in
 
+    let llgameobjs = using_decls (fun x -> x.B.gameobjs) in
     let llnamespace =
       { B.variables = llvars; functions = llfns;
-        namespaces = llnamespaces; gameobjs = StringMap.empty }
+        namespaces = llnamespaces; gameobjs = llgameobjs }
     in
     let rec add_llgameobj ns (gname, g) =
       if StringMap.mem gname ns.B.gameobjs then ns
@@ -494,7 +508,7 @@ let translate the_program files =
   let llprogram, llfiles = define_llns ("", the_program) StringMap.empty in
 
   let rec define_ns_contents llns (nname, the_namespace) =
-    let { A.Namespace.variables = _;
+    let { A.Namespace.variables = _; usings = _;
           functions ; gameobjs ; namespaces } = the_namespace in
     let () = (* Recursively check inner namespaces *)
       let check_inner_ns (nname, (_, ns)) = match ns with

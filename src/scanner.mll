@@ -73,6 +73,7 @@ rule token = parse
   | "public" { PUBLIC }
   | "extern" { EXTERN }
   | "open"   { OPEN }
+  | "using"  { USING }
   (* literals *)
   | "true"   { TRUE }
   | "false"  { FALSE }

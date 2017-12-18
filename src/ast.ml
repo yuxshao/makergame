@@ -110,28 +110,32 @@ end
 module Namespace = struct
   type concrete = {
     namespaces : decl list;
-    variables : (Var.decl * expr) list;
-    functions : Func.decl list;
-    gameobjs : Gameobj.decl list;
+    usings     : (bool * string list) list; (* Private or not, namespace name *)
+    variables  : (Var.decl * expr) list;
+    functions  : Func.decl list;
+    gameobjs   : Gameobj.decl list;
   }
   (* a namespace could be an alias for another in the tree, with the same values *)
   and t = Concrete of concrete | Alias of string list | File of string
   and decl = string * (bool * t)
 
-  let make (variables, functions, gameobjs, namespaces) =
-    { variables; functions; gameobjs; namespaces }
+  let make (variables, functions, gameobjs, namespaces, usings) =
+    { variables; functions; gameobjs; namespaces; usings }
 
-  let add_vdecl (vdecls, fdecls, odecls, ndecls) vdecl =
-    (vdecl :: vdecls, fdecls, odecls, ndecls)
+  let add_vdecl (vdecls, fdecls, odecls, ndecls, udecls) vdecl =
+    (vdecl :: vdecls, fdecls, odecls, ndecls, udecls)
 
-  let add_fdecl (vdecls, fdecls, odecls, ndecls) fdecl =
-    (vdecls, fdecl :: fdecls, odecls, ndecls)
+  let add_fdecl (vdecls, fdecls, odecls, ndecls, udecls) fdecl =
+    (vdecls, fdecl :: fdecls, odecls, ndecls, udecls)
 
-  let add_odecl (vdecls, fdecls, odecls, ndecls) odecl =
-    (vdecls, fdecls, odecl :: odecls, ndecls)
+  let add_odecl (vdecls, fdecls, odecls, ndecls, udecls) odecl =
+    (vdecls, fdecls, odecl :: odecls, ndecls, udecls)
 
-  let add_ndecl (vdecls, fdecls, odecls, ndecls) ndecl =
-    (vdecls, fdecls, odecls, ndecl :: ndecls)
+  let add_ndecl (vdecls, fdecls, odecls, ndecls, udecls) ndecl =
+    (vdecls, fdecls, odecls, ndecl :: ndecls, udecls)
+
+  let add_udecl (vdecls, fdecls, odecls, ndecls, udecls) udecl =
+    (vdecls, fdecls, odecls, ndecls, udecl :: udecls)
 
 end
 
@@ -287,7 +291,13 @@ let string_of_gameobj (name, obj) =
   String.concat "" (List.map string_of_edecl obj.events) ^ "\n" ^
   "}\n"
 
-let rec string_of_concrete_ns { Namespace.variables; functions; gameobjs; namespaces } =
+let string_of_udecl (priv, ns) =
+  "using " ^ (if priv then "private " else "") ^ (String.concat "::" ns) ^ ";"
+;;
+
+let rec string_of_concrete_ns
+    { Namespace.variables; functions; gameobjs; namespaces; usings } =
+  String.concat "\n" (List.map string_of_udecl usings) ^ "\n" ^
   String.concat "\n" (List.map string_of_global_vdecl variables) ^ "\n" ^
   String.concat "\n" (List.map string_of_fdecl functions) ^
   String.concat "\n" (List.map string_of_gameobj gameobjs) ^
