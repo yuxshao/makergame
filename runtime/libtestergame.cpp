@@ -25,6 +25,8 @@ void global_create();
 void global_step();
 void global_draw();
 
+int rand_max() { return 0; }
+
 void set_window_size(int w, int h) { }
 void set_window_clear(int r, int g, int b) { }
 void set_window_title(char *x) { }

@@ -74,7 +74,7 @@ void draw_sprite(sf::Sprite *sprite, double x, double y) {
 void end_game() { close_window(&window); game_ended = true; }
 
 // TODO find a better place for libs
-int irandom(int x) { return rand() % x; }
+int rand_max() { return RAND_MAX; }
 
 // TODO find better way. enums in our language? or namespaces?
 bool key_pressed(int code) {

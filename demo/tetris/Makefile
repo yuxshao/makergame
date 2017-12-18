@@ -1,7 +1,7 @@
 tetris: tetris.mg
 	MAKERGAME_PATH=../../lib ../../makergame.native < tetris.mg > tetris.ll
 	llc tetris.ll -relocation-model=pic
-	gcc tetris.s -o tetris.exe -L../../runtime -lmakergame \
+	gcc tetris.s -o tetris.exe -L../../runtime -lmakergame -lm \
 	  -lsfml-audio -lsfml-graphics -lsfml-window -lsfml-system -lstdc++
 
 .PHONY: timer
