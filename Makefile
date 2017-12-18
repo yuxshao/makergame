@@ -5,16 +5,18 @@
 # Easiest way to build: using ocamlbuild, which in turn uses ocamlfind
 
 .PHONY : all
-all : makergame.native runtime/libmakergame.o runtime/libtestergame.o
+all : makergame.native runtime/libmakergame.a runtime/libtestergame.a
 
-test : makergame.native runtime/libtestergame.o testall.sh
+test : makergame.native runtime/libtestergame.a testall.sh
 	./testall.sh
 
-runtime/libmakergame.o:
+runtime/libmakergame.a:
 	gcc -c runtime/libmakergame.cpp -o runtime/libmakergame.o -std=c++11
+	ar cr runtime/libmakergame.a runtime/libmakergame.o
 
-runtime/libtestergame.o:
+runtime/libtestergame.a:
 	gcc -c runtime/libtestergame.cpp -o runtime/libtestergame.o -std=c++11
+	ar cr runtime/libtestergame.a runtime/libtestergame.o
 
 makergame.native : src/*.ml src/*.mly src/*.mll clean
 	ocamlbuild -use-ocamlfind -pkgs llvm,llvm.analysis -cflags -w,+a-4 \
@@ -27,8 +29,7 @@ clean :
 	ocamlbuild -clean
 	rm -rf vgcore.*
 	rm -rf testall.log *.diff makergame scanner.ml parser.ml parser.mli
-	rm -rf runtime/libmakergame.o
-	rm -rf runtime/libtestergame.o
+	rm -rf runtime/*.o runtime/*.a
 	rm -rf *.cmx *.cmi *.cmo *.cmx *.o *.s *.ll *.out *.exe *.err
 
 # More detailed: build using ocamlc/ocamlopt + ocamlfind to locate LLVM

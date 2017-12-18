@@ -135,7 +135,7 @@ object Piece {
       blocks[i].settlePosition(board);
       blocks[i].piece = none;
     }
-    board.checkRows();
+    // board.checkRows();
     create Piece(board, 60);
     destroy this;
   }
