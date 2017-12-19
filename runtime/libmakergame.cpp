@@ -66,8 +66,15 @@ sf::Sprite *load_image(const char *filename) {
 int sprite_width(sf::Sprite *sprite) { return sprite->getTextureRect().width; }
 int sprite_height(sf::Sprite *sprite) { return sprite->getTextureRect().height; }
 
+void draw_sprite_rect(sf::Sprite *sprite, double x, double y, int sx, int sy, int sw, int sh) {
+  sprite->setPosition(x, y);
+  sprite->setTextureRect(sf::IntRect(sx, sy, sw, sh));
+  window.draw(*sprite);
+}
+
 void draw_sprite(sf::Sprite *sprite, double x, double y) {
   sprite->setPosition(x, y);
+  sprite->setTexture(*sprite->getTexture(), true); // reset texture rect
   window.draw(*sprite);
 }
 
