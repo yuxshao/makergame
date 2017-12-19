@@ -1,0 +1,12 @@
+create maind
+create A
+create gameover
+destroy maind
+destroy A
+loop alive
+step alive
+step alive
+step alive
+step alive
+step alive
+step alive

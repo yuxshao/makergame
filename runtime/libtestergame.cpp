@@ -1,7 +1,7 @@
 // SFML-independent environment for testing
 #include <cstdio>
 static bool game_ended = false;
-static const int max_steps = 1000;
+static const int max_steps = 40;
 
 extern "C" {
 

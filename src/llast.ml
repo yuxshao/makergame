@@ -11,7 +11,7 @@ type func = {
 
 type gameobj = {
   gtyp: L.lltype;
-  ends: L.llvalue * L.llvalue;
+  head: L.llvalue;
   methods: func StringMap.t;
   events: func StringMap.t;
   vtable: L.llvalue;            (* TODO: events are replaced even if they're not defined in child class. *)

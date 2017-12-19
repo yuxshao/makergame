@@ -115,7 +115,7 @@ let translate the_program files =
   (* Define generic types for linked lists and game objects *)
   let node_t = L.named_struct_type context "node" in
   let nodeptr_t = L.pointer_type node_t in
-  L.struct_set_body node_t [|nodeptr_t; nodeptr_t|] false;
+  L.struct_set_body node_t [|nodeptr_t; nodeptr_t; i1_t|] false; (* 0 if node is not assoc. with object *)
 
   let gameobj_t = L.named_struct_type context "gameobj" in
   let objptr_t = L.pointer_type gameobj_t in
@@ -130,12 +130,9 @@ let translate the_program files =
   (* Define linked list heads for the generic gameobj *)
   let make_node_end name =
     let h = L.declare_global node_t ("node." ^ name ^ ".head") the_module in
-    let t = L.declare_global node_t ("node." ^ name ^ ".tail") the_module in
-    L.set_initializer (L.const_named_struct node_t [|t; t|]) h;
-    L.set_initializer (L.const_named_struct node_t [|h; h|]) t;
-    h, t
+    L.set_initializer (L.const_named_struct node_t [|h; h; L.const_int i1_t 0|]) h; h
   in
-  let gameobj_end = make_node_end "gameobj" in
+  let gameobj_head = make_node_end "gameobj" in
 
   let global_objid = L.define_global "last_objid" (L.const_int i64_t 0) the_module in
 
@@ -239,7 +236,7 @@ let translate the_program files =
       |> List.fold_left (fun m x -> StringMap.add x empty_method m) StringMap.empty
     in
     { B.gtyp = gameobj_t;
-      ends = gameobj_end;
+      head = gameobj_head;
       methods = StringMap.empty;
       events; vtable = vtable_gen;
       semant = A.Gameobj.generic }
@@ -252,9 +249,12 @@ let translate the_program files =
   (*             (Array.of_list (L.build_global_stringptr (fmt ^ "\n") "" builder *)
   (*                             :: elems)) "" builder) *)
   (* in *)
-  (* let build_printstr str builder = *)
-  (*   build_print "%s" [L.build_global_stringptr str "" builder] builder *)
-  (* in *)
+  let build_print _ _ _ = () in
+
+  let build_printstr str builder =
+    build_print "%s" [L.build_global_stringptr str "" builder] builder
+  in
+
 
   let build_obj_cmp ~eq e1 e2 name builder =
     let lid = L.build_extractvalue e1 0 (name ^ "_lid") builder in
@@ -298,16 +298,19 @@ let translate the_program files =
     builder
   in
 
-  let build_node_loop builder the_function ~ends ~body =
-    let head, tail = ends in
+  let build_node_loop builder the_function ~head ~body =
     (* Keep track of curr and next in case curr is modified when body is run. *)
     (* If something's added right in front of the iterator, it'll be skipped. To
        ensure adding right behind head is always safe, an empty tail node is
        added to ensure a space between the iterator and the end. *)
+    let tail = L.build_alloca node_t "tail" builder in
+    let marker = L.build_struct_gep tail 2 "marker" builder in
+    ignore (L.build_store (L.const_int i1_t 0) marker builder); (* Set marker to 0 to indicate not an object *)
     let curr_ptr = L.build_alloca nodeptr_t "curr_ptr" builder in
     let next_ptr = L.build_alloca nodeptr_t "next_ptr" builder in
+    ignore (L.build_call list_add_func [|tail; head|] "" builder);
     ignore (L.build_store head curr_ptr builder);
-    (* build_printstr "loop" builder; *)
+    build_printstr "loop" builder;
 
     let next = L.build_load (L.build_struct_gep head 1 "" builder) "" builder in
     ignore (L.build_store next next_ptr builder);
@@ -319,29 +322,39 @@ let translate the_program files =
         L.build_load (L.build_struct_gep curr 1 "" builder) "next" builder
       in
 
-      (* let curr_int = L.build_ptrtoint curr i64_t "" builder in *)
-      (* let next_int = L.build_ptrtoint next i64_t "" builder in *)
-      (* let head_int = L.build_ptrtoint head i64_t "" builder in *)
-      (* let tail_int = L.build_ptrtoint tail i64_t "" builder in *)
-      (* build_print "%d %d %d %d" [curr_int; next_int; head_int; tail_int] builder; *)
+      let curr_int = L.build_ptrtoint curr i64_t "" builder in
+      let next_int = L.build_ptrtoint next i64_t "" builder in
+      let head_int = L.build_ptrtoint head i64_t "" builder in
+      let tail_int = L.build_ptrtoint tail i64_t "" builder in
+      build_print "%d %d %d %d" [curr_int; next_int; head_int; tail_int] builder;
 
       ignore (L.build_store curr curr_ptr builder);
       ignore (L.build_store next next_ptr builder);
       L.build_icmp L.Icmp.Ne curr head "cont" builder, curr
     in
 
-    let move_tail builder _ =
-      ignore (L.build_call list_rem_func [|tail|] "" builder);
-      ignore (L.build_call list_add_func [|tail; head|] "" builder);
-      builder
-    in
-
     let body builder break_bb _ curr =
-      let check_tail builder _ = L.build_icmp L.Icmp.Ne curr tail "cont" builder in
+      let handle_tail builder _ =
+        let is_my_tail builder _ = L.build_icmp L.Icmp.Eq curr tail "cont" builder in
+        let move_tail builder _ =
+          ignore (L.build_call list_rem_func [|tail|] "" builder);
+          ignore (L.build_call list_add_func [|tail; head|] "" builder);
+          builder
+        in
+        build_if context builder the_function ~pred:is_my_tail ~then_:move_tail
+      in
+
+      let is_object builder _ =
+        let marker = L.build_struct_gep curr 2 "markerptr" builder in
+        let marker_value = L.build_load marker "marker" builder in
+        L.build_icmp L.Icmp.Eq marker_value (L.const_int i1_t 1) "cont" builder
+      in
       let body builder _ = body builder break_bb curr in
-      build_if context builder the_function ~pred:check_tail ~then_:body ~else_:move_tail
+      build_if context builder the_function ~pred:is_object ~then_:body ~else_:handle_tail
     in
-    build_while context builder the_function ~pred:check_head ~body
+    let builder = build_while context builder the_function ~pred:check_head ~body in
+    ignore (L.build_call list_rem_func [|tail|] "" builder);
+    build_printstr "loop end" builder; builder
   in
 
   (* TODO: Should really be an association list for vtable positioning *)
@@ -455,7 +468,7 @@ let translate the_program files =
         let gtyp = L.named_struct_type context gname in
 
         (* Define linked list heads for each object type *)
-        let ends = make_node_end ("object" ^ nname ^ "::" ^ gname) in
+        let head = make_node_end ("object" ^ nname ^ "::" ^ gname) in
 
         (* If I have a parent, get the ll information about my parent first.
            Semant guarantees no loop. *)
@@ -498,7 +511,7 @@ let translate the_program files =
         in
 
         let gameobj =
-          { B.gtyp; ends; vtable; events; semant = g;
+          { B.gtyp; head; vtable; events; semant = g;
             methods = fn_decls g.methods (Some gname) (to_llname "function") }
         in
         { ns with B.gameobjs = StringMap.add gname gameobj ns.B.gameobjs }
@@ -540,8 +553,8 @@ let translate the_program files =
       with Not_found -> failwith ("event " ^ oname ^ "." ^ event)
     in
 
-    let obj_end (chain, oname) =
-      try (gameobj_decl (chain, oname)).B.ends
+    let obj_head (chain, oname) =
+      try (gameobj_decl (chain, oname)).B.head
       with Not_found -> failwith ("end " ^ oname)
     in
 
@@ -587,13 +600,13 @@ let translate the_program files =
         let pred builder _ =
           (* Get values for the removal check *)
           let id = L.build_load (L.build_struct_gep obj 2 "id_ptr" builder) "id" builder in
-          (* build_print "%d" id builder; *)
+          build_print "%d" [id] builder;
           L.build_icmp L.Icmp.Ne id (L.const_null i64_t) "is_removed" builder
         in
         let then_ builder _ = body builder break_bb obj in
         build_if ~pred ~then_ context builder the_function
       in
-      build_node_loop builder the_function ~ends:(obj_end (chain, objname)) ~body
+      build_node_loop builder the_function ~head:(obj_head (chain, objname)) ~body
     in
 
     (* Construct code for an expression used for assignment; return its value *)
@@ -729,7 +742,9 @@ let translate the_program files =
         (* Set up linked list connections *)
         let make_node_cons (llobj, objname) g =
           let llobjnode = L.build_struct_gep llobj 1 (objname ^ "_objnode") builder in
-          let obj_head, _ = g.B.ends in
+          let marker = L.build_struct_gep llobjnode 2 "marker" builder in
+          ignore (L.build_store (L.const_int i1_t 1) marker builder);
+          let obj_head = g.B.head in
           ignore (L.build_call list_add_func [|llobjnode; obj_head|] "" builder);
           let pobjname =
             match g.B.semant.A.Gameobj.parent with
@@ -742,7 +757,6 @@ let translate the_program files =
         (* As long as generic gameobj is parent of all, we don't need to also
            specifically set its connections. *)
         (* let llnode = L.build_struct_gep llobj_gen 1 (objname ^ "_node") builder in *)
-        (* let gameobj_head, _ = gameobj_end in *)
         (* ignore (L.build_call list_add_func [|llnode; gameobj_head|] "" builder); *)
         (* Update ID and ID counter *)
         let llid = L.build_load global_objid "old_id" builder in
@@ -966,7 +980,7 @@ let translate the_program files =
 
       build_if ~pred ~then_:call ~else_:remove context builder fn
     in
-    let builder = build_node_loop builder fn ~ends:gameobj_end ~body in
+    let builder = build_node_loop builder fn ~head:gameobj_head ~body in
     ignore (L.build_ret_void builder)
   in
   List.iter global_event ["step", 0; "draw", 2];
