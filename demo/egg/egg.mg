@@ -21,7 +21,6 @@ object Egg : game::obj {
   int points;
 
   event create(float x, float y) {
-    std::print::s("hello");
     super(x, y, "egg.png");
     vspeed = 4 + std::math::frandom();
     points = vspeed * 10;
@@ -68,7 +67,6 @@ object Player : game::obj {
         score += egg.points;
         numbers.n = score;
         destroy egg;
-        std::print::i(score);
       }
     }
   }
