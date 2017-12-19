@@ -5,6 +5,11 @@ namespace window = std::window;
 namespace game   = std::game;
 
 namespace Numbers = open "draw_numbers.mg";
+Numbers::Draw piece_counts[7];
+Numbers::Draw level_count;
+Numbers::Draw top_count;
+Numbers::Draw score_count;
+Numbers::Draw lines_count;
 
 // TODO: make sure path is set
 bool possible_pieces[7][4][3] = [
@@ -107,20 +112,23 @@ object Piece {
   int x; int y;
   int interval;
   int curr_timer;
+  int drop_points;
   bool active;
+  int piece_type;
   Piece next;
   event create(Board b, int interval) {
+    drop_points = 0;
     board = b;
     curr_timer = this.interval = interval;
     active = false;
 
     int piece_type_x = std::math::irandom(3);
     int piece_type_y = std::math::irandom(10);
-    int choice = std::math::irandom(7);
+    piece_type = std::math::irandom(7);
     int k = 0;
     for (int y = 0; y < 4; ++y)
       for (int x = 0; x < 3; ++x)
-        if (possible_pieces[choice][y][x]) {
+        if (possible_pieces[piece_type][y][x]) {
           // centres of pieces are at x = 1, y = 1
           blocks[k] = create Block(x-1, y-1, this);
           blocks[k].setType(piece_type_x, piece_type_y);
@@ -129,6 +137,7 @@ object Piece {
   }
 
   void activate() {
+    ++piece_counts[piece_type].n;
     active = true;
     next = create Piece(board, 60);
     x = 5; y = 1;
@@ -169,8 +178,9 @@ object Piece {
       blocks[i].settlePosition(board);
       blocks[i].piece = none;
     }
-    //board.checkRows();
+    board.checkRows();
     destroy this;
+    score_count.n += drop_points;
     foreach (game_over g) { return; } // janky: dont create if in gameover
     next.activate();
   }
@@ -180,16 +190,17 @@ object Piece {
     if (std::key::is_pressed(std::key::Left))  moveLeft();
     if (std::key::is_pressed(std::key::Right)) moveRight();
     if (std::key::is_down(std::key::Down)) {
-      if (curr_timer > 3) curr_timer = 3;
+      if (curr_timer > 3) { curr_timer = 3; ++drop_points; }
     }
-    if (std::key::is_pressed(std::key::Z)) rotateLeft();
-    if (std::key::is_pressed(std::key::X)) rotateRight();
+    if (std::key::is_pressed(std::key::X)) rotateLeft();
+    if (std::key::is_pressed(std::key::Z)) rotateRight();
     if (--curr_timer == 0) moveDown();
   }
 }
 
 int board_width = 10;
 int board_height = 20;
+int points[5] = [0, 40, 100, 300, 1200];
 object Board {
   Block pieces[24][10];
 
@@ -199,16 +210,18 @@ object Board {
         pieces[y][x] = none;
   }
 
-  /*void checkRows() {
+  void checkRows() {
+    int lines = 0;
     for (int y = 0; y < board_height; ++y)
-      checkRow(y);
+      if (checkRow(y)) ++lines;
+    score_count.n += points[lines] * (level_count.n + 1);
   }
 
-  void checkRow(int r) {
+  bool checkRow(int r) {
     // check if row full
     for (int x = 0; x < board_width; ++x)
       if (pieces[r][x] == none)
-        return;
+        return false;
 
     // remove things in row
     for (int x = 0; x < board_width; ++x)
@@ -224,7 +237,10 @@ object Board {
 
     for (int x = 0; x < board_width; ++x)
       pieces[0][x] = none;
-  }*/
+
+    ++lines_count.n;
+    return true;
+  }
 
   bool occupied(int x, int y) {
     if (x < 0 || x >= board_width || y >= board_height) return true;
@@ -243,18 +259,12 @@ object game_over : game::room {
 }
 
 object main : game::room {
-  Numbers::Draw piece_counts[7];
-  Numbers::Draw level_count;
-  Numbers::Draw top_count;
-  Numbers::Draw score_count;
-  Numbers::Draw lines_count;
   event create {
     super();
     std::window::set_clear(0, 0, 0);
     std::window::set_title("Tetris");
     std::window::set_size(256, 224);
     Board b = create Board;
-    (create Piece(b, 60)).activate();
     for (int i = 0; i < 7; ++i)
       piece_counts[i] = create Numbers::Draw(48, 88+16*i, 3);
 
@@ -262,10 +272,13 @@ object main : game::room {
     top_count = create Numbers::Draw(192, 32, 6);
     score_count = create Numbers::Draw(192, 56, 6);
     lines_count = create Numbers::Draw(152, 16, 3);
+
+    (create Piece(b, 60)).activate();
     // next piece at 196 and 112
   }
 
   event step {
+    top_count.n = score_count.n;
     super();
   }
 

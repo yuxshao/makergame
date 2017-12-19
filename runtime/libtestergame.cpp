@@ -18,6 +18,7 @@ void loop_sound(void *sound) { }
 void *load_image(const char *filename) { return nullptr; }
 void set_sprite_position(void *s, double x, double y) { }
 void draw_sprite(void *sprite) { }
+void draw_sprite_rect(void *sprite, double x, double y, int sx, int sy, int sw, int sh) { }
 void end_game() { game_ended = true; }
 bool key_pressed(int code) { return false; }
 
