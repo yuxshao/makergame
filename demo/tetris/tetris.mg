@@ -368,8 +368,11 @@ object game_over : game::room {
     ++timer;
     if (timer == game_over_fade)
       score_count = create Numbers::Draw(104, 136, 6);
-    if (timer >= game_over_fade + game_over_delay && score_count.n < n)
-      ++score_count.n;
+    if (timer >= game_over_fade + game_over_delay && score_count.n < n) {
+      int add = n/game_over_delay/2 + 1;
+      score_count.n += n/game_over_delay/2;
+      if (score_count.n > n) score_count.n = n;
+    }
     super();
   }
 
