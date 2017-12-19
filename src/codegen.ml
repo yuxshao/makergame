@@ -175,7 +175,6 @@ let translate the_program files =
       let t = L.function_type void_t [|nodeptr_t|] in
       L.define_function "list_rem" t the_module
     in
-    (* TODO: do only if prev and next actually connect to node *)
     let builder = L.builder_at_end context (L.entry_block f) in
     let node = L.param f 0 in
     let prev_ptr = L.build_struct_gep node 0 "prev_ptr" builder in
@@ -183,9 +182,26 @@ let translate the_program files =
     let next_ptr = L.build_struct_gep node 1 "next_ptr" builder in
     let next = L.build_load next_ptr "next" builder in
     let next_prev = L.build_struct_gep next 0 "next_prev" builder in
-    ignore (L.build_store prev next_prev builder);
     let prev_next = L.build_struct_gep prev 1 "prev_next" builder in
-    ignore (L.build_store next prev_next builder);
+    (* TODO: currently reconnects only if they originally connected to you. *)
+    (* If the linked list system were really robust we wouldn't need this... it
+       causes some newly created objects to skip a step. *)
+    (* Something really insidious shows up in Tetris without this guard, though,
+       and I don't have the time to figure it out. *)
+    let builder =
+      build_if context builder f
+        ~pred:(fun builder _ ->
+            let next_prev_val = L.build_load next_prev "" builder in
+            L.build_icmp L.Icmp.Eq next_prev_val node "cmp" builder)
+        ~then_:(fun builder _ -> ignore (L.build_store prev next_prev builder); builder)
+    in
+    let builder =
+      build_if context builder f
+        ~pred:(fun builder _ ->
+            let prev_next_val = L.build_load prev_next "" builder in
+            L.build_icmp L.Icmp.Eq prev_next_val node "cmp" builder)
+        ~then_:(fun builder _ -> ignore (L.build_store next prev_next builder); builder)
+    in
     ignore (L.build_ret_void builder); f
   in
 
