@@ -738,6 +738,9 @@ let translate the_program files =
         let g = gameobj_decl (chain, objname) in
         (* Allocate memory for the object *)
         let llobj = L.build_malloc g.B.gtyp objname builder in
+        (* Uncountably many hours have been lost over bugs from uninitialized
+           variables... So I'm zero-initing everything. *)
+        ignore (L.build_store (L.const_null g.B.gtyp) llobj builder);
         let llobj_gen = L.build_bitcast llobj objptr_t (objname ^ "_gen") builder in
         (* Set up linked list connections *)
         let make_node_cons (llobj, objname) g =
