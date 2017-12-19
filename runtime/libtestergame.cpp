@@ -15,6 +15,7 @@ void printstr(char *x) { printf("%s\n", x); }
 void *load_sound(const char *filename) { return nullptr; }
 void play_sound(void *sound) { }
 void loop_sound(void *sound) { }
+void stop_sound(void *sound) { }
 void *load_image(const char *filename) { return nullptr; }
 void set_sprite_position(void *s, double x, double y) { }
 void draw_sprite(void *sprite) { }

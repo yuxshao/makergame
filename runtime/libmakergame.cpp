@@ -23,7 +23,6 @@ static void close_window(sf::RenderWindow *window) {
 }
 
 static void play_sound(sf::Sound *sound, bool loop) {
-  sound->stop();
   sound->setLoop(loop);
   sound->play();
 }
@@ -53,6 +52,7 @@ void set_window_title(char *x) { window.setTitle(x); }
 
 void play_sound(sf::Sound *sound) { play_sound(sound, false); }
 void loop_sound(sf::Sound *sound) { play_sound(sound, true); }
+void stop_sound(sf::Sound *sound) { sound->stop(); }
 
 sf::Sprite *load_image(const char *filename) {
   if (!image_map.count(filename)) {
