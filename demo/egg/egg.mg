@@ -22,7 +22,7 @@ object Egg : game::obj {
 
   event create(float x, float y) {
     super(x, y, "egg.png");
-    vspeed = 4 + std::math::frandom();
+    vspeed = 3 + std::math::frandom() * (1.4 + times * 0.02);
     points = vspeed * 10;
     snd::play(boinkSound);
     center_hitbox_prop(0.9, 0.9);
@@ -72,13 +72,16 @@ object Player : game::obj {
   }
 }
 
+int times = 0; // to keep track of progress
 object Spawner {
   int timer;
-  event create { timer = 50; }
+  event create { timer = 50; times = 0; }
   event step {
     --timer;
     if (timer == 0) {
-      timer = 50;
+      timer = 50 - times/8;
+      if (timer < 8) timer = 8;
+      ++times;
       int range = 300;
       int x = 400 + (range * std::math::frandom() - range * 0.5);
       if (std::math::irandom(5) == 0) create SineEgg(x, 0);
