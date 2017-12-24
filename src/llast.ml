@@ -20,8 +20,10 @@ type gameobj = {
      we do two separate lookups. unify *)
 }
 
+type vsc = Direct of L.llvalue | Deferred of (L.llbuilder -> L.llvalue)
+
 type concrete = {
-  variables: (L.llvalue * Ast.typ) StringMap.t;
+  variables: (vsc * Ast.typ) StringMap.t;
   functions: func StringMap.t;
   gameobjs: gameobj StringMap.t;
   namespaces: namespace StringMap.t;

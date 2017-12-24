@@ -19,14 +19,19 @@ module B = Llast
 module StringMap = Map.Make(String)
 
 module Gconfig = struct
-  type scoped_block_builder =
-    (L.llbuilder -> (B.L.llvalue * A.Var.t) StringMap.t * B.func StringMap.t -> L.llbuilder)
   type t = {
     obj: string;
-    postwork: scoped_block_builder option; (* Unused now. Used to be for removing nodes. *)
     super: string option;
   }
 end
+
+let add_vscope_dir n (v, t) vscope =
+  StringMap.add n (B.Direct v, t) vscope
+
+let find_in_vscope n vscope builder =
+  match StringMap.find n vscope with
+  | B.Direct v, t -> v, t
+  | B.Deferred v, t -> v builder, t
 
 (* Helper function for assigning struct values. *)
 let build_struct_assign str values builder =
@@ -457,7 +462,7 @@ let translate the_program files =
           match e with
           | A.Noexpr -> L.const_null (ltype_of_typ t)
           | _ -> const_expr e
-        in StringMap.add n (L.define_global llname init the_module, t) m
+        in add_vscope_dir n (L.define_global llname init the_module, t) m
       in
       List.fold_left var (using_decls (fun x -> x.B.variables)) globals
     in
@@ -578,8 +583,8 @@ let translate the_program files =
        that object in StringMap. *)
     let gameobj_members objref oname builder =
       let add_member llobj (map, ind) (name, typ) =
-        let member_var = L.build_struct_gep llobj ind name builder in
-        (StringMap.add name (member_var, typ) map, ind + 1)
+        let member_var builder = L.build_struct_gep llobj ind name builder in
+        (StringMap.add name (B.Deferred member_var, typ) map, ind + 1)
       in
       let objptr = L.build_extractvalue objref 1 "objptr_gen" builder in
 
@@ -626,25 +631,30 @@ let translate the_program files =
     in
 
     (* Construct code for an expression used for assignment; return its value *)
-    let rec lexpr (vscope, fscope) builder = function
+    let rec lexpr scope builder = function
       | A.Id (chain, n) ->
+        let vscope, _ = scope in
         (match chain with
-         | [] -> let v, _ = StringMap.find n vscope in v
-         | _ -> let v, _ = StringMap.find n (namespace_of_chain chain).B.variables in v)
+         | [] ->
+           let v, _ = find_in_vscope n vscope builder in v
+         | _ ->
+           let v, _ =
+             find_in_vscope n (namespace_of_chain chain).B.variables builder in v)
       | A.Member(e, objname, n) ->
-        let vscope = gameobj_members (expr (vscope, fscope) builder e) objname builder in
+        let vscope = gameobj_members (expr scope builder e) objname builder in
+        let _, fscope = scope in
         lexpr (vscope, fscope) builder (A.Id([], n))
       | A.Assign (l, r) ->
-        let l', r' = lexpr (vscope, fscope) builder l, expr (vscope, fscope) builder r in
+        let l' = lexpr scope builder l in
+        let r' = expr scope builder r in
         ignore (L.build_store r' l' builder); l'
       | A.Subscript (arr, ind) ->
-        let arr' = lexpr (vscope, fscope) builder arr in
-        let ind' = expr (vscope, fscope) builder ind in
+        let arr', ind' = lexpr scope builder arr, expr scope builder ind in
         L.build_gep arr' [|L.const_null i32_t; ind'|] "subscript" builder
       | A.Asnop (l, asnop ,t, r) ->
-        let lp = lexpr (vscope, fscope) builder l in
+        let lp = lexpr scope builder l in
         let le = L.build_load lp "le" builder in
-        let re = expr(vscope, fscope) builder r in
+        let re = expr scope builder r in
         let sum =
           (match t, asnop with
            | A.Int, A.Addasn  -> L.build_add  | A.Float, A.Addasn  -> L.build_fadd
@@ -655,7 +665,7 @@ let translate the_program files =
         in
         ignore (L.build_store sum lp builder); lp
       | A.Idop (idop, t, l) ->
-        lexpr (vscope, fscope) builder
+        lexpr scope builder
           (match t, idop with
            | A.Int, A.Inc -> A.Asnop (l, A.Addasn, A.Int, A.Literal 1)
            | A.Int, A.Dec -> A.Asnop (l, A.Subasn, A.Int, A.Literal 1)
@@ -671,7 +681,8 @@ let translate the_program files =
       | A.FloatLit f -> L.const_float float_t f
       | A.Noexpr -> L.const_int i32_t 0
       | A.NoneObject -> L.const_null objref_t
-      | A.Id (_, n) | A.Member (_, _, n) as e -> L.build_load (lexpr scope builder e) n builder
+      | A.Id (_, n) | A.Member (_, _, n) as e ->
+        L.build_load (lexpr scope builder e) n builder
       | A.Conv (t1, e, t2) ->
         let e' = expr scope builder e in
         (match t1, t2 with
@@ -679,7 +690,8 @@ let translate the_program files =
          | A.Int, A.Float -> L.build_fptosi e' i32_t "" builder
          | A.Object _, A.Object _ -> e' (* Do nothing since object lltypes are all the same *)
          | _ -> assert false)
-      | A.Assign _ | A.Asnop _ | A.Idop _ as e -> L.build_load (lexpr scope builder e) "" builder
+      | A.Assign _ | A.Asnop _ | A.Idop _ as e ->
+        L.build_load (lexpr scope builder e) "" builder
       | A.ArrayLit l ->
         let lll = List.map (expr scope builder) l in
         let typ = (L.array_type (L.type_of (List.hd lll)) (List.length l)) in
@@ -811,14 +823,14 @@ let translate the_program files =
       | A.Decl (name, typ) ->
         let vscope, fscope = scope in
         let local_var = L.build_alloca (ltype_of_typ typ) name builder in
-        builder, (StringMap.add name (local_var, typ) vscope, fscope)
+        builder, (add_vscope_dir name (local_var, typ) vscope, fscope)
       | A.Vdef ((name, typ), e) ->
         let vscope, fscope = scope in
         let local_var = L.build_alloca (ltype_of_typ typ) name builder in
-        let new_vscope = StringMap.add name (local_var, typ) vscope in
+        let new_vscope = add_vscope_dir name (local_var, typ) vscope in
         let e' = expr (vscope, fscope) builder e in
         ignore(L.build_store e' local_var builder);
-        builder, (StringMap.add name (local_var, typ) new_vscope, fscope)
+        builder, (add_vscope_dir name (local_var, typ) new_vscope, fscope)
       | A.Block b ->
         let merge_bb = L.append_block context "block_end" fn in
         let builder, _ =
@@ -862,7 +874,7 @@ let translate the_program files =
             ignore (L.build_store obj objref builder);
             let builder, _ =
               let vscope, fscope = scope in
-              let vscope' = StringMap.add name (objref, A.Object(objname)) vscope in
+              let vscope' = add_vscope_dir name (objref, A.Object(objname)) vscope in
               stmt fn break_bb ret_t (builder, (vscope', fscope)) body_stmt
             in
             builder
@@ -886,7 +898,7 @@ let translate the_program files =
           L.set_value_name n p;
           let local = L.build_alloca (ltype_of_typ t) n builder in
           ignore (L.build_store p local builder);
-          StringMap.add n (local, t) m
+          add_vscope_dir n (local, t) m
         in
         List.fold_left2 add_formal StringMap.empty formals
           (Array.to_list (L.params the_function))
@@ -894,7 +906,7 @@ let translate the_program files =
       let member_scope =
         match gconfig with
         | Some { Gconfig.obj; _ } ->
-          let this, _ = StringMap.find "this" formal_scope in
+          let this, _ = find_in_vscope "this" formal_scope builder in
           let this = L.build_load this "thisref" builder in
           gameobj_members this ([], obj) builder
         | None -> StringMap.empty
@@ -922,13 +934,6 @@ let translate the_program files =
         stmt the_function entry return_type (builder, scope) (A.Block(block))
       in
 
-      (* Possibly add some code at the end *)
-      let builder = match gconfig with
-        | None -> builder
-        | Some { Gconfig.postwork; _ } ->
-          match postwork with Some p -> p builder scope | None -> builder
-      in
-
       (* Add a precautionary return to the end *)
       ignore (match return_type with
           | A.Void -> L.build_ret_void builder
@@ -953,7 +958,7 @@ let translate the_program files =
         | Some block ->
           (* Add super into scope on case-by-case basis. Casework used to be more complicated. *)
           let super = match fname with "create" | "step" | "draw" | "destroy" -> Some fname | _ -> None in
-          let gconfig = { Gconfig.obj = gname; postwork = None; super } in
+          let gconfig = { Gconfig.obj = gname; super } in
           build_function_body llfn formals block typ ~gconfig
         | None -> assert false    (* Semant ensures obj fns are not external *)
       in

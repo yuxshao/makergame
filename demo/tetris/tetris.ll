@@ -595,7 +595,6 @@ entry:
   %thisref = load %objref, %objref* %this1
   %objptr_gen = extractvalue %objref %thisref, 1
   %objptr = bitcast %gameobj* %objptr_gen to %Checker*
-  %pressed = getelementptr inbounds %Checker, %Checker* %objptr, i32 0, i32 2
   %i = alloca i32
   store i32 0, i32* %i
   br label %while
@@ -613,9 +612,10 @@ while:                                            ; preds = %block_end4, %entry
 
 while_body:                                       ; preds = %while
   %i5 = load i32, i32* %i
-  %key_pressed_result = call i1 @key_pressed(i32 %i5)
+  %pressed = getelementptr inbounds %Checker, %Checker* %objptr, i32 0, i32 2
+  %subscript = getelementptr [101 x i1], [101 x i1]* %pressed, i32 0, i32 %i5
   %i6 = load i32, i32* %i
-  %subscript = getelementptr [101 x i1], [101 x i1]* %pressed, i32 0, i32 %i6
+  %key_pressed_result = call i1 @key_pressed(i32 %i6)
   store i1 %key_pressed_result, i1* %subscript
   %0 = load i1, i1* %subscript
   %le = load i32, i32* %i
@@ -638,7 +638,6 @@ entry:
   %thisref = load %objref, %objref* %this1
   %objptr_gen = extractvalue %objref %thisref, 1
   %objptr = bitcast %gameobj* %objptr_gen to %Checker*
-  %pressed = getelementptr inbounds %Checker, %Checker* %objptr, i32 0, i32 2
   %i = alloca i32
   store i32 0, i32* %i
   br label %while
@@ -656,6 +655,7 @@ while:                                            ; preds = %block_end4, %entry
 
 while_body:                                       ; preds = %while
   %i5 = load i32, i32* %i
+  %pressed = getelementptr inbounds %Checker, %Checker* %objptr, i32 0, i32 2
   %subscript = getelementptr [101 x i1], [101 x i1]* %pressed, i32 0, i32 %i5
   store i1 false, i1* %subscript
   %0 = load i1, i1* %subscript
@@ -906,346 +906,146 @@ entry:
   %a3 = load %objref, %objref* %a1
   %objptr_gen = extractvalue %objref %a3, 1
   %objptr = bitcast %gameobj* %objptr_gen to %obj*
-  %hitbox_h = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 2
-  %hitbox_w = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 3
-  %hitbox_offy = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 4
-  %hitbox_offx = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 5
-  %origin_y = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 6
-  %origin_x = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 7
-  %vspeed = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 8
-  %hspeed = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 9
-  %y = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 10
   %x = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 11
-  %spr = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 12
   %x4 = load double, double* %x
   %a5 = load %objref, %objref* %a1
   %objptr_gen6 = extractvalue %objref %a5, 1
   %objptr7 = bitcast %gameobj* %objptr_gen6 to %obj*
-  %hitbox_h8 = getelementptr inbounds %obj, %obj* %objptr7, i32 0, i32 2
-  %hitbox_w9 = getelementptr inbounds %obj, %obj* %objptr7, i32 0, i32 3
-  %hitbox_offy10 = getelementptr inbounds %obj, %obj* %objptr7, i32 0, i32 4
-  %hitbox_offx11 = getelementptr inbounds %obj, %obj* %objptr7, i32 0, i32 5
-  %origin_y12 = getelementptr inbounds %obj, %obj* %objptr7, i32 0, i32 6
-  %origin_x13 = getelementptr inbounds %obj, %obj* %objptr7, i32 0, i32 7
-  %vspeed14 = getelementptr inbounds %obj, %obj* %objptr7, i32 0, i32 8
-  %hspeed15 = getelementptr inbounds %obj, %obj* %objptr7, i32 0, i32 9
-  %y16 = getelementptr inbounds %obj, %obj* %objptr7, i32 0, i32 10
-  %x17 = getelementptr inbounds %obj, %obj* %objptr7, i32 0, i32 11
-  %spr18 = getelementptr inbounds %obj, %obj* %objptr7, i32 0, i32 12
-  %hitbox_offx19 = load double, double* %hitbox_offx11
-  %tmp = fadd double %x4, %hitbox_offx19
+  %hitbox_offx = getelementptr inbounds %obj, %obj* %objptr7, i32 0, i32 5
+  %hitbox_offx8 = load double, double* %hitbox_offx
+  %tmp = fadd double %x4, %hitbox_offx8
   store double %tmp, double* %al
   %au = alloca double
-  %a20 = load %objref, %objref* %a1
-  %objptr_gen21 = extractvalue %objref %a20, 1
-  %objptr22 = bitcast %gameobj* %objptr_gen21 to %obj*
-  %hitbox_h23 = getelementptr inbounds %obj, %obj* %objptr22, i32 0, i32 2
-  %hitbox_w24 = getelementptr inbounds %obj, %obj* %objptr22, i32 0, i32 3
-  %hitbox_offy25 = getelementptr inbounds %obj, %obj* %objptr22, i32 0, i32 4
-  %hitbox_offx26 = getelementptr inbounds %obj, %obj* %objptr22, i32 0, i32 5
-  %origin_y27 = getelementptr inbounds %obj, %obj* %objptr22, i32 0, i32 6
-  %origin_x28 = getelementptr inbounds %obj, %obj* %objptr22, i32 0, i32 7
-  %vspeed29 = getelementptr inbounds %obj, %obj* %objptr22, i32 0, i32 8
-  %hspeed30 = getelementptr inbounds %obj, %obj* %objptr22, i32 0, i32 9
-  %y31 = getelementptr inbounds %obj, %obj* %objptr22, i32 0, i32 10
-  %x32 = getelementptr inbounds %obj, %obj* %objptr22, i32 0, i32 11
-  %spr33 = getelementptr inbounds %obj, %obj* %objptr22, i32 0, i32 12
-  %y34 = load double, double* %y31
-  %a35 = load %objref, %objref* %a1
-  %objptr_gen36 = extractvalue %objref %a35, 1
-  %objptr37 = bitcast %gameobj* %objptr_gen36 to %obj*
-  %hitbox_h38 = getelementptr inbounds %obj, %obj* %objptr37, i32 0, i32 2
-  %hitbox_w39 = getelementptr inbounds %obj, %obj* %objptr37, i32 0, i32 3
-  %hitbox_offy40 = getelementptr inbounds %obj, %obj* %objptr37, i32 0, i32 4
-  %hitbox_offx41 = getelementptr inbounds %obj, %obj* %objptr37, i32 0, i32 5
-  %origin_y42 = getelementptr inbounds %obj, %obj* %objptr37, i32 0, i32 6
-  %origin_x43 = getelementptr inbounds %obj, %obj* %objptr37, i32 0, i32 7
-  %vspeed44 = getelementptr inbounds %obj, %obj* %objptr37, i32 0, i32 8
-  %hspeed45 = getelementptr inbounds %obj, %obj* %objptr37, i32 0, i32 9
-  %y46 = getelementptr inbounds %obj, %obj* %objptr37, i32 0, i32 10
-  %x47 = getelementptr inbounds %obj, %obj* %objptr37, i32 0, i32 11
-  %spr48 = getelementptr inbounds %obj, %obj* %objptr37, i32 0, i32 12
-  %hitbox_offy49 = load double, double* %hitbox_offy40
-  %tmp50 = fadd double %y34, %hitbox_offy49
-  store double %tmp50, double* %au
+  %a9 = load %objref, %objref* %a1
+  %objptr_gen10 = extractvalue %objref %a9, 1
+  %objptr11 = bitcast %gameobj* %objptr_gen10 to %obj*
+  %y = getelementptr inbounds %obj, %obj* %objptr11, i32 0, i32 10
+  %y12 = load double, double* %y
+  %a13 = load %objref, %objref* %a1
+  %objptr_gen14 = extractvalue %objref %a13, 1
+  %objptr15 = bitcast %gameobj* %objptr_gen14 to %obj*
+  %hitbox_offy = getelementptr inbounds %obj, %obj* %objptr15, i32 0, i32 4
+  %hitbox_offy16 = load double, double* %hitbox_offy
+  %tmp17 = fadd double %y12, %hitbox_offy16
+  store double %tmp17, double* %au
   %ar = alloca double
-  %a51 = load %objref, %objref* %a1
-  %objptr_gen52 = extractvalue %objref %a51, 1
-  %objptr53 = bitcast %gameobj* %objptr_gen52 to %obj*
-  %hitbox_h54 = getelementptr inbounds %obj, %obj* %objptr53, i32 0, i32 2
-  %hitbox_w55 = getelementptr inbounds %obj, %obj* %objptr53, i32 0, i32 3
-  %hitbox_offy56 = getelementptr inbounds %obj, %obj* %objptr53, i32 0, i32 4
-  %hitbox_offx57 = getelementptr inbounds %obj, %obj* %objptr53, i32 0, i32 5
-  %origin_y58 = getelementptr inbounds %obj, %obj* %objptr53, i32 0, i32 6
-  %origin_x59 = getelementptr inbounds %obj, %obj* %objptr53, i32 0, i32 7
-  %vspeed60 = getelementptr inbounds %obj, %obj* %objptr53, i32 0, i32 8
-  %hspeed61 = getelementptr inbounds %obj, %obj* %objptr53, i32 0, i32 9
-  %y62 = getelementptr inbounds %obj, %obj* %objptr53, i32 0, i32 10
-  %x63 = getelementptr inbounds %obj, %obj* %objptr53, i32 0, i32 11
-  %spr64 = getelementptr inbounds %obj, %obj* %objptr53, i32 0, i32 12
-  %x65 = load double, double* %x63
-  %a66 = load %objref, %objref* %a1
-  %objptr_gen67 = extractvalue %objref %a66, 1
-  %objptr68 = bitcast %gameobj* %objptr_gen67 to %obj*
-  %hitbox_h69 = getelementptr inbounds %obj, %obj* %objptr68, i32 0, i32 2
-  %hitbox_w70 = getelementptr inbounds %obj, %obj* %objptr68, i32 0, i32 3
-  %hitbox_offy71 = getelementptr inbounds %obj, %obj* %objptr68, i32 0, i32 4
-  %hitbox_offx72 = getelementptr inbounds %obj, %obj* %objptr68, i32 0, i32 5
-  %origin_y73 = getelementptr inbounds %obj, %obj* %objptr68, i32 0, i32 6
-  %origin_x74 = getelementptr inbounds %obj, %obj* %objptr68, i32 0, i32 7
-  %vspeed75 = getelementptr inbounds %obj, %obj* %objptr68, i32 0, i32 8
-  %hspeed76 = getelementptr inbounds %obj, %obj* %objptr68, i32 0, i32 9
-  %y77 = getelementptr inbounds %obj, %obj* %objptr68, i32 0, i32 10
-  %x78 = getelementptr inbounds %obj, %obj* %objptr68, i32 0, i32 11
-  %spr79 = getelementptr inbounds %obj, %obj* %objptr68, i32 0, i32 12
-  %hitbox_offx80 = load double, double* %hitbox_offx72
-  %tmp81 = fadd double %x65, %hitbox_offx80
-  %a82 = load %objref, %objref* %a1
-  %objptr_gen83 = extractvalue %objref %a82, 1
-  %objptr84 = bitcast %gameobj* %objptr_gen83 to %obj*
-  %hitbox_h85 = getelementptr inbounds %obj, %obj* %objptr84, i32 0, i32 2
-  %hitbox_w86 = getelementptr inbounds %obj, %obj* %objptr84, i32 0, i32 3
-  %hitbox_offy87 = getelementptr inbounds %obj, %obj* %objptr84, i32 0, i32 4
-  %hitbox_offx88 = getelementptr inbounds %obj, %obj* %objptr84, i32 0, i32 5
-  %origin_y89 = getelementptr inbounds %obj, %obj* %objptr84, i32 0, i32 6
-  %origin_x90 = getelementptr inbounds %obj, %obj* %objptr84, i32 0, i32 7
-  %vspeed91 = getelementptr inbounds %obj, %obj* %objptr84, i32 0, i32 8
-  %hspeed92 = getelementptr inbounds %obj, %obj* %objptr84, i32 0, i32 9
-  %y93 = getelementptr inbounds %obj, %obj* %objptr84, i32 0, i32 10
-  %x94 = getelementptr inbounds %obj, %obj* %objptr84, i32 0, i32 11
-  %spr95 = getelementptr inbounds %obj, %obj* %objptr84, i32 0, i32 12
-  %hitbox_w96 = load double, double* %hitbox_w86
-  %tmp97 = fadd double %tmp81, %hitbox_w96
-  store double %tmp97, double* %ar
+  %a18 = load %objref, %objref* %a1
+  %objptr_gen19 = extractvalue %objref %a18, 1
+  %objptr20 = bitcast %gameobj* %objptr_gen19 to %obj*
+  %x21 = getelementptr inbounds %obj, %obj* %objptr20, i32 0, i32 11
+  %x22 = load double, double* %x21
+  %a23 = load %objref, %objref* %a1
+  %objptr_gen24 = extractvalue %objref %a23, 1
+  %objptr25 = bitcast %gameobj* %objptr_gen24 to %obj*
+  %hitbox_offx26 = getelementptr inbounds %obj, %obj* %objptr25, i32 0, i32 5
+  %hitbox_offx27 = load double, double* %hitbox_offx26
+  %tmp28 = fadd double %x22, %hitbox_offx27
+  %a29 = load %objref, %objref* %a1
+  %objptr_gen30 = extractvalue %objref %a29, 1
+  %objptr31 = bitcast %gameobj* %objptr_gen30 to %obj*
+  %hitbox_w = getelementptr inbounds %obj, %obj* %objptr31, i32 0, i32 3
+  %hitbox_w32 = load double, double* %hitbox_w
+  %tmp33 = fadd double %tmp28, %hitbox_w32
+  store double %tmp33, double* %ar
   %ad = alloca double
-  %a98 = load %objref, %objref* %a1
-  %objptr_gen99 = extractvalue %objref %a98, 1
-  %objptr100 = bitcast %gameobj* %objptr_gen99 to %obj*
-  %hitbox_h101 = getelementptr inbounds %obj, %obj* %objptr100, i32 0, i32 2
-  %hitbox_w102 = getelementptr inbounds %obj, %obj* %objptr100, i32 0, i32 3
-  %hitbox_offy103 = getelementptr inbounds %obj, %obj* %objptr100, i32 0, i32 4
-  %hitbox_offx104 = getelementptr inbounds %obj, %obj* %objptr100, i32 0, i32 5
-  %origin_y105 = getelementptr inbounds %obj, %obj* %objptr100, i32 0, i32 6
-  %origin_x106 = getelementptr inbounds %obj, %obj* %objptr100, i32 0, i32 7
-  %vspeed107 = getelementptr inbounds %obj, %obj* %objptr100, i32 0, i32 8
-  %hspeed108 = getelementptr inbounds %obj, %obj* %objptr100, i32 0, i32 9
-  %y109 = getelementptr inbounds %obj, %obj* %objptr100, i32 0, i32 10
-  %x110 = getelementptr inbounds %obj, %obj* %objptr100, i32 0, i32 11
-  %spr111 = getelementptr inbounds %obj, %obj* %objptr100, i32 0, i32 12
-  %y112 = load double, double* %y109
-  %a113 = load %objref, %objref* %a1
-  %objptr_gen114 = extractvalue %objref %a113, 1
-  %objptr115 = bitcast %gameobj* %objptr_gen114 to %obj*
-  %hitbox_h116 = getelementptr inbounds %obj, %obj* %objptr115, i32 0, i32 2
-  %hitbox_w117 = getelementptr inbounds %obj, %obj* %objptr115, i32 0, i32 3
-  %hitbox_offy118 = getelementptr inbounds %obj, %obj* %objptr115, i32 0, i32 4
-  %hitbox_offx119 = getelementptr inbounds %obj, %obj* %objptr115, i32 0, i32 5
-  %origin_y120 = getelementptr inbounds %obj, %obj* %objptr115, i32 0, i32 6
-  %origin_x121 = getelementptr inbounds %obj, %obj* %objptr115, i32 0, i32 7
-  %vspeed122 = getelementptr inbounds %obj, %obj* %objptr115, i32 0, i32 8
-  %hspeed123 = getelementptr inbounds %obj, %obj* %objptr115, i32 0, i32 9
-  %y124 = getelementptr inbounds %obj, %obj* %objptr115, i32 0, i32 10
-  %x125 = getelementptr inbounds %obj, %obj* %objptr115, i32 0, i32 11
-  %spr126 = getelementptr inbounds %obj, %obj* %objptr115, i32 0, i32 12
-  %hitbox_offy127 = load double, double* %hitbox_offy118
-  %tmp128 = fadd double %y112, %hitbox_offy127
-  %a129 = load %objref, %objref* %a1
-  %objptr_gen130 = extractvalue %objref %a129, 1
-  %objptr131 = bitcast %gameobj* %objptr_gen130 to %obj*
-  %hitbox_h132 = getelementptr inbounds %obj, %obj* %objptr131, i32 0, i32 2
-  %hitbox_w133 = getelementptr inbounds %obj, %obj* %objptr131, i32 0, i32 3
-  %hitbox_offy134 = getelementptr inbounds %obj, %obj* %objptr131, i32 0, i32 4
-  %hitbox_offx135 = getelementptr inbounds %obj, %obj* %objptr131, i32 0, i32 5
-  %origin_y136 = getelementptr inbounds %obj, %obj* %objptr131, i32 0, i32 6
-  %origin_x137 = getelementptr inbounds %obj, %obj* %objptr131, i32 0, i32 7
-  %vspeed138 = getelementptr inbounds %obj, %obj* %objptr131, i32 0, i32 8
-  %hspeed139 = getelementptr inbounds %obj, %obj* %objptr131, i32 0, i32 9
-  %y140 = getelementptr inbounds %obj, %obj* %objptr131, i32 0, i32 10
-  %x141 = getelementptr inbounds %obj, %obj* %objptr131, i32 0, i32 11
-  %spr142 = getelementptr inbounds %obj, %obj* %objptr131, i32 0, i32 12
-  %hitbox_h143 = load double, double* %hitbox_h132
-  %tmp144 = fadd double %tmp128, %hitbox_h143
-  store double %tmp144, double* %ad
+  %a34 = load %objref, %objref* %a1
+  %objptr_gen35 = extractvalue %objref %a34, 1
+  %objptr36 = bitcast %gameobj* %objptr_gen35 to %obj*
+  %y37 = getelementptr inbounds %obj, %obj* %objptr36, i32 0, i32 10
+  %y38 = load double, double* %y37
+  %a39 = load %objref, %objref* %a1
+  %objptr_gen40 = extractvalue %objref %a39, 1
+  %objptr41 = bitcast %gameobj* %objptr_gen40 to %obj*
+  %hitbox_offy42 = getelementptr inbounds %obj, %obj* %objptr41, i32 0, i32 4
+  %hitbox_offy43 = load double, double* %hitbox_offy42
+  %tmp44 = fadd double %y38, %hitbox_offy43
+  %a45 = load %objref, %objref* %a1
+  %objptr_gen46 = extractvalue %objref %a45, 1
+  %objptr47 = bitcast %gameobj* %objptr_gen46 to %obj*
+  %hitbox_h = getelementptr inbounds %obj, %obj* %objptr47, i32 0, i32 2
+  %hitbox_h48 = load double, double* %hitbox_h
+  %tmp49 = fadd double %tmp44, %hitbox_h48
+  store double %tmp49, double* %ad
   %bl = alloca double
-  %b145 = load %objref, %objref* %b2
-  %objptr_gen146 = extractvalue %objref %b145, 1
-  %objptr147 = bitcast %gameobj* %objptr_gen146 to %obj*
-  %hitbox_h148 = getelementptr inbounds %obj, %obj* %objptr147, i32 0, i32 2
-  %hitbox_w149 = getelementptr inbounds %obj, %obj* %objptr147, i32 0, i32 3
-  %hitbox_offy150 = getelementptr inbounds %obj, %obj* %objptr147, i32 0, i32 4
-  %hitbox_offx151 = getelementptr inbounds %obj, %obj* %objptr147, i32 0, i32 5
-  %origin_y152 = getelementptr inbounds %obj, %obj* %objptr147, i32 0, i32 6
-  %origin_x153 = getelementptr inbounds %obj, %obj* %objptr147, i32 0, i32 7
-  %vspeed154 = getelementptr inbounds %obj, %obj* %objptr147, i32 0, i32 8
-  %hspeed155 = getelementptr inbounds %obj, %obj* %objptr147, i32 0, i32 9
-  %y156 = getelementptr inbounds %obj, %obj* %objptr147, i32 0, i32 10
-  %x157 = getelementptr inbounds %obj, %obj* %objptr147, i32 0, i32 11
-  %spr158 = getelementptr inbounds %obj, %obj* %objptr147, i32 0, i32 12
-  %x159 = load double, double* %x157
-  %b160 = load %objref, %objref* %b2
-  %objptr_gen161 = extractvalue %objref %b160, 1
-  %objptr162 = bitcast %gameobj* %objptr_gen161 to %obj*
-  %hitbox_h163 = getelementptr inbounds %obj, %obj* %objptr162, i32 0, i32 2
-  %hitbox_w164 = getelementptr inbounds %obj, %obj* %objptr162, i32 0, i32 3
-  %hitbox_offy165 = getelementptr inbounds %obj, %obj* %objptr162, i32 0, i32 4
-  %hitbox_offx166 = getelementptr inbounds %obj, %obj* %objptr162, i32 0, i32 5
-  %origin_y167 = getelementptr inbounds %obj, %obj* %objptr162, i32 0, i32 6
-  %origin_x168 = getelementptr inbounds %obj, %obj* %objptr162, i32 0, i32 7
-  %vspeed169 = getelementptr inbounds %obj, %obj* %objptr162, i32 0, i32 8
-  %hspeed170 = getelementptr inbounds %obj, %obj* %objptr162, i32 0, i32 9
-  %y171 = getelementptr inbounds %obj, %obj* %objptr162, i32 0, i32 10
-  %x172 = getelementptr inbounds %obj, %obj* %objptr162, i32 0, i32 11
-  %spr173 = getelementptr inbounds %obj, %obj* %objptr162, i32 0, i32 12
-  %hitbox_offx174 = load double, double* %hitbox_offx166
-  %tmp175 = fadd double %x159, %hitbox_offx174
-  store double %tmp175, double* %bl
+  %b50 = load %objref, %objref* %b2
+  %objptr_gen51 = extractvalue %objref %b50, 1
+  %objptr52 = bitcast %gameobj* %objptr_gen51 to %obj*
+  %x53 = getelementptr inbounds %obj, %obj* %objptr52, i32 0, i32 11
+  %x54 = load double, double* %x53
+  %b55 = load %objref, %objref* %b2
+  %objptr_gen56 = extractvalue %objref %b55, 1
+  %objptr57 = bitcast %gameobj* %objptr_gen56 to %obj*
+  %hitbox_offx58 = getelementptr inbounds %obj, %obj* %objptr57, i32 0, i32 5
+  %hitbox_offx59 = load double, double* %hitbox_offx58
+  %tmp60 = fadd double %x54, %hitbox_offx59
+  store double %tmp60, double* %bl
   %bu = alloca double
-  %b176 = load %objref, %objref* %b2
-  %objptr_gen177 = extractvalue %objref %b176, 1
-  %objptr178 = bitcast %gameobj* %objptr_gen177 to %obj*
-  %hitbox_h179 = getelementptr inbounds %obj, %obj* %objptr178, i32 0, i32 2
-  %hitbox_w180 = getelementptr inbounds %obj, %obj* %objptr178, i32 0, i32 3
-  %hitbox_offy181 = getelementptr inbounds %obj, %obj* %objptr178, i32 0, i32 4
-  %hitbox_offx182 = getelementptr inbounds %obj, %obj* %objptr178, i32 0, i32 5
-  %origin_y183 = getelementptr inbounds %obj, %obj* %objptr178, i32 0, i32 6
-  %origin_x184 = getelementptr inbounds %obj, %obj* %objptr178, i32 0, i32 7
-  %vspeed185 = getelementptr inbounds %obj, %obj* %objptr178, i32 0, i32 8
-  %hspeed186 = getelementptr inbounds %obj, %obj* %objptr178, i32 0, i32 9
-  %y187 = getelementptr inbounds %obj, %obj* %objptr178, i32 0, i32 10
-  %x188 = getelementptr inbounds %obj, %obj* %objptr178, i32 0, i32 11
-  %spr189 = getelementptr inbounds %obj, %obj* %objptr178, i32 0, i32 12
-  %y190 = load double, double* %y187
-  %b191 = load %objref, %objref* %b2
-  %objptr_gen192 = extractvalue %objref %b191, 1
-  %objptr193 = bitcast %gameobj* %objptr_gen192 to %obj*
-  %hitbox_h194 = getelementptr inbounds %obj, %obj* %objptr193, i32 0, i32 2
-  %hitbox_w195 = getelementptr inbounds %obj, %obj* %objptr193, i32 0, i32 3
-  %hitbox_offy196 = getelementptr inbounds %obj, %obj* %objptr193, i32 0, i32 4
-  %hitbox_offx197 = getelementptr inbounds %obj, %obj* %objptr193, i32 0, i32 5
-  %origin_y198 = getelementptr inbounds %obj, %obj* %objptr193, i32 0, i32 6
-  %origin_x199 = getelementptr inbounds %obj, %obj* %objptr193, i32 0, i32 7
-  %vspeed200 = getelementptr inbounds %obj, %obj* %objptr193, i32 0, i32 8
-  %hspeed201 = getelementptr inbounds %obj, %obj* %objptr193, i32 0, i32 9
-  %y202 = getelementptr inbounds %obj, %obj* %objptr193, i32 0, i32 10
-  %x203 = getelementptr inbounds %obj, %obj* %objptr193, i32 0, i32 11
-  %spr204 = getelementptr inbounds %obj, %obj* %objptr193, i32 0, i32 12
-  %hitbox_offy205 = load double, double* %hitbox_offy196
-  %tmp206 = fadd double %y190, %hitbox_offy205
-  store double %tmp206, double* %bu
+  %b61 = load %objref, %objref* %b2
+  %objptr_gen62 = extractvalue %objref %b61, 1
+  %objptr63 = bitcast %gameobj* %objptr_gen62 to %obj*
+  %y64 = getelementptr inbounds %obj, %obj* %objptr63, i32 0, i32 10
+  %y65 = load double, double* %y64
+  %b66 = load %objref, %objref* %b2
+  %objptr_gen67 = extractvalue %objref %b66, 1
+  %objptr68 = bitcast %gameobj* %objptr_gen67 to %obj*
+  %hitbox_offy69 = getelementptr inbounds %obj, %obj* %objptr68, i32 0, i32 4
+  %hitbox_offy70 = load double, double* %hitbox_offy69
+  %tmp71 = fadd double %y65, %hitbox_offy70
+  store double %tmp71, double* %bu
   %br = alloca double
-  %b207 = load %objref, %objref* %b2
-  %objptr_gen208 = extractvalue %objref %b207, 1
-  %objptr209 = bitcast %gameobj* %objptr_gen208 to %obj*
-  %hitbox_h210 = getelementptr inbounds %obj, %obj* %objptr209, i32 0, i32 2
-  %hitbox_w211 = getelementptr inbounds %obj, %obj* %objptr209, i32 0, i32 3
-  %hitbox_offy212 = getelementptr inbounds %obj, %obj* %objptr209, i32 0, i32 4
-  %hitbox_offx213 = getelementptr inbounds %obj, %obj* %objptr209, i32 0, i32 5
-  %origin_y214 = getelementptr inbounds %obj, %obj* %objptr209, i32 0, i32 6
-  %origin_x215 = getelementptr inbounds %obj, %obj* %objptr209, i32 0, i32 7
-  %vspeed216 = getelementptr inbounds %obj, %obj* %objptr209, i32 0, i32 8
-  %hspeed217 = getelementptr inbounds %obj, %obj* %objptr209, i32 0, i32 9
-  %y218 = getelementptr inbounds %obj, %obj* %objptr209, i32 0, i32 10
-  %x219 = getelementptr inbounds %obj, %obj* %objptr209, i32 0, i32 11
-  %spr220 = getelementptr inbounds %obj, %obj* %objptr209, i32 0, i32 12
-  %x221 = load double, double* %x219
-  %b222 = load %objref, %objref* %b2
-  %objptr_gen223 = extractvalue %objref %b222, 1
-  %objptr224 = bitcast %gameobj* %objptr_gen223 to %obj*
-  %hitbox_h225 = getelementptr inbounds %obj, %obj* %objptr224, i32 0, i32 2
-  %hitbox_w226 = getelementptr inbounds %obj, %obj* %objptr224, i32 0, i32 3
-  %hitbox_offy227 = getelementptr inbounds %obj, %obj* %objptr224, i32 0, i32 4
-  %hitbox_offx228 = getelementptr inbounds %obj, %obj* %objptr224, i32 0, i32 5
-  %origin_y229 = getelementptr inbounds %obj, %obj* %objptr224, i32 0, i32 6
-  %origin_x230 = getelementptr inbounds %obj, %obj* %objptr224, i32 0, i32 7
-  %vspeed231 = getelementptr inbounds %obj, %obj* %objptr224, i32 0, i32 8
-  %hspeed232 = getelementptr inbounds %obj, %obj* %objptr224, i32 0, i32 9
-  %y233 = getelementptr inbounds %obj, %obj* %objptr224, i32 0, i32 10
-  %x234 = getelementptr inbounds %obj, %obj* %objptr224, i32 0, i32 11
-  %spr235 = getelementptr inbounds %obj, %obj* %objptr224, i32 0, i32 12
-  %hitbox_offx236 = load double, double* %hitbox_offx228
-  %tmp237 = fadd double %x221, %hitbox_offx236
-  %b238 = load %objref, %objref* %b2
-  %objptr_gen239 = extractvalue %objref %b238, 1
-  %objptr240 = bitcast %gameobj* %objptr_gen239 to %obj*
-  %hitbox_h241 = getelementptr inbounds %obj, %obj* %objptr240, i32 0, i32 2
-  %hitbox_w242 = getelementptr inbounds %obj, %obj* %objptr240, i32 0, i32 3
-  %hitbox_offy243 = getelementptr inbounds %obj, %obj* %objptr240, i32 0, i32 4
-  %hitbox_offx244 = getelementptr inbounds %obj, %obj* %objptr240, i32 0, i32 5
-  %origin_y245 = getelementptr inbounds %obj, %obj* %objptr240, i32 0, i32 6
-  %origin_x246 = getelementptr inbounds %obj, %obj* %objptr240, i32 0, i32 7
-  %vspeed247 = getelementptr inbounds %obj, %obj* %objptr240, i32 0, i32 8
-  %hspeed248 = getelementptr inbounds %obj, %obj* %objptr240, i32 0, i32 9
-  %y249 = getelementptr inbounds %obj, %obj* %objptr240, i32 0, i32 10
-  %x250 = getelementptr inbounds %obj, %obj* %objptr240, i32 0, i32 11
-  %spr251 = getelementptr inbounds %obj, %obj* %objptr240, i32 0, i32 12
-  %hitbox_w252 = load double, double* %hitbox_w242
-  %tmp253 = fadd double %tmp237, %hitbox_w252
-  store double %tmp253, double* %br
+  %b72 = load %objref, %objref* %b2
+  %objptr_gen73 = extractvalue %objref %b72, 1
+  %objptr74 = bitcast %gameobj* %objptr_gen73 to %obj*
+  %x75 = getelementptr inbounds %obj, %obj* %objptr74, i32 0, i32 11
+  %x76 = load double, double* %x75
+  %b77 = load %objref, %objref* %b2
+  %objptr_gen78 = extractvalue %objref %b77, 1
+  %objptr79 = bitcast %gameobj* %objptr_gen78 to %obj*
+  %hitbox_offx80 = getelementptr inbounds %obj, %obj* %objptr79, i32 0, i32 5
+  %hitbox_offx81 = load double, double* %hitbox_offx80
+  %tmp82 = fadd double %x76, %hitbox_offx81
+  %b83 = load %objref, %objref* %b2
+  %objptr_gen84 = extractvalue %objref %b83, 1
+  %objptr85 = bitcast %gameobj* %objptr_gen84 to %obj*
+  %hitbox_w86 = getelementptr inbounds %obj, %obj* %objptr85, i32 0, i32 3
+  %hitbox_w87 = load double, double* %hitbox_w86
+  %tmp88 = fadd double %tmp82, %hitbox_w87
+  store double %tmp88, double* %br
   %bd = alloca double
-  %b254 = load %objref, %objref* %b2
-  %objptr_gen255 = extractvalue %objref %b254, 1
-  %objptr256 = bitcast %gameobj* %objptr_gen255 to %obj*
-  %hitbox_h257 = getelementptr inbounds %obj, %obj* %objptr256, i32 0, i32 2
-  %hitbox_w258 = getelementptr inbounds %obj, %obj* %objptr256, i32 0, i32 3
-  %hitbox_offy259 = getelementptr inbounds %obj, %obj* %objptr256, i32 0, i32 4
-  %hitbox_offx260 = getelementptr inbounds %obj, %obj* %objptr256, i32 0, i32 5
-  %origin_y261 = getelementptr inbounds %obj, %obj* %objptr256, i32 0, i32 6
-  %origin_x262 = getelementptr inbounds %obj, %obj* %objptr256, i32 0, i32 7
-  %vspeed263 = getelementptr inbounds %obj, %obj* %objptr256, i32 0, i32 8
-  %hspeed264 = getelementptr inbounds %obj, %obj* %objptr256, i32 0, i32 9
-  %y265 = getelementptr inbounds %obj, %obj* %objptr256, i32 0, i32 10
-  %x266 = getelementptr inbounds %obj, %obj* %objptr256, i32 0, i32 11
-  %spr267 = getelementptr inbounds %obj, %obj* %objptr256, i32 0, i32 12
-  %y268 = load double, double* %y265
-  %b269 = load %objref, %objref* %b2
-  %objptr_gen270 = extractvalue %objref %b269, 1
-  %objptr271 = bitcast %gameobj* %objptr_gen270 to %obj*
-  %hitbox_h272 = getelementptr inbounds %obj, %obj* %objptr271, i32 0, i32 2
-  %hitbox_w273 = getelementptr inbounds %obj, %obj* %objptr271, i32 0, i32 3
-  %hitbox_offy274 = getelementptr inbounds %obj, %obj* %objptr271, i32 0, i32 4
-  %hitbox_offx275 = getelementptr inbounds %obj, %obj* %objptr271, i32 0, i32 5
-  %origin_y276 = getelementptr inbounds %obj, %obj* %objptr271, i32 0, i32 6
-  %origin_x277 = getelementptr inbounds %obj, %obj* %objptr271, i32 0, i32 7
-  %vspeed278 = getelementptr inbounds %obj, %obj* %objptr271, i32 0, i32 8
-  %hspeed279 = getelementptr inbounds %obj, %obj* %objptr271, i32 0, i32 9
-  %y280 = getelementptr inbounds %obj, %obj* %objptr271, i32 0, i32 10
-  %x281 = getelementptr inbounds %obj, %obj* %objptr271, i32 0, i32 11
-  %spr282 = getelementptr inbounds %obj, %obj* %objptr271, i32 0, i32 12
-  %hitbox_offy283 = load double, double* %hitbox_offy274
-  %tmp284 = fadd double %y268, %hitbox_offy283
-  %b285 = load %objref, %objref* %b2
-  %objptr_gen286 = extractvalue %objref %b285, 1
-  %objptr287 = bitcast %gameobj* %objptr_gen286 to %obj*
-  %hitbox_h288 = getelementptr inbounds %obj, %obj* %objptr287, i32 0, i32 2
-  %hitbox_w289 = getelementptr inbounds %obj, %obj* %objptr287, i32 0, i32 3
-  %hitbox_offy290 = getelementptr inbounds %obj, %obj* %objptr287, i32 0, i32 4
-  %hitbox_offx291 = getelementptr inbounds %obj, %obj* %objptr287, i32 0, i32 5
-  %origin_y292 = getelementptr inbounds %obj, %obj* %objptr287, i32 0, i32 6
-  %origin_x293 = getelementptr inbounds %obj, %obj* %objptr287, i32 0, i32 7
-  %vspeed294 = getelementptr inbounds %obj, %obj* %objptr287, i32 0, i32 8
-  %hspeed295 = getelementptr inbounds %obj, %obj* %objptr287, i32 0, i32 9
-  %y296 = getelementptr inbounds %obj, %obj* %objptr287, i32 0, i32 10
-  %x297 = getelementptr inbounds %obj, %obj* %objptr287, i32 0, i32 11
-  %spr298 = getelementptr inbounds %obj, %obj* %objptr287, i32 0, i32 12
-  %hitbox_h299 = load double, double* %hitbox_h288
-  %tmp300 = fadd double %tmp284, %hitbox_h299
-  store double %tmp300, double* %bd
-  %al301 = load double, double* %al
-  %br302 = load double, double* %br
-  %tmp303 = fcmp olt double %al301, %br302
-  %ar304 = load double, double* %ar
-  %bl305 = load double, double* %bl
-  %tmp306 = fcmp ogt double %ar304, %bl305
-  %tmp307 = and i1 %tmp303, %tmp306
-  %au308 = load double, double* %au
-  %bd309 = load double, double* %bd
-  %tmp310 = fcmp olt double %au308, %bd309
-  %tmp311 = and i1 %tmp307, %tmp310
-  %ad312 = load double, double* %ad
-  %bu313 = load double, double* %bu
-  %tmp314 = fcmp ogt double %ad312, %bu313
-  %tmp315 = and i1 %tmp311, %tmp314
-  ret i1 %tmp315
+  %b89 = load %objref, %objref* %b2
+  %objptr_gen90 = extractvalue %objref %b89, 1
+  %objptr91 = bitcast %gameobj* %objptr_gen90 to %obj*
+  %y92 = getelementptr inbounds %obj, %obj* %objptr91, i32 0, i32 10
+  %y93 = load double, double* %y92
+  %b94 = load %objref, %objref* %b2
+  %objptr_gen95 = extractvalue %objref %b94, 1
+  %objptr96 = bitcast %gameobj* %objptr_gen95 to %obj*
+  %hitbox_offy97 = getelementptr inbounds %obj, %obj* %objptr96, i32 0, i32 4
+  %hitbox_offy98 = load double, double* %hitbox_offy97
+  %tmp99 = fadd double %y93, %hitbox_offy98
+  %b100 = load %objref, %objref* %b2
+  %objptr_gen101 = extractvalue %objref %b100, 1
+  %objptr102 = bitcast %gameobj* %objptr_gen101 to %obj*
+  %hitbox_h103 = getelementptr inbounds %obj, %obj* %objptr102, i32 0, i32 2
+  %hitbox_h104 = load double, double* %hitbox_h103
+  %tmp105 = fadd double %tmp99, %hitbox_h104
+  store double %tmp105, double* %bd
+  %al106 = load double, double* %al
+  %br107 = load double, double* %br
+  %tmp108 = fcmp olt double %al106, %br107
+  %ar109 = load double, double* %ar
+  %bl110 = load double, double* %bl
+  %tmp111 = fcmp ogt double %ar109, %bl110
+  %tmp112 = and i1 %tmp108, %tmp111
+  %au113 = load double, double* %au
+  %bd114 = load double, double* %bd
+  %tmp115 = fcmp olt double %au113, %bd114
+  %tmp116 = and i1 %tmp112, %tmp115
+  %ad117 = load double, double* %ad
+  %bu118 = load double, double* %bu
+  %tmp119 = fcmp ogt double %ad117, %bu118
+  %tmp120 = and i1 %tmp116, %tmp119
+  ret i1 %tmp120
 
 block_end:                                        ; preds = %postret
   ret i1 false
@@ -1401,35 +1201,33 @@ entry:
   %thisref = load %objref, %objref* %this1
   %objptr_gen = extractvalue %objref %thisref, 1
   %objptr = bitcast %gameobj* %objptr_gen to %obj*
-  %hitbox_h = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 2
-  %hitbox_w = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 3
-  %hitbox_offy = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 4
-  %hitbox_offx = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 5
-  %origin_y = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 6
-  %origin_x = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 7
-  %vspeed = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 8
-  %hspeed = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 9
-  %y = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 10
   %x = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 11
-  %spr = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 12
   %le = load double, double* %x
+  %hspeed = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 9
   %hspeed2 = load double, double* %hspeed
   %Asn = fadd double %le, %hspeed2
   store double %Asn, double* %x
   %0 = load double, double* %x
+  %y = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 10
   %le3 = load double, double* %y
+  %vspeed = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 8
   %vspeed4 = load double, double* %vspeed
   %Asn5 = fadd double %le3, %vspeed4
   store double %Asn5, double* %y
   %1 = load double, double* %y
+  %spr = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 12
   %spr6 = load %sfSprite*, %sfSprite** %spr
-  %x7 = load double, double* %x
-  %origin_x8 = load double, double* %origin_x
-  %tmp = fsub double %x7, %origin_x8
-  %y9 = load double, double* %y
-  %origin_y10 = load double, double* %origin_y
-  %tmp11 = fsub double %y9, %origin_y10
-  call void @"function:file-../../lib/sprite.mg::render"(%sfSprite* %spr6, double %tmp, double %tmp11)
+  %x7 = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 11
+  %x8 = load double, double* %x7
+  %origin_x = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 7
+  %origin_x9 = load double, double* %origin_x
+  %tmp = fsub double %x8, %origin_x9
+  %y10 = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 10
+  %y11 = load double, double* %y10
+  %origin_y = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 6
+  %origin_y12 = load double, double* %origin_y
+  %tmp13 = fsub double %y11, %origin_y12
+  call void @"function:file-../../lib/sprite.mg::render"(%sfSprite* %spr6, double %tmp, double %tmp13)
   br label %block_end
 
 block_end:                                        ; preds = %entry
@@ -1449,69 +1247,43 @@ entry:
   %thisref = load %objref, %objref* %this1
   %objptr_gen = extractvalue %objref %thisref, 1
   %objptr = bitcast %gameobj* %objptr_gen to %obj*
-  %hitbox_h = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 2
-  %hitbox_w = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 3
-  %hitbox_offy = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 4
-  %hitbox_offx = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 5
-  %origin_y = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 6
-  %origin_x = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 7
-  %vspeed = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 8
-  %hspeed = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 9
-  %y5 = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 10
-  %x6 = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 11
+  %this5 = load %objref, %objref* %this1
+  %objptr_gen6 = extractvalue %objref %this5, 1
+  %objptr7 = bitcast %gameobj* %objptr_gen6 to %obj*
+  %x8 = getelementptr inbounds %obj, %obj* %objptr7, i32 0, i32 11
+  %x9 = load double, double* %x2
+  store double %x9, double* %x8
+  %0 = load double, double* %x8
+  %this10 = load %objref, %objref* %this1
+  %objptr_gen11 = extractvalue %objref %this10, 1
+  %objptr12 = bitcast %gameobj* %objptr_gen11 to %obj*
+  %y13 = getelementptr inbounds %obj, %obj* %objptr12, i32 0, i32 10
+  %y14 = load double, double* %y3
+  store double %y14, double* %y13
+  %1 = load double, double* %y13
   %spr = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 12
-  %x7 = load double, double* %x2
-  %this8 = load %objref, %objref* %this1
-  %objptr_gen9 = extractvalue %objref %this8, 1
-  %objptr10 = bitcast %gameobj* %objptr_gen9 to %obj*
-  %hitbox_h11 = getelementptr inbounds %obj, %obj* %objptr10, i32 0, i32 2
-  %hitbox_w12 = getelementptr inbounds %obj, %obj* %objptr10, i32 0, i32 3
-  %hitbox_offy13 = getelementptr inbounds %obj, %obj* %objptr10, i32 0, i32 4
-  %hitbox_offx14 = getelementptr inbounds %obj, %obj* %objptr10, i32 0, i32 5
-  %origin_y15 = getelementptr inbounds %obj, %obj* %objptr10, i32 0, i32 6
-  %origin_x16 = getelementptr inbounds %obj, %obj* %objptr10, i32 0, i32 7
-  %vspeed17 = getelementptr inbounds %obj, %obj* %objptr10, i32 0, i32 8
-  %hspeed18 = getelementptr inbounds %obj, %obj* %objptr10, i32 0, i32 9
-  %y19 = getelementptr inbounds %obj, %obj* %objptr10, i32 0, i32 10
-  %x20 = getelementptr inbounds %obj, %obj* %objptr10, i32 0, i32 11
-  %spr21 = getelementptr inbounds %obj, %obj* %objptr10, i32 0, i32 12
-  store double %x7, double* %x20
-  %0 = load double, double* %x20
-  %y22 = load double, double* %y3
-  %this23 = load %objref, %objref* %this1
-  %objptr_gen24 = extractvalue %objref %this23, 1
-  %objptr25 = bitcast %gameobj* %objptr_gen24 to %obj*
-  %hitbox_h26 = getelementptr inbounds %obj, %obj* %objptr25, i32 0, i32 2
-  %hitbox_w27 = getelementptr inbounds %obj, %obj* %objptr25, i32 0, i32 3
-  %hitbox_offy28 = getelementptr inbounds %obj, %obj* %objptr25, i32 0, i32 4
-  %hitbox_offx29 = getelementptr inbounds %obj, %obj* %objptr25, i32 0, i32 5
-  %origin_y30 = getelementptr inbounds %obj, %obj* %objptr25, i32 0, i32 6
-  %origin_x31 = getelementptr inbounds %obj, %obj* %objptr25, i32 0, i32 7
-  %vspeed32 = getelementptr inbounds %obj, %obj* %objptr25, i32 0, i32 8
-  %hspeed33 = getelementptr inbounds %obj, %obj* %objptr25, i32 0, i32 9
-  %y34 = getelementptr inbounds %obj, %obj* %objptr25, i32 0, i32 10
-  %x35 = getelementptr inbounds %obj, %obj* %objptr25, i32 0, i32 11
-  %spr36 = getelementptr inbounds %obj, %obj* %objptr25, i32 0, i32 12
-  store double %y22, double* %y34
-  %1 = load double, double* %y34
-  %sprite_name37 = load i8*, i8** %sprite_name4
-  %load_result = call %sfSprite* @"function:file-../../lib/sprite.mg::load"(i8* %sprite_name37)
+  %sprite_name15 = load i8*, i8** %sprite_name4
+  %load_result = call %sfSprite* @"function:file-../../lib/sprite.mg::load"(i8* %sprite_name15)
   store %sfSprite* %load_result, %sfSprite** %spr
   %2 = load %sfSprite*, %sfSprite** %spr
-  %spr38 = load %sfSprite*, %sfSprite** %spr
-  %width_result = call i32 @"function:file-../../lib/sprite.mg::width"(%sfSprite* %spr38)
+  %origin_x = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 7
+  %spr16 = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 12
+  %spr17 = load %sfSprite*, %sfSprite** %spr16
+  %width_result = call i32 @"function:file-../../lib/sprite.mg::width"(%sfSprite* %spr17)
   %3 = sitofp i32 %width_result to double
   %tmp = fmul double %3, 5.000000e-01
   store double %tmp, double* %origin_x
   %4 = load double, double* %origin_x
-  %spr39 = load %sfSprite*, %sfSprite** %spr
-  %height_result = call i32 @"function:file-../../lib/sprite.mg::height"(%sfSprite* %spr39)
+  %origin_y = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 6
+  %spr18 = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 12
+  %spr19 = load %sfSprite*, %sfSprite** %spr18
+  %height_result = call i32 @"function:file-../../lib/sprite.mg::height"(%sfSprite* %spr19)
   %5 = sitofp i32 %height_result to double
-  %tmp40 = fmul double %5, 5.000000e-01
-  store double %tmp40, double* %origin_y
+  %tmp20 = fmul double %5, 5.000000e-01
+  store double %tmp20, double* %origin_y
   %6 = load double, double* %origin_y
-  %this41 = load %objref, %objref* %this1
-  call void @"object:file-../../lib/game.mg::obj.function.center_hitbox_abs"(%objref %this41, double 0.000000e+00, double 0.000000e+00)
+  %this21 = load %objref, %objref* %this1
+  call void @"object:file-../../lib/game.mg::obj.function.center_hitbox_abs"(%objref %this21, double 0.000000e+00, double 0.000000e+00)
   br label %block_end
 
 block_end:                                        ; preds = %entry
@@ -1546,28 +1318,21 @@ entry:
   %thisref = load %objref, %objref* %this1
   %objptr_gen = extractvalue %objref %thisref, 1
   %objptr = bitcast %gameobj* %objptr_gen to %obj*
-  %hitbox_h = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 2
-  %hitbox_w = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 3
-  %hitbox_offy = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 4
   %hitbox_offx = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 5
-  %origin_y = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 6
-  %origin_x = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 7
-  %vspeed = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 8
-  %hspeed = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 9
-  %y6 = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 10
-  %x7 = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 11
-  %spr = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 12
-  %x8 = load double, double* %x2
-  store double %x8, double* %hitbox_offx
+  %x6 = load double, double* %x2
+  store double %x6, double* %hitbox_offx
   %0 = load double, double* %hitbox_offx
-  %y9 = load double, double* %y3
-  store double %y9, double* %hitbox_offy
+  %hitbox_offy = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 4
+  %y7 = load double, double* %y3
+  store double %y7, double* %hitbox_offy
   %1 = load double, double* %hitbox_offy
-  %w10 = load double, double* %w4
-  store double %w10, double* %hitbox_w
+  %hitbox_w = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 3
+  %w8 = load double, double* %w4
+  store double %w8, double* %hitbox_w
   %2 = load double, double* %hitbox_w
-  %h11 = load double, double* %h5
-  store double %h11, double* %hitbox_h
+  %hitbox_h = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 2
+  %h9 = load double, double* %h5
+  store double %h9, double* %hitbox_h
   %3 = load double, double* %hitbox_h
   br label %block_end
 
@@ -1586,19 +1351,9 @@ entry:
   %thisref = load %objref, %objref* %this1
   %objptr_gen = extractvalue %objref %thisref, 1
   %objptr = bitcast %gameobj* %objptr_gen to %obj*
-  %hitbox_h = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 2
-  %hitbox_w = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 3
-  %hitbox_offy = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 4
-  %hitbox_offx = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 5
-  %origin_y = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 6
-  %origin_x = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 7
-  %vspeed = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 8
-  %hspeed = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 9
-  %y = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 10
-  %x = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 11
-  %spr = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 12
   %sw = alloca double
   %xprop4 = load double, double* %xprop2
+  %spr = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 12
   %spr5 = load %sfSprite*, %sfSprite** %spr
   %width_result = call i32 @"function:file-../../lib/sprite.mg::width"(%sfSprite* %spr5)
   %0 = sitofp i32 %width_result to double
@@ -1606,15 +1361,16 @@ entry:
   store double %tmp, double* %sw
   %sh = alloca double
   %yprop6 = load double, double* %yprop3
-  %spr7 = load %sfSprite*, %sfSprite** %spr
-  %height_result = call i32 @"function:file-../../lib/sprite.mg::height"(%sfSprite* %spr7)
+  %spr7 = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 12
+  %spr8 = load %sfSprite*, %sfSprite** %spr7
+  %height_result = call i32 @"function:file-../../lib/sprite.mg::height"(%sfSprite* %spr8)
   %1 = sitofp i32 %height_result to double
-  %tmp8 = fmul double %yprop6, %1
-  store double %tmp8, double* %sh
-  %sw9 = load double, double* %sw
-  %sh10 = load double, double* %sh
-  %this11 = load %objref, %objref* %this1
-  call void @"object:file-../../lib/game.mg::obj.function.center_hitbox_abs"(%objref %this11, double %sw9, double %sh10)
+  %tmp9 = fmul double %yprop6, %1
+  store double %tmp9, double* %sh
+  %sw10 = load double, double* %sw
+  %sh11 = load double, double* %sh
+  %this12 = load %objref, %objref* %this1
+  call void @"object:file-../../lib/game.mg::obj.function.center_hitbox_abs"(%objref %this12, double %sw10, double %sh11)
   br label %block_end
 
 block_end:                                        ; preds = %entry
@@ -1632,17 +1388,6 @@ entry:
   %thisref = load %objref, %objref* %this1
   %objptr_gen = extractvalue %objref %thisref, 1
   %objptr = bitcast %gameobj* %objptr_gen to %obj*
-  %hitbox_h = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 2
-  %hitbox_w = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 3
-  %hitbox_offy = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 4
-  %hitbox_offx = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 5
-  %origin_y = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 6
-  %origin_x = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 7
-  %vspeed = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 8
-  %hspeed = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 9
-  %y = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 10
-  %x = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 11
-  %spr = getelementptr inbounds %obj, %obj* %objptr, i32 0, i32 12
   %sw4 = load double, double* %sw2
   %tmp = fsub double -0.000000e+00, %sw4
   %tmp5 = fdiv double %tmp, 2.000000e+00
@@ -1666,43 +1411,32 @@ entry:
   %thisref = load %objref, %objref* %this1
   %objptr_gen = extractvalue %objref %thisref, 1
   %objptr = bitcast %gameobj* %objptr_gen to %Draw*
-  %digits = getelementptr inbounds %Draw, %Draw* %objptr, i32 0, i32 2
-  %n = getelementptr inbounds %Draw, %Draw* %objptr, i32 0, i32 3
-  %height = getelementptr inbounds %Draw, %Draw* %objptr, i32 0, i32 4
-  %width = getelementptr inbounds %Draw, %Draw* %objptr, i32 0, i32 5
-  %y = getelementptr inbounds %Draw, %Draw* %objptr, i32 0, i32 6
-  %x = getelementptr inbounds %Draw, %Draw* %objptr, i32 0, i32 7
-  %spr = getelementptr inbounds %Draw, %Draw* %objptr, i32 0, i32 8
   %div = alloca i32
   store i32 1, i32* %div
   %i = alloca i32
   store i32 0, i32* %i
   br label %while
 
-block_end:                                        ; preds = %merge25
+block_end:                                        ; preds = %merge18
   ret void
 
 block_end2:                                       ; preds = %merge
-  %x9 = alloca i32
-  %x10 = load i32, i32* %x
-  store i32 %x10, i32* %x9
-  %n11 = alloca i32
-  %this12 = load %objref, %objref* %this1
-  %objptr_gen13 = extractvalue %objref %this12, 1
-  %objptr14 = bitcast %gameobj* %objptr_gen13 to %Draw*
-  %digits15 = getelementptr inbounds %Draw, %Draw* %objptr14, i32 0, i32 2
-  %n16 = getelementptr inbounds %Draw, %Draw* %objptr14, i32 0, i32 3
-  %height17 = getelementptr inbounds %Draw, %Draw* %objptr14, i32 0, i32 4
-  %width18 = getelementptr inbounds %Draw, %Draw* %objptr14, i32 0, i32 5
-  %y19 = getelementptr inbounds %Draw, %Draw* %objptr14, i32 0, i32 6
-  %x20 = getelementptr inbounds %Draw, %Draw* %objptr14, i32 0, i32 7
-  %spr21 = getelementptr inbounds %Draw, %Draw* %objptr14, i32 0, i32 8
-  %n22 = load i32, i32* %n16
-  store i32 %n22, i32* %n11
-  br label %while23
+  %x = alloca i32
+  %x9 = getelementptr inbounds %Draw, %Draw* %objptr, i32 0, i32 7
+  %x10 = load i32, i32* %x9
+  store i32 %x10, i32* %x
+  %n = alloca i32
+  %this11 = load %objref, %objref* %this1
+  %objptr_gen12 = extractvalue %objref %this11, 1
+  %objptr13 = bitcast %gameobj* %objptr_gen12 to %Draw*
+  %n14 = getelementptr inbounds %Draw, %Draw* %objptr13, i32 0, i32 3
+  %n15 = load i32, i32* %n14
+  store i32 %n15, i32* %n
+  br label %while16
 
 while:                                            ; preds = %block_end6, %entry
   %i3 = load i32, i32* %i
+  %digits = getelementptr inbounds %Draw, %Draw* %objptr, i32 0, i32 2
   %digits4 = load i32, i32* %digits
   %tmp = sub i32 %digits4, 1
   %tmp5 = icmp slt i32 %i3, %tmp
@@ -1725,45 +1459,47 @@ merge:                                            ; preds = %while
 block_end6:                                       ; preds = %while_body
   br label %while
 
-while23:                                          ; preds = %block_end28, %block_end2
-  %div26 = load i32, i32* %div
-  %tmp27 = icmp sgt i32 %div26, 0
-  br i1 %tmp27, label %while_body24, label %merge25
+while16:                                          ; preds = %block_end21, %block_end2
+  %div19 = load i32, i32* %div
+  %tmp20 = icmp sgt i32 %div19, 0
+  br i1 %tmp20, label %while_body17, label %merge18
 
-while_body24:                                     ; preds = %while23
+while_body17:                                     ; preds = %while16
   %d = alloca i32
-  %n29 = load i32, i32* %n11
-  %div30 = load i32, i32* %div
-  %tmp31 = sdiv i32 %n29, %div30
-  %tmp32 = srem i32 %tmp31, 10
-  store i32 %tmp32, i32* %d
-  %spr33 = load %sfSprite*, %sfSprite** %spr
-  %x34 = load i32, i32* %x9
-  %2 = sitofp i32 %x34 to double
-  %y35 = load i32, i32* %y
-  %3 = sitofp i32 %y35 to double
-  %d36 = load i32, i32* %d
-  %tmp37 = mul i32 8, %d36
-  %4 = insertvalue [4 x i32] undef, i32 %tmp37, 0
+  %n22 = load i32, i32* %n
+  %div23 = load i32, i32* %div
+  %tmp24 = sdiv i32 %n22, %div23
+  %tmp25 = srem i32 %tmp24, 10
+  store i32 %tmp25, i32* %d
+  %spr = getelementptr inbounds %Draw, %Draw* %objptr, i32 0, i32 8
+  %spr26 = load %sfSprite*, %sfSprite** %spr
+  %x27 = load i32, i32* %x
+  %2 = sitofp i32 %x27 to double
+  %y = getelementptr inbounds %Draw, %Draw* %objptr, i32 0, i32 6
+  %y28 = load i32, i32* %y
+  %3 = sitofp i32 %y28 to double
+  %d29 = load i32, i32* %d
+  %tmp30 = mul i32 8, %d29
+  %4 = insertvalue [4 x i32] undef, i32 %tmp30, 0
   %5 = insertvalue [4 x i32] %4, i32 0, 1
   %6 = insertvalue [4 x i32] %5, i32 8, 2
   %7 = insertvalue [4 x i32] %6, i32 8, 3
-  call void @"function:file-../../lib/sprite.mg::render_rect"(%sfSprite* %spr33, double %2, double %3, [4 x i32] %7)
-  %le38 = load i32, i32* %x9
-  %Asn39 = add i32 %le38, 8
-  store i32 %Asn39, i32* %x9
-  %8 = load i32, i32* %x9
-  %le40 = load i32, i32* %div
-  %Asn41 = sdiv i32 %le40, 10
-  store i32 %Asn41, i32* %div
+  call void @"function:file-../../lib/sprite.mg::render_rect"(%sfSprite* %spr26, double %2, double %3, [4 x i32] %7)
+  %le31 = load i32, i32* %x
+  %Asn32 = add i32 %le31, 8
+  store i32 %Asn32, i32* %x
+  %8 = load i32, i32* %x
+  %le33 = load i32, i32* %div
+  %Asn34 = sdiv i32 %le33, 10
+  store i32 %Asn34, i32* %div
   %9 = load i32, i32* %div
-  br label %block_end28
+  br label %block_end21
 
-merge25:                                          ; preds = %while23
+merge18:                                          ; preds = %while16
   br label %block_end
 
-block_end28:                                      ; preds = %while_body24
-  br label %while23
+block_end21:                                      ; preds = %while_body17
+  br label %while16
 }
 
 define void @"object:file-/home/steven/Files/Desktop/Schoolwork/7/plt/makergame/demo/tetris/draw_numbers.mg::Draw.event.create"(%objref %this, i32 %x, i32 %y, i32 %digits) {
@@ -1779,52 +1515,28 @@ entry:
   %thisref = load %objref, %objref* %this1
   %objptr_gen = extractvalue %objref %thisref, 1
   %objptr = bitcast %gameobj* %objptr_gen to %Draw*
-  %digits5 = getelementptr inbounds %Draw, %Draw* %objptr, i32 0, i32 2
-  %n = getelementptr inbounds %Draw, %Draw* %objptr, i32 0, i32 3
-  %height = getelementptr inbounds %Draw, %Draw* %objptr, i32 0, i32 4
-  %width = getelementptr inbounds %Draw, %Draw* %objptr, i32 0, i32 5
-  %y6 = getelementptr inbounds %Draw, %Draw* %objptr, i32 0, i32 6
-  %x7 = getelementptr inbounds %Draw, %Draw* %objptr, i32 0, i32 7
+  %this5 = load %objref, %objref* %this1
+  %objptr_gen6 = extractvalue %objref %this5, 1
+  %objptr7 = bitcast %gameobj* %objptr_gen6 to %Draw*
+  %x8 = getelementptr inbounds %Draw, %Draw* %objptr7, i32 0, i32 7
+  %x9 = load i32, i32* %x2
+  store i32 %x9, i32* %x8
+  %0 = load i32, i32* %x8
+  %this10 = load %objref, %objref* %this1
+  %objptr_gen11 = extractvalue %objref %this10, 1
+  %objptr12 = bitcast %gameobj* %objptr_gen11 to %Draw*
+  %y13 = getelementptr inbounds %Draw, %Draw* %objptr12, i32 0, i32 6
+  %y14 = load i32, i32* %y3
+  store i32 %y14, i32* %y13
+  %1 = load i32, i32* %y13
+  %this15 = load %objref, %objref* %this1
+  %objptr_gen16 = extractvalue %objref %this15, 1
+  %objptr17 = bitcast %gameobj* %objptr_gen16 to %Draw*
+  %digits18 = getelementptr inbounds %Draw, %Draw* %objptr17, i32 0, i32 2
+  %digits19 = load i32, i32* %digits4
+  store i32 %digits19, i32* %digits18
+  %2 = load i32, i32* %digits18
   %spr = getelementptr inbounds %Draw, %Draw* %objptr, i32 0, i32 8
-  %x8 = load i32, i32* %x2
-  %this9 = load %objref, %objref* %this1
-  %objptr_gen10 = extractvalue %objref %this9, 1
-  %objptr11 = bitcast %gameobj* %objptr_gen10 to %Draw*
-  %digits12 = getelementptr inbounds %Draw, %Draw* %objptr11, i32 0, i32 2
-  %n13 = getelementptr inbounds %Draw, %Draw* %objptr11, i32 0, i32 3
-  %height14 = getelementptr inbounds %Draw, %Draw* %objptr11, i32 0, i32 4
-  %width15 = getelementptr inbounds %Draw, %Draw* %objptr11, i32 0, i32 5
-  %y16 = getelementptr inbounds %Draw, %Draw* %objptr11, i32 0, i32 6
-  %x17 = getelementptr inbounds %Draw, %Draw* %objptr11, i32 0, i32 7
-  %spr18 = getelementptr inbounds %Draw, %Draw* %objptr11, i32 0, i32 8
-  store i32 %x8, i32* %x17
-  %0 = load i32, i32* %x17
-  %y19 = load i32, i32* %y3
-  %this20 = load %objref, %objref* %this1
-  %objptr_gen21 = extractvalue %objref %this20, 1
-  %objptr22 = bitcast %gameobj* %objptr_gen21 to %Draw*
-  %digits23 = getelementptr inbounds %Draw, %Draw* %objptr22, i32 0, i32 2
-  %n24 = getelementptr inbounds %Draw, %Draw* %objptr22, i32 0, i32 3
-  %height25 = getelementptr inbounds %Draw, %Draw* %objptr22, i32 0, i32 4
-  %width26 = getelementptr inbounds %Draw, %Draw* %objptr22, i32 0, i32 5
-  %y27 = getelementptr inbounds %Draw, %Draw* %objptr22, i32 0, i32 6
-  %x28 = getelementptr inbounds %Draw, %Draw* %objptr22, i32 0, i32 7
-  %spr29 = getelementptr inbounds %Draw, %Draw* %objptr22, i32 0, i32 8
-  store i32 %y19, i32* %y27
-  %1 = load i32, i32* %y27
-  %digits30 = load i32, i32* %digits4
-  %this31 = load %objref, %objref* %this1
-  %objptr_gen32 = extractvalue %objref %this31, 1
-  %objptr33 = bitcast %gameobj* %objptr_gen32 to %Draw*
-  %digits34 = getelementptr inbounds %Draw, %Draw* %objptr33, i32 0, i32 2
-  %n35 = getelementptr inbounds %Draw, %Draw* %objptr33, i32 0, i32 3
-  %height36 = getelementptr inbounds %Draw, %Draw* %objptr33, i32 0, i32 4
-  %width37 = getelementptr inbounds %Draw, %Draw* %objptr33, i32 0, i32 5
-  %y38 = getelementptr inbounds %Draw, %Draw* %objptr33, i32 0, i32 6
-  %x39 = getelementptr inbounds %Draw, %Draw* %objptr33, i32 0, i32 7
-  %spr40 = getelementptr inbounds %Draw, %Draw* %objptr33, i32 0, i32 8
-  store i32 %digits30, i32* %digits34
-  %2 = load i32, i32* %digits34
   %load_result = call %sfSprite* @"function:file-../../lib/sprite.mg::load"(i8* getelementptr inbounds ([16 x i8], [16 x i8]* @literal.12, i32 0, i32 0))
   store %sfSprite* %load_result, %sfSprite** %spr
   %3 = load %sfSprite*, %sfSprite** %spr
@@ -1882,13 +1594,7 @@ entry:
   %level_count = load %objref, %objref* @"variable::level_count"
   %objptr_gen = extractvalue %objref %level_count, 1
   %objptr = bitcast %gameobj* %objptr_gen to %Draw*
-  %digits = getelementptr inbounds %Draw, %Draw* %objptr, i32 0, i32 2
   %n = getelementptr inbounds %Draw, %Draw* %objptr, i32 0, i32 3
-  %height = getelementptr inbounds %Draw, %Draw* %objptr, i32 0, i32 4
-  %width = getelementptr inbounds %Draw, %Draw* %objptr, i32 0, i32 5
-  %y = getelementptr inbounds %Draw, %Draw* %objptr, i32 0, i32 6
-  %x = getelementptr inbounds %Draw, %Draw* %objptr, i32 0, i32 7
-  %spr = getelementptr inbounds %Draw, %Draw* %objptr, i32 0, i32 8
   %n1 = load i32, i32* %n
   store i32 %n1, i32* %lv
   %lv2 = load i32, i32* %lv
@@ -1941,152 +1647,127 @@ entry:
   %thisref = load %objref, %objref* %this1
   %objptr_gen = extractvalue %objref %thisref, 1
   %objptr = bitcast %gameobj* %objptr_gen to %Block*
-  %piece = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 2
-  %s = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 3
-  %type_rect = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 4
-  %type_y = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 5
-  %type_x = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 6
-  %y = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 7
-  %x = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 8
   %draw_x = alloca double
+  %x = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 8
   %x2 = load i32, i32* %x
   %0 = sitofp i32 %x2 to double
   store double %0, double* %draw_x
   %draw_y = alloca double
+  %y = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 7
   %y3 = load i32, i32* %y
   %1 = sitofp i32 %y3 to double
   store double %1, double* %draw_y
+  %piece = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 2
   %piece4 = load %objref, %objref* %piece
   %tmp_lid = extractvalue %objref %piece4, 0
   %tmp = icmp ne i64 %tmp_lid, 0
-  br i1 %tmp, label %then, label %else55
+  br i1 %tmp, label %then, label %else40
 
 block_end:                                        ; preds = %merge
   ret void
 
-merge:                                            ; preds = %block_end56, %block_end5
+merge:                                            ; preds = %block_end41, %block_end5
   %le = load double, double* %draw_x
   %tile_size = load i32, i32* @"variable::tile_size"
   %2 = sitofp i32 %tile_size to double
   %Asn = fmul double %le, %2
   store double %Asn, double* %draw_x
   %3 = load double, double* %draw_x
-  %le57 = load double, double* %draw_y
-  %tile_size58 = load i32, i32* @"variable::tile_size"
-  %4 = sitofp i32 %tile_size58 to double
-  %Asn59 = fmul double %le57, %4
-  store double %Asn59, double* %draw_y
+  %le42 = load double, double* %draw_y
+  %tile_size43 = load i32, i32* @"variable::tile_size"
+  %4 = sitofp i32 %tile_size43 to double
+  %Asn44 = fmul double %le42, %4
+  store double %Asn44, double* %draw_y
   %5 = load double, double* %draw_y
-  %le60 = load double, double* %draw_x
+  %le45 = load double, double* %draw_x
   %boardOffsetX = load i32, i32* @"variable::boardOffsetX"
   %6 = sitofp i32 %boardOffsetX to double
-  %Asn61 = fadd double %le60, %6
-  store double %Asn61, double* %draw_x
+  %Asn46 = fadd double %le45, %6
+  store double %Asn46, double* %draw_x
   %7 = load double, double* %draw_x
-  %le62 = load double, double* %draw_y
+  %le47 = load double, double* %draw_y
   %boardOffsetY = load i32, i32* @"variable::boardOffsetY"
   %8 = sitofp i32 %boardOffsetY to double
-  %Asn63 = fadd double %le62, %8
-  store double %Asn63, double* %draw_y
+  %Asn48 = fadd double %le47, %8
+  store double %Asn48, double* %draw_y
   %9 = load double, double* %draw_y
-  %s64 = load %sfSprite*, %sfSprite** %s
-  %draw_x65 = load double, double* %draw_x
-  %draw_y66 = load double, double* %draw_y
-  %type_rect67 = load [4 x i32], [4 x i32]* %type_rect
-  call void @"function:file-../../lib/sprite.mg::render_rect"(%sfSprite* %s64, double %draw_x65, double %draw_y66, [4 x i32] %type_rect67)
+  %s = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 3
+  %s49 = load %sfSprite*, %sfSprite** %s
+  %draw_x50 = load double, double* %draw_x
+  %draw_y51 = load double, double* %draw_y
+  %type_rect = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 4
+  %type_rect52 = load [4 x i32], [4 x i32]* %type_rect
+  call void @"function:file-../../lib/sprite.mg::render_rect"(%sfSprite* %s49, double %draw_x50, double %draw_y51, [4 x i32] %type_rect52)
   br label %block_end
 
 then:                                             ; preds = %entry
-  %piece6 = load %objref, %objref* %piece
-  %objptr_gen7 = extractvalue %objref %piece6, 1
-  %objptr8 = bitcast %gameobj* %objptr_gen7 to %Piece*
-  %next = getelementptr inbounds %Piece, %Piece* %objptr8, i32 0, i32 2
-  %hard_drop = getelementptr inbounds %Piece, %Piece* %objptr8, i32 0, i32 3
-  %piece_type = getelementptr inbounds %Piece, %Piece* %objptr8, i32 0, i32 4
-  %active = getelementptr inbounds %Piece, %Piece* %objptr8, i32 0, i32 5
-  %drop_points = getelementptr inbounds %Piece, %Piece* %objptr8, i32 0, i32 6
-  %horiz_timer = getelementptr inbounds %Piece, %Piece* %objptr8, i32 0, i32 7
-  %curr_timer = getelementptr inbounds %Piece, %Piece* %objptr8, i32 0, i32 8
-  %y9 = getelementptr inbounds %Piece, %Piece* %objptr8, i32 0, i32 9
-  %x10 = getelementptr inbounds %Piece, %Piece* %objptr8, i32 0, i32 10
-  %board = getelementptr inbounds %Piece, %Piece* %objptr8, i32 0, i32 11
-  %blocks = getelementptr inbounds %Piece, %Piece* %objptr8, i32 0, i32 12
-  %active11 = load i1, i1* %active
-  %tmp12 = xor i1 %active11, true
-  br i1 %tmp12, label %then14, label %else
+  %piece6 = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 2
+  %piece7 = load %objref, %objref* %piece6
+  %objptr_gen8 = extractvalue %objref %piece7, 1
+  %objptr9 = bitcast %gameobj* %objptr_gen8 to %Piece*
+  %active = getelementptr inbounds %Piece, %Piece* %objptr9, i32 0, i32 5
+  %active10 = load i1, i1* %active
+  %tmp11 = xor i1 %active10, true
+  br i1 %tmp11, label %then13, label %else
 
-block_end5:                                       ; preds = %merge13
+block_end5:                                       ; preds = %merge12
   br label %merge
 
-merge13:                                          ; preds = %block_end20, %block_end15
+merge12:                                          ; preds = %block_end21, %block_end14
   br label %block_end5
 
-then14:                                           ; preds = %then
-  %x16 = load i32, i32* %x
+then13:                                           ; preds = %then
+  %x15 = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 8
+  %x16 = load i32, i32* %x15
   %10 = sitofp i32 %x16 to double
   %tmp17 = fadd double %10, 1.350000e+01
   store double %tmp17, double* %draw_x
   %11 = load double, double* %draw_x
-  %y18 = load i32, i32* %y
-  %tmp19 = add i32 %y18, 9
-  %12 = sitofp i32 %tmp19 to double
+  %y18 = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 7
+  %y19 = load i32, i32* %y18
+  %tmp20 = add i32 %y19, 9
+  %12 = sitofp i32 %tmp20 to double
   store double %12, double* %draw_y
   %13 = load double, double* %draw_y
-  br label %block_end15
+  br label %block_end14
 
-block_end15:                                      ; preds = %then14
-  br label %merge13
+block_end14:                                      ; preds = %then13
+  br label %merge12
 
 else:                                             ; preds = %then
-  %x21 = load i32, i32* %x
-  %piece22 = load %objref, %objref* %piece
-  %objptr_gen23 = extractvalue %objref %piece22, 1
-  %objptr24 = bitcast %gameobj* %objptr_gen23 to %Piece*
-  %next25 = getelementptr inbounds %Piece, %Piece* %objptr24, i32 0, i32 2
-  %hard_drop26 = getelementptr inbounds %Piece, %Piece* %objptr24, i32 0, i32 3
-  %piece_type27 = getelementptr inbounds %Piece, %Piece* %objptr24, i32 0, i32 4
-  %active28 = getelementptr inbounds %Piece, %Piece* %objptr24, i32 0, i32 5
-  %drop_points29 = getelementptr inbounds %Piece, %Piece* %objptr24, i32 0, i32 6
-  %horiz_timer30 = getelementptr inbounds %Piece, %Piece* %objptr24, i32 0, i32 7
-  %curr_timer31 = getelementptr inbounds %Piece, %Piece* %objptr24, i32 0, i32 8
-  %y32 = getelementptr inbounds %Piece, %Piece* %objptr24, i32 0, i32 9
-  %x33 = getelementptr inbounds %Piece, %Piece* %objptr24, i32 0, i32 10
-  %board34 = getelementptr inbounds %Piece, %Piece* %objptr24, i32 0, i32 11
-  %blocks35 = getelementptr inbounds %Piece, %Piece* %objptr24, i32 0, i32 12
-  %x36 = load i32, i32* %x33
-  %tmp37 = add i32 %x21, %x36
-  %14 = sitofp i32 %tmp37 to double
+  %x22 = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 8
+  %x23 = load i32, i32* %x22
+  %piece24 = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 2
+  %piece25 = load %objref, %objref* %piece24
+  %objptr_gen26 = extractvalue %objref %piece25, 1
+  %objptr27 = bitcast %gameobj* %objptr_gen26 to %Piece*
+  %x28 = getelementptr inbounds %Piece, %Piece* %objptr27, i32 0, i32 10
+  %x29 = load i32, i32* %x28
+  %tmp30 = add i32 %x23, %x29
+  %14 = sitofp i32 %tmp30 to double
   store double %14, double* %draw_x
   %15 = load double, double* %draw_x
-  %y38 = load i32, i32* %y
-  %piece39 = load %objref, %objref* %piece
-  %objptr_gen40 = extractvalue %objref %piece39, 1
-  %objptr41 = bitcast %gameobj* %objptr_gen40 to %Piece*
-  %next42 = getelementptr inbounds %Piece, %Piece* %objptr41, i32 0, i32 2
-  %hard_drop43 = getelementptr inbounds %Piece, %Piece* %objptr41, i32 0, i32 3
-  %piece_type44 = getelementptr inbounds %Piece, %Piece* %objptr41, i32 0, i32 4
-  %active45 = getelementptr inbounds %Piece, %Piece* %objptr41, i32 0, i32 5
-  %drop_points46 = getelementptr inbounds %Piece, %Piece* %objptr41, i32 0, i32 6
-  %horiz_timer47 = getelementptr inbounds %Piece, %Piece* %objptr41, i32 0, i32 7
-  %curr_timer48 = getelementptr inbounds %Piece, %Piece* %objptr41, i32 0, i32 8
-  %y49 = getelementptr inbounds %Piece, %Piece* %objptr41, i32 0, i32 9
-  %x50 = getelementptr inbounds %Piece, %Piece* %objptr41, i32 0, i32 10
-  %board51 = getelementptr inbounds %Piece, %Piece* %objptr41, i32 0, i32 11
-  %blocks52 = getelementptr inbounds %Piece, %Piece* %objptr41, i32 0, i32 12
-  %y53 = load i32, i32* %y49
-  %tmp54 = add i32 %y38, %y53
-  %16 = sitofp i32 %tmp54 to double
+  %y31 = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 7
+  %y32 = load i32, i32* %y31
+  %piece33 = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 2
+  %piece34 = load %objref, %objref* %piece33
+  %objptr_gen35 = extractvalue %objref %piece34, 1
+  %objptr36 = bitcast %gameobj* %objptr_gen35 to %Piece*
+  %y37 = getelementptr inbounds %Piece, %Piece* %objptr36, i32 0, i32 9
+  %y38 = load i32, i32* %y37
+  %tmp39 = add i32 %y32, %y38
+  %16 = sitofp i32 %tmp39 to double
   store double %16, double* %draw_y
   %17 = load double, double* %draw_y
-  br label %block_end20
+  br label %block_end21
 
-block_end20:                                      ; preds = %else
-  br label %merge13
+block_end21:                                      ; preds = %else
+  br label %merge12
 
-else55:                                           ; preds = %entry
-  br label %block_end56
+else40:                                           ; preds = %entry
+  br label %block_end41
 
-block_end56:                                      ; preds = %else55
+block_end41:                                      ; preds = %else40
   br label %merge
 }
 
@@ -2103,47 +1784,30 @@ entry:
   %thisref = load %objref, %objref* %this1
   %objptr_gen = extractvalue %objref %thisref, 1
   %objptr = bitcast %gameobj* %objptr_gen to %Block*
-  %piece = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 2
   %s = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 3
-  %type_rect = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 4
-  %type_y = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 5
-  %type_x = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 6
-  %y5 = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 7
-  %x6 = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 8
   %load_result = call %sfSprite* @"function:file-../../lib/sprite.mg::load"(i8* getelementptr inbounds ([15 x i8], [15 x i8]* @literal.7, i32 0, i32 0))
   store %sfSprite* %load_result, %sfSprite** %s
   %0 = load %sfSprite*, %sfSprite** %s
-  %x7 = load i32, i32* %x2
-  %this8 = load %objref, %objref* %this1
-  %objptr_gen9 = extractvalue %objref %this8, 1
-  %objptr10 = bitcast %gameobj* %objptr_gen9 to %Block*
-  %piece11 = getelementptr inbounds %Block, %Block* %objptr10, i32 0, i32 2
-  %s12 = getelementptr inbounds %Block, %Block* %objptr10, i32 0, i32 3
-  %type_rect13 = getelementptr inbounds %Block, %Block* %objptr10, i32 0, i32 4
-  %type_y14 = getelementptr inbounds %Block, %Block* %objptr10, i32 0, i32 5
-  %type_x15 = getelementptr inbounds %Block, %Block* %objptr10, i32 0, i32 6
-  %y16 = getelementptr inbounds %Block, %Block* %objptr10, i32 0, i32 7
-  %x17 = getelementptr inbounds %Block, %Block* %objptr10, i32 0, i32 8
-  store i32 %x7, i32* %x17
-  %1 = load i32, i32* %x17
-  %y18 = load i32, i32* %y3
-  %this19 = load %objref, %objref* %this1
-  %objptr_gen20 = extractvalue %objref %this19, 1
-  %objptr21 = bitcast %gameobj* %objptr_gen20 to %Block*
-  %piece22 = getelementptr inbounds %Block, %Block* %objptr21, i32 0, i32 2
-  %s23 = getelementptr inbounds %Block, %Block* %objptr21, i32 0, i32 3
-  %type_rect24 = getelementptr inbounds %Block, %Block* %objptr21, i32 0, i32 4
-  %type_y25 = getelementptr inbounds %Block, %Block* %objptr21, i32 0, i32 5
-  %type_x26 = getelementptr inbounds %Block, %Block* %objptr21, i32 0, i32 6
-  %y27 = getelementptr inbounds %Block, %Block* %objptr21, i32 0, i32 7
-  %x28 = getelementptr inbounds %Block, %Block* %objptr21, i32 0, i32 8
-  store i32 %y18, i32* %y27
-  %2 = load i32, i32* %y27
-  %p29 = load %objref, %objref* %p4
-  store %objref %p29, %objref* %piece
+  %this5 = load %objref, %objref* %this1
+  %objptr_gen6 = extractvalue %objref %this5, 1
+  %objptr7 = bitcast %gameobj* %objptr_gen6 to %Block*
+  %x8 = getelementptr inbounds %Block, %Block* %objptr7, i32 0, i32 8
+  %x9 = load i32, i32* %x2
+  store i32 %x9, i32* %x8
+  %1 = load i32, i32* %x8
+  %this10 = load %objref, %objref* %this1
+  %objptr_gen11 = extractvalue %objref %this10, 1
+  %objptr12 = bitcast %gameobj* %objptr_gen11 to %Block*
+  %y13 = getelementptr inbounds %Block, %Block* %objptr12, i32 0, i32 7
+  %y14 = load i32, i32* %y3
+  store i32 %y14, i32* %y13
+  %2 = load i32, i32* %y13
+  %piece = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 2
+  %p15 = load %objref, %objref* %p4
+  store %objref %p15, %objref* %piece
   %3 = load %objref, %objref* %piece
-  %this30 = load %objref, %objref* %this1
-  call void @"object::Block.function.setType"(%objref %this30, i32 0, i32 0)
+  %this16 = load %objref, %objref* %this1
+  call void @"object::Block.function.setType"(%objref %this16, i32 0, i32 0)
   br label %block_end
 
 block_end:                                        ; preds = %entry
@@ -2172,72 +1836,55 @@ entry:
   %thisref = load %objref, %objref* %this1
   %objptr_gen = extractvalue %objref %thisref, 1
   %objptr = bitcast %gameobj* %objptr_gen to %Block*
-  %piece = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 2
-  %s = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 3
-  %type_rect = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 4
-  %type_y = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 5
-  %type_x = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 6
-  %y = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 7
   %x = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 8
+  %piece = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 2
   %piece3 = load %objref, %objref* %piece
   %objptr_gen4 = extractvalue %objref %piece3, 1
   %objptr5 = bitcast %gameobj* %objptr_gen4 to %Piece*
-  %next = getelementptr inbounds %Piece, %Piece* %objptr5, i32 0, i32 2
-  %hard_drop = getelementptr inbounds %Piece, %Piece* %objptr5, i32 0, i32 3
-  %piece_type = getelementptr inbounds %Piece, %Piece* %objptr5, i32 0, i32 4
-  %active = getelementptr inbounds %Piece, %Piece* %objptr5, i32 0, i32 5
-  %drop_points = getelementptr inbounds %Piece, %Piece* %objptr5, i32 0, i32 6
-  %horiz_timer = getelementptr inbounds %Piece, %Piece* %objptr5, i32 0, i32 7
-  %curr_timer = getelementptr inbounds %Piece, %Piece* %objptr5, i32 0, i32 8
-  %y6 = getelementptr inbounds %Piece, %Piece* %objptr5, i32 0, i32 9
-  %x7 = getelementptr inbounds %Piece, %Piece* %objptr5, i32 0, i32 10
-  %board8 = getelementptr inbounds %Piece, %Piece* %objptr5, i32 0, i32 11
-  %blocks = getelementptr inbounds %Piece, %Piece* %objptr5, i32 0, i32 12
-  %x9 = load i32, i32* %x7
-  %x10 = load i32, i32* %x
-  %tmp = add i32 %x9, %x10
+  %x6 = getelementptr inbounds %Piece, %Piece* %objptr5, i32 0, i32 10
+  %x7 = load i32, i32* %x6
+  %x8 = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 8
+  %x9 = load i32, i32* %x8
+  %tmp = add i32 %x7, %x9
   store i32 %tmp, i32* %x
   %0 = load i32, i32* %x
-  %piece11 = load %objref, %objref* %piece
+  %y = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 7
+  %piece10 = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 2
+  %piece11 = load %objref, %objref* %piece10
   %objptr_gen12 = extractvalue %objref %piece11, 1
   %objptr13 = bitcast %gameobj* %objptr_gen12 to %Piece*
-  %next14 = getelementptr inbounds %Piece, %Piece* %objptr13, i32 0, i32 2
-  %hard_drop15 = getelementptr inbounds %Piece, %Piece* %objptr13, i32 0, i32 3
-  %piece_type16 = getelementptr inbounds %Piece, %Piece* %objptr13, i32 0, i32 4
-  %active17 = getelementptr inbounds %Piece, %Piece* %objptr13, i32 0, i32 5
-  %drop_points18 = getelementptr inbounds %Piece, %Piece* %objptr13, i32 0, i32 6
-  %horiz_timer19 = getelementptr inbounds %Piece, %Piece* %objptr13, i32 0, i32 7
-  %curr_timer20 = getelementptr inbounds %Piece, %Piece* %objptr13, i32 0, i32 8
-  %y21 = getelementptr inbounds %Piece, %Piece* %objptr13, i32 0, i32 9
-  %x22 = getelementptr inbounds %Piece, %Piece* %objptr13, i32 0, i32 10
-  %board23 = getelementptr inbounds %Piece, %Piece* %objptr13, i32 0, i32 11
-  %blocks24 = getelementptr inbounds %Piece, %Piece* %objptr13, i32 0, i32 12
-  %y25 = load i32, i32* %y21
-  %y26 = load i32, i32* %y
-  %tmp27 = add i32 %y25, %y26
-  store i32 %tmp27, i32* %y
+  %y14 = getelementptr inbounds %Piece, %Piece* %objptr13, i32 0, i32 9
+  %y15 = load i32, i32* %y14
+  %y16 = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 7
+  %y17 = load i32, i32* %y16
+  %tmp18 = add i32 %y15, %y17
+  store i32 %tmp18, i32* %y
   %1 = load i32, i32* %y
-  store %objref zeroinitializer, %objref* %piece
-  %2 = load %objref, %objref* %piece
-  %y28 = load i32, i32* %y
-  %tmp29 = icmp sle i32 %y28, 0
-  br i1 %tmp29, label %then, label %else
+  %piece19 = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 2
+  store %objref zeroinitializer, %objref* %piece19
+  %2 = load %objref, %objref* %piece19
+  %y20 = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 7
+  %y21 = load i32, i32* %y20
+  %tmp22 = icmp sle i32 %y21, 0
+  br i1 %tmp22, label %then, label %else
 
 block_end:                                        ; preds = %merge
   ret void
 
-merge:                                            ; preds = %block_end38, %block_end30
-  %this39 = load %objref, %objref* %this1
-  %board40 = load %objref, %objref* %board2
-  %objptr_gen41 = extractvalue %objref %board40, 1
-  %objptr42 = bitcast %gameobj* %objptr_gen41 to %Board*
-  %pieces = getelementptr inbounds %Board, %Board* %objptr42, i32 0, i32 2
-  %y43 = load i32, i32* %y
-  %subscript = getelementptr [24 x [10 x %objref]], [24 x [10 x %objref]]* %pieces, i32 0, i32 %y43
-  %x44 = load i32, i32* %x
-  %subscript45 = getelementptr [10 x %objref], [10 x %objref]* %subscript, i32 0, i32 %x44
-  store %objref %this39, %objref* %subscript45
-  %3 = load %objref, %objref* %subscript45
+merge:                                            ; preds = %block_end29, %block_end23
+  %x30 = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 8
+  %x31 = load i32, i32* %x30
+  %y32 = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 7
+  %y33 = load i32, i32* %y32
+  %board34 = load %objref, %objref* %board2
+  %objptr_gen35 = extractvalue %objref %board34, 1
+  %objptr36 = bitcast %gameobj* %objptr_gen35 to %Board*
+  %pieces = getelementptr inbounds %Board, %Board* %objptr36, i32 0, i32 2
+  %subscript = getelementptr [24 x [10 x %objref]], [24 x [10 x %objref]]* %pieces, i32 0, i32 %y33
+  %subscript37 = getelementptr [10 x %objref], [10 x %objref]* %subscript, i32 0, i32 %x31
+  %this38 = load %objref, %objref* %this1
+  store %objref %this38, %objref* %subscript37
+  %3 = load %objref, %objref* %subscript37
   br label %block_end
 
 then:                                             ; preds = %entry
@@ -2251,13 +1898,13 @@ then:                                             ; preds = %entry
   call void @list_add(%node* %game_over_objnode, %node* @"node.object::game_over.head")
   %game_over_parent = getelementptr inbounds %game_over, %game_over* %game_over, i32 0, i32 0
   %room_objnode = getelementptr inbounds %room, %room* %game_over_parent, i32 0, i32 1
-  %marker31 = getelementptr inbounds %node, %node* %room_objnode, i32 0, i32 2
-  store i1 true, i1* %marker31
+  %marker24 = getelementptr inbounds %node, %node* %room_objnode, i32 0, i32 2
+  store i1 true, i1* %marker24
   call void @list_add(%node* %room_objnode, %node* @"node.object:file-../../lib/game.mg::room.head")
   %room_parent = getelementptr inbounds %room, %room* %game_over_parent, i32 0, i32 0
   %object_objnode = getelementptr inbounds %gameobj, %gameobj* %room_parent, i32 0, i32 1
-  %marker32 = getelementptr inbounds %node, %node* %object_objnode, i32 0, i32 2
-  store i1 true, i1* %marker32
+  %marker25 = getelementptr inbounds %node, %node* %object_objnode, i32 0, i32 2
+  store i1 true, i1* %marker25
   call void @list_add(%node* %object_objnode, %node* @node.gameobj.head)
   %object_parent = getelementptr inbounds %gameobj, %gameobj* %room_parent, i32 0, i32 0
   %old_id = load i64, i64* @last_objid
@@ -2270,29 +1917,23 @@ then:                                             ; preds = %entry
   %6 = insertvalue %objref undef, i64 %new_id, 0
   %7 = insertvalue %objref %6, %gameobj* %game_over_gen, 1
   %score_count = load %objref, %objref* @"variable::score_count"
-  %objptr_gen33 = extractvalue %objref %score_count, 1
-  %objptr34 = bitcast %gameobj* %objptr_gen33 to %Draw*
-  %digits = getelementptr inbounds %Draw, %Draw* %objptr34, i32 0, i32 2
-  %n = getelementptr inbounds %Draw, %Draw* %objptr34, i32 0, i32 3
-  %height = getelementptr inbounds %Draw, %Draw* %objptr34, i32 0, i32 4
-  %width = getelementptr inbounds %Draw, %Draw* %objptr34, i32 0, i32 5
-  %y35 = getelementptr inbounds %Draw, %Draw* %objptr34, i32 0, i32 6
-  %x36 = getelementptr inbounds %Draw, %Draw* %objptr34, i32 0, i32 7
-  %spr = getelementptr inbounds %Draw, %Draw* %objptr34, i32 0, i32 8
-  %n37 = load i32, i32* %n
-  call void @"object::game_over.event.create"(%objref %7, i32 %n37)
+  %objptr_gen26 = extractvalue %objref %score_count, 1
+  %objptr27 = bitcast %gameobj* %objptr_gen26 to %Draw*
+  %n = getelementptr inbounds %Draw, %Draw* %objptr27, i32 0, i32 3
+  %n28 = load i32, i32* %n
+  call void @"object::game_over.event.create"(%objref %7, i32 %n28)
   ret void
 
-block_end30:                                      ; preds = %postret
+block_end23:                                      ; preds = %postret
   br label %merge
 
 postret:                                          ; No predecessors!
-  br label %block_end30
+  br label %block_end23
 
 else:                                             ; preds = %entry
-  br label %block_end38
+  br label %block_end29
 
-block_end38:                                      ; preds = %else
+block_end29:                                      ; preds = %else
   br label %merge
 }
 
@@ -2303,13 +1944,6 @@ entry:
   %thisref = load %objref, %objref* %this1
   %objptr_gen = extractvalue %objref %thisref, 1
   %objptr = bitcast %gameobj* %objptr_gen to %Block*
-  %piece = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 2
-  %s = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 3
-  %type_rect = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 4
-  %type_y = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 5
-  %type_x = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 6
-  %y = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 7
-  %x = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 8
   %this2 = load %objref, %objref* %this1
   call void @"object::Block.function.rotateLeft"(%objref %this2)
   %this3 = load %objref, %objref* %this1
@@ -2329,26 +1963,23 @@ entry:
   %thisref = load %objref, %objref* %this1
   %objptr_gen = extractvalue %objref %thisref, 1
   %objptr = bitcast %gameobj* %objptr_gen to %Block*
-  %piece = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 2
-  %s = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 3
-  %type_rect = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 4
-  %type_y = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 5
-  %type_x = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 6
-  %y = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 7
-  %x = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 8
   %newX = alloca i32
+  %y = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 7
   %y2 = load i32, i32* %y
   %tmp = sub i32 0, %y2
   store i32 %tmp, i32* %newX
   %newY = alloca i32
+  %x = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 8
   %x3 = load i32, i32* %x
   store i32 %x3, i32* %newY
-  %newY4 = load i32, i32* %newY
-  store i32 %newY4, i32* %y
-  %0 = load i32, i32* %y
-  %newX5 = load i32, i32* %newX
-  store i32 %newX5, i32* %x
-  %1 = load i32, i32* %x
+  %y4 = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 7
+  %newY5 = load i32, i32* %newY
+  store i32 %newY5, i32* %y4
+  %0 = load i32, i32* %y4
+  %x6 = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 8
+  %newX7 = load i32, i32* %newX
+  store i32 %newX7, i32* %x6
+  %1 = load i32, i32* %x6
   br label %block_end
 
 block_end:                                        ; preds = %entry
@@ -2366,31 +1997,27 @@ entry:
   %thisref = load %objref, %objref* %this1
   %objptr_gen = extractvalue %objref %thisref, 1
   %objptr = bitcast %gameobj* %objptr_gen to %Block*
-  %piece = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 2
-  %s = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 3
-  %type_rect = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 4
-  %type_y = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 5
   %type_x = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 6
-  %y4 = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 7
-  %x5 = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 8
-  %x6 = load i32, i32* %x2
-  store i32 %x6, i32* %type_x
+  %x4 = load i32, i32* %x2
+  store i32 %x4, i32* %type_x
   %0 = load i32, i32* %type_x
-  %y7 = load i32, i32* %y3
-  store i32 %y7, i32* %type_y
+  %type_y = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 5
+  %y5 = load i32, i32* %y3
+  store i32 %y5, i32* %type_y
   %1 = load i32, i32* %type_y
+  %type_rect = getelementptr inbounds %Block, %Block* %objptr, i32 0, i32 4
   %tile_size = load i32, i32* @"variable::tile_size"
-  %x8 = load i32, i32* %x2
-  %tmp = mul i32 %tile_size, %x8
-  %tile_size9 = load i32, i32* @"variable::tile_size"
-  %y10 = load i32, i32* %y3
-  %tmp11 = mul i32 %tile_size9, %y10
-  %tile_size12 = load i32, i32* @"variable::tile_size"
-  %tile_size13 = load i32, i32* @"variable::tile_size"
+  %x6 = load i32, i32* %x2
+  %tmp = mul i32 %tile_size, %x6
+  %tile_size7 = load i32, i32* @"variable::tile_size"
+  %y8 = load i32, i32* %y3
+  %tmp9 = mul i32 %tile_size7, %y8
+  %tile_size10 = load i32, i32* @"variable::tile_size"
+  %tile_size11 = load i32, i32* @"variable::tile_size"
   %2 = insertvalue [4 x i32] undef, i32 %tmp, 0
-  %3 = insertvalue [4 x i32] %2, i32 %tmp11, 1
-  %4 = insertvalue [4 x i32] %3, i32 %tile_size12, 2
-  %5 = insertvalue [4 x i32] %4, i32 %tile_size13, 3
+  %3 = insertvalue [4 x i32] %2, i32 %tmp9, 1
+  %4 = insertvalue [4 x i32] %3, i32 %tile_size10, 2
+  %5 = insertvalue [4 x i32] %4, i32 %tile_size11, 3
   store [4 x i32] %5, [4 x i32]* %type_rect
   %6 = load [4 x i32], [4 x i32]* %type_rect
   br label %block_end
@@ -2406,22 +2033,12 @@ entry:
   %thisref = load %objref, %objref* %this1
   %objptr_gen = extractvalue %objref %thisref, 1
   %objptr = bitcast %gameobj* %objptr_gen to %Piece*
-  %next = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 2
-  %hard_drop = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 3
-  %piece_type = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 4
   %active = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 5
-  %drop_points = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 6
-  %horiz_timer = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 7
-  %curr_timer = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 8
-  %y = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 9
-  %x = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 10
-  %board = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 11
-  %blocks = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 12
   %active2 = load i1, i1* %active
   %tmp = xor i1 %active2, true
   br i1 %tmp, label %then, label %else
 
-block_end:                                        ; preds = %merge85
+block_end:                                        ; preds = %merge95
   ret void
 
 merge:                                            ; preds = %block_end3, %postret
@@ -2429,11 +2046,12 @@ merge:                                            ; preds = %block_end3, %postre
   %is_pressed_result = call i1 @"function:file-../../lib/key.mg::is_pressed"(i32 %Left)
   %Left4 = load i32, i32* @"variable:file-../../lib/key.mg::Left"
   %is_down_result = call i1 @"function:file-../../lib/key.mg::is_down"(i32 %Left4)
+  %horiz_timer = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 7
   %horiz_timer5 = load i32, i32* %horiz_timer
   %tmp6 = icmp eq i32 %horiz_timer5, 0
   %tmp7 = and i1 %is_down_result, %tmp6
   %tmp8 = or i1 %is_pressed_result, %tmp7
-  br i1 %tmp8, label %then10, label %else13
+  br i1 %tmp8, label %then10, label %else14
 
 then:                                             ; preds = %entry
   ret void
@@ -2447,214 +2065,228 @@ else:                                             ; preds = %entry
 block_end3:                                       ; preds = %else
   br label %merge
 
-merge9:                                           ; preds = %block_end14, %block_end11
+merge9:                                           ; preds = %block_end15, %block_end11
   %Right = load i32, i32* @"variable:file-../../lib/key.mg::Right"
-  %is_pressed_result15 = call i1 @"function:file-../../lib/key.mg::is_pressed"(i32 %Right)
-  %Right16 = load i32, i32* @"variable:file-../../lib/key.mg::Right"
-  %is_down_result17 = call i1 @"function:file-../../lib/key.mg::is_down"(i32 %Right16)
-  %horiz_timer18 = load i32, i32* %horiz_timer
-  %tmp19 = icmp eq i32 %horiz_timer18, 0
-  %tmp20 = and i1 %is_down_result17, %tmp19
-  %tmp21 = or i1 %is_pressed_result15, %tmp20
-  br i1 %tmp21, label %then23, label %else26
+  %is_pressed_result16 = call i1 @"function:file-../../lib/key.mg::is_pressed"(i32 %Right)
+  %Right17 = load i32, i32* @"variable:file-../../lib/key.mg::Right"
+  %is_down_result18 = call i1 @"function:file-../../lib/key.mg::is_down"(i32 %Right17)
+  %horiz_timer19 = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 7
+  %horiz_timer20 = load i32, i32* %horiz_timer19
+  %tmp21 = icmp eq i32 %horiz_timer20, 0
+  %tmp22 = and i1 %is_down_result18, %tmp21
+  %tmp23 = or i1 %is_pressed_result16, %tmp22
+  br i1 %tmp23, label %then25, label %else29
 
 then10:                                           ; preds = %merge
-  store i32 5, i32* %horiz_timer
-  %0 = load i32, i32* %horiz_timer
-  %this12 = load %objref, %objref* %this1
-  call void @"object::Piece.function.moveLeft"(%objref %this12)
+  %horiz_timer12 = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 7
+  store i32 5, i32* %horiz_timer12
+  %0 = load i32, i32* %horiz_timer12
+  %this13 = load %objref, %objref* %this1
+  call void @"object::Piece.function.moveLeft"(%objref %this13)
   br label %block_end11
 
 block_end11:                                      ; preds = %then10
   br label %merge9
 
-else13:                                           ; preds = %merge
-  br label %block_end14
+else14:                                           ; preds = %merge
+  br label %block_end15
 
-block_end14:                                      ; preds = %else13
+block_end15:                                      ; preds = %else14
   br label %merge9
 
-merge22:                                          ; preds = %block_end27, %block_end24
+merge24:                                          ; preds = %block_end30, %block_end26
   %Down = load i32, i32* @"variable:file-../../lib/key.mg::Down"
-  %is_down_result28 = call i1 @"function:file-../../lib/key.mg::is_down"(i32 %Down)
-  br i1 %is_down_result28, label %then30, label %else39
+  %is_down_result31 = call i1 @"function:file-../../lib/key.mg::is_down"(i32 %Down)
+  br i1 %is_down_result31, label %then33, label %else43
 
-then23:                                           ; preds = %merge9
-  store i32 5, i32* %horiz_timer
-  %1 = load i32, i32* %horiz_timer
-  %this25 = load %objref, %objref* %this1
-  call void @"object::Piece.function.moveRight"(%objref %this25)
-  br label %block_end24
+then25:                                           ; preds = %merge9
+  %horiz_timer27 = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 7
+  store i32 5, i32* %horiz_timer27
+  %1 = load i32, i32* %horiz_timer27
+  %this28 = load %objref, %objref* %this1
+  call void @"object::Piece.function.moveRight"(%objref %this28)
+  br label %block_end26
 
-block_end24:                                      ; preds = %then23
-  br label %merge22
+block_end26:                                      ; preds = %then25
+  br label %merge24
 
-else26:                                           ; preds = %merge9
-  br label %block_end27
+else29:                                           ; preds = %merge9
+  br label %block_end30
 
-block_end27:                                      ; preds = %else26
-  br label %merge22
+block_end30:                                      ; preds = %else29
+  br label %merge24
 
-merge29:                                          ; preds = %block_end40, %block_end31
+merge32:                                          ; preds = %block_end44, %block_end34
   %X = load i32, i32* @"variable:file-../../lib/key.mg::X"
-  %is_pressed_result41 = call i1 @"function:file-../../lib/key.mg::is_pressed"(i32 %X)
-  br i1 %is_pressed_result41, label %then43, label %else45
+  %is_pressed_result45 = call i1 @"function:file-../../lib/key.mg::is_pressed"(i32 %X)
+  br i1 %is_pressed_result45, label %then47, label %else49
 
-then30:                                           ; preds = %merge22
-  %curr_timer32 = load i32, i32* %curr_timer
-  %tmp33 = icmp sgt i32 %curr_timer32, 3
-  br i1 %tmp33, label %then35, label %else37
+then33:                                           ; preds = %merge24
+  %curr_timer = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 8
+  %curr_timer35 = load i32, i32* %curr_timer
+  %tmp36 = icmp sgt i32 %curr_timer35, 3
+  br i1 %tmp36, label %then38, label %else41
 
-block_end31:                                      ; preds = %merge34
-  br label %merge29
+block_end34:                                      ; preds = %merge37
+  br label %merge32
 
-merge34:                                          ; preds = %block_end38, %block_end36
-  br label %block_end31
+merge37:                                          ; preds = %block_end42, %block_end39
+  br label %block_end34
 
-then35:                                           ; preds = %then30
-  store i32 3, i32* %curr_timer
-  %2 = load i32, i32* %curr_timer
+then38:                                           ; preds = %then33
+  %curr_timer40 = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 8
+  store i32 3, i32* %curr_timer40
+  %2 = load i32, i32* %curr_timer40
+  %drop_points = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 6
   %le = load i32, i32* %drop_points
   %Asn = add i32 %le, 1
   store i32 %Asn, i32* %drop_points
   %3 = load i32, i32* %drop_points
-  br label %block_end36
+  br label %block_end39
 
-block_end36:                                      ; preds = %then35
-  br label %merge34
+block_end39:                                      ; preds = %then38
+  br label %merge37
 
-else37:                                           ; preds = %then30
-  br label %block_end38
+else41:                                           ; preds = %then33
+  br label %block_end42
 
-block_end38:                                      ; preds = %else37
-  br label %merge34
+block_end42:                                      ; preds = %else41
+  br label %merge37
 
-else39:                                           ; preds = %merge22
-  br label %block_end40
+else43:                                           ; preds = %merge24
+  br label %block_end44
 
-block_end40:                                      ; preds = %else39
-  br label %merge29
+block_end44:                                      ; preds = %else43
+  br label %merge32
 
-merge42:                                          ; preds = %block_end46, %then43
+merge46:                                          ; preds = %block_end50, %then47
   %Z = load i32, i32* @"variable:file-../../lib/key.mg::Z"
-  %is_pressed_result47 = call i1 @"function:file-../../lib/key.mg::is_pressed"(i32 %Z)
-  br i1 %is_pressed_result47, label %then49, label %else51
+  %is_pressed_result51 = call i1 @"function:file-../../lib/key.mg::is_pressed"(i32 %Z)
+  br i1 %is_pressed_result51, label %then53, label %else55
 
-then43:                                           ; preds = %merge29
-  %this44 = load %objref, %objref* %this1
-  call void @"object::Piece.function.rotateLeft"(%objref %this44)
-  br label %merge42
+then47:                                           ; preds = %merge32
+  %this48 = load %objref, %objref* %this1
+  call void @"object::Piece.function.rotateLeft"(%objref %this48)
+  br label %merge46
 
-else45:                                           ; preds = %merge29
-  br label %block_end46
+else49:                                           ; preds = %merge32
+  br label %block_end50
 
-block_end46:                                      ; preds = %else45
-  br label %merge42
+block_end50:                                      ; preds = %else49
+  br label %merge46
 
-merge48:                                          ; preds = %block_end52, %then49
+merge52:                                          ; preds = %block_end56, %then53
   %Space = load i32, i32* @"variable:file-../../lib/key.mg::Space"
-  %is_pressed_result53 = call i1 @"function:file-../../lib/key.mg::is_pressed"(i32 %Space)
-  %hard_drop54 = load i32, i32* %hard_drop
-  %tmp55 = icmp eq i32 %hard_drop54, 0
-  %tmp56 = and i1 %is_pressed_result53, %tmp55
-  br i1 %tmp56, label %then58, label %else65
+  %is_pressed_result57 = call i1 @"function:file-../../lib/key.mg::is_pressed"(i32 %Space)
+  %hard_drop = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 3
+  %hard_drop58 = load i32, i32* %hard_drop
+  %tmp59 = icmp eq i32 %hard_drop58, 0
+  %tmp60 = and i1 %is_pressed_result57, %tmp59
+  br i1 %tmp60, label %then62, label %else71
 
-then49:                                           ; preds = %merge42
-  %this50 = load %objref, %objref* %this1
-  call void @"object::Piece.function.rotateRight"(%objref %this50)
-  br label %merge48
+then53:                                           ; preds = %merge46
+  %this54 = load %objref, %objref* %this1
+  call void @"object::Piece.function.rotateRight"(%objref %this54)
+  br label %merge52
 
-else51:                                           ; preds = %merge42
-  br label %block_end52
+else55:                                           ; preds = %merge46
+  br label %block_end56
 
-block_end52:                                      ; preds = %else51
-  br label %merge48
+block_end56:                                      ; preds = %else55
+  br label %merge52
 
-merge57:                                          ; preds = %block_end66, %merge59
-  %le67 = load i32, i32* %curr_timer
-  %Asn68 = sub i32 %le67, 1
-  store i32 %Asn68, i32* %curr_timer
-  %4 = load i32, i32* %curr_timer
-  %tmp69 = icmp eq i32 %4, 0
-  br i1 %tmp69, label %then71, label %else73
+merge61:                                          ; preds = %block_end72, %merge63
+  %curr_timer73 = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 8
+  %le74 = load i32, i32* %curr_timer73
+  %Asn75 = sub i32 %le74, 1
+  store i32 %Asn75, i32* %curr_timer73
+  %4 = load i32, i32* %curr_timer73
+  %tmp76 = icmp eq i32 %4, 0
+  br i1 %tmp76, label %then78, label %else80
 
-then58:                                           ; preds = %merge48
+then62:                                           ; preds = %merge52
   br label %while
 
-while:                                            ; preds = %block_end61, %then58
-  %active60 = load i1, i1* %active
-  br i1 %active60, label %while_body, label %merge59
+while:                                            ; preds = %block_end66, %then62
+  %active64 = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 5
+  %active65 = load i1, i1* %active64
+  br i1 %active65, label %while_body, label %merge63
 
 while_body:                                       ; preds = %while
-  %le62 = load i32, i32* %drop_points
-  %Asn63 = add i32 %le62, 1
-  store i32 %Asn63, i32* %drop_points
-  %5 = load i32, i32* %drop_points
-  %this64 = load %objref, %objref* %this1
-  call void @"object::Piece.function.moveDown"(%objref %this64)
-  br label %block_end61
-
-merge59:                                          ; preds = %while
-  br label %merge57
-
-block_end61:                                      ; preds = %while_body
-  br label %while
-
-else65:                                           ; preds = %merge48
+  %drop_points67 = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 6
+  %le68 = load i32, i32* %drop_points67
+  %Asn69 = add i32 %le68, 1
+  store i32 %Asn69, i32* %drop_points67
+  %5 = load i32, i32* %drop_points67
+  %this70 = load %objref, %objref* %this1
+  call void @"object::Piece.function.moveDown"(%objref %this70)
   br label %block_end66
 
-block_end66:                                      ; preds = %else65
-  br label %merge57
+merge63:                                          ; preds = %while
+  br label %merge61
 
-merge70:                                          ; preds = %block_end74, %then71
-  %horiz_timer75 = load i32, i32* %horiz_timer
-  %tmp76 = icmp sgt i32 %horiz_timer75, 0
-  br i1 %tmp76, label %then78, label %else81
+block_end66:                                      ; preds = %while_body
+  br label %while
 
-then71:                                           ; preds = %merge57
-  %this72 = load %objref, %objref* %this1
-  call void @"object::Piece.function.moveDown"(%objref %this72)
-  br label %merge70
+else71:                                           ; preds = %merge52
+  br label %block_end72
 
-else73:                                           ; preds = %merge57
-  br label %block_end74
+block_end72:                                      ; preds = %else71
+  br label %merge61
 
-block_end74:                                      ; preds = %else73
-  br label %merge70
+merge77:                                          ; preds = %block_end81, %then78
+  %horiz_timer82 = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 7
+  %horiz_timer83 = load i32, i32* %horiz_timer82
+  %tmp84 = icmp sgt i32 %horiz_timer83, 0
+  br i1 %tmp84, label %then86, label %else90
 
-merge77:                                          ; preds = %block_end82, %then78
-  %hard_drop83 = load i32, i32* %hard_drop
-  %tmp84 = icmp sgt i32 %hard_drop83, 0
-  br i1 %tmp84, label %then86, label %else89
-
-then78:                                           ; preds = %merge70
-  %le79 = load i32, i32* %horiz_timer
-  %Asn80 = sub i32 %le79, 1
-  store i32 %Asn80, i32* %horiz_timer
-  %6 = load i32, i32* %horiz_timer
+then78:                                           ; preds = %merge61
+  %this79 = load %objref, %objref* %this1
+  call void @"object::Piece.function.moveDown"(%objref %this79)
   br label %merge77
 
-else81:                                           ; preds = %merge70
-  br label %block_end82
+else80:                                           ; preds = %merge61
+  br label %block_end81
 
-block_end82:                                      ; preds = %else81
+block_end81:                                      ; preds = %else80
   br label %merge77
 
-merge85:                                          ; preds = %block_end90, %then86
-  br label %block_end
+merge85:                                          ; preds = %block_end91, %then86
+  %hard_drop92 = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 3
+  %hard_drop93 = load i32, i32* %hard_drop92
+  %tmp94 = icmp sgt i32 %hard_drop93, 0
+  br i1 %tmp94, label %then96, label %else100
 
 then86:                                           ; preds = %merge77
-  %le87 = load i32, i32* %hard_drop
-  %Asn88 = sub i32 %le87, 1
-  store i32 %Asn88, i32* %hard_drop
-  %7 = load i32, i32* %hard_drop
+  %horiz_timer87 = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 7
+  %le88 = load i32, i32* %horiz_timer87
+  %Asn89 = sub i32 %le88, 1
+  store i32 %Asn89, i32* %horiz_timer87
+  %6 = load i32, i32* %horiz_timer87
   br label %merge85
 
-else89:                                           ; preds = %merge77
-  br label %block_end90
+else90:                                           ; preds = %merge77
+  br label %block_end91
 
-block_end90:                                      ; preds = %else89
+block_end91:                                      ; preds = %else90
   br label %merge85
+
+merge95:                                          ; preds = %block_end101, %then96
+  br label %block_end
+
+then96:                                           ; preds = %merge85
+  %hard_drop97 = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 3
+  %le98 = load i32, i32* %hard_drop97
+  %Asn99 = sub i32 %le98, 1
+  store i32 %Asn99, i32* %hard_drop97
+  %7 = load i32, i32* %hard_drop97
+  br label %merge95
+
+else100:                                          ; preds = %merge85
+  br label %block_end101
+
+block_end101:                                     ; preds = %else100
+  br label %merge95
 }
 
 define void @"object::Piece.event.create"(%objref %this, %objref %b) {
@@ -2666,27 +2298,21 @@ entry:
   %thisref = load %objref, %objref* %this1
   %objptr_gen = extractvalue %objref %thisref, 1
   %objptr = bitcast %gameobj* %objptr_gen to %Piece*
-  %next = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 2
-  %hard_drop = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 3
-  %piece_type = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 4
-  %active = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 5
   %drop_points = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 6
-  %horiz_timer = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 7
-  %curr_timer = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 8
-  %y = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 9
-  %x = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 10
-  %board = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 11
-  %blocks = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 12
   store i32 0, i32* %drop_points
   %0 = load i32, i32* %drop_points
+  %board = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 11
   %b3 = load %objref, %objref* %b2
   store %objref %b3, %objref* %board
   %1 = load %objref, %objref* %board
+  %curr_timer = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 8
   %current_speed_result = call i32 @"function::current_speed"()
   store i32 %current_speed_result, i32* %curr_timer
   %2 = load i32, i32* %curr_timer
+  %active = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 5
   store i1 false, i1* %active
   %3 = load i1, i1* %active
+  %hard_drop = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 3
   store i32 1, i32* %hard_drop
   %4 = load i32, i32* %hard_drop
   %piece_type_x = alloca i32
@@ -2695,13 +2321,14 @@ entry:
   %piece_type_y = alloca i32
   %irandom_result4 = call i32 @"function:file-../../lib/math.mg::irandom"(i32 10)
   store i32 %irandom_result4, i32* %piece_type_y
+  %piece_type = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 4
   %irandom_result5 = call i32 @"function:file-../../lib/math.mg::irandom"(i32 7)
   store i32 %irandom_result5, i32* %piece_type
   %5 = load i32, i32* %piece_type
   %k = alloca i32
   store i32 0, i32* %k
-  %y7 = alloca i32
-  store i32 0, i32* %y7
+  %y = alloca i32
+  store i32 0, i32* %y
   br label %while
 
 block_end:                                        ; preds = %block_end6
@@ -2710,67 +2337,71 @@ block_end:                                        ; preds = %block_end6
 block_end6:                                       ; preds = %merge
   br label %block_end
 
-while:                                            ; preds = %block_end9, %entry
-  %y8 = load i32, i32* %y7
-  %tmp = icmp slt i32 %y8, 4
+while:                                            ; preds = %block_end8, %entry
+  %y7 = load i32, i32* %y
+  %tmp = icmp slt i32 %y7, 4
   br i1 %tmp, label %while_body, label %merge
 
 while_body:                                       ; preds = %while
-  %x11 = alloca i32
-  store i32 0, i32* %x11
-  br label %while12
+  %x = alloca i32
+  store i32 0, i32* %x
+  br label %while10
 
 merge:                                            ; preds = %while
   br label %block_end6
 
-block_end9:                                       ; preds = %block_end10
+block_end8:                                       ; preds = %block_end9
   br label %while
 
-block_end10:                                      ; preds = %merge14
-  %le44 = load i32, i32* %y7
+block_end9:                                       ; preds = %merge12
+  %le44 = load i32, i32* %y
   %Asn45 = add i32 %le44, 1
-  store i32 %Asn45, i32* %y7
-  %6 = load i32, i32* %y7
-  br label %block_end9
+  store i32 %Asn45, i32* %y
+  %6 = load i32, i32* %y
+  br label %block_end8
 
-while12:                                          ; preds = %block_end17, %while_body
-  %x15 = load i32, i32* %x11
-  %tmp16 = icmp slt i32 %x15, 3
-  br i1 %tmp16, label %while_body13, label %merge14
+while10:                                          ; preds = %block_end15, %while_body
+  %x13 = load i32, i32* %x
+  %tmp14 = icmp slt i32 %x13, 3
+  br i1 %tmp14, label %while_body11, label %merge12
 
-while_body13:                                     ; preds = %while12
-  %x18 = load i32, i32* %x11
-  %y19 = load i32, i32* %y7
-  %piece_type20 = load i32, i32* %piece_type
+while_body11:                                     ; preds = %while10
+  %x16 = load i32, i32* %x
+  %y17 = load i32, i32* %y
+  %piece_type18 = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 4
+  %piece_type19 = load i32, i32* %piece_type18
   %possible_pieces = load [7 x [4 x [3 x i1]]], [7 x [4 x [3 x i1]]]* @"variable::possible_pieces"
   %arr = alloca [7 x [4 x [3 x i1]]]
   store [7 x [4 x [3 x i1]]] %possible_pieces, [7 x [4 x [3 x i1]]]* %arr
-  %7 = getelementptr [7 x [4 x [3 x i1]]], [7 x [4 x [3 x i1]]]* %arr, i32 0, i32 %piece_type20
+  %7 = getelementptr [7 x [4 x [3 x i1]]], [7 x [4 x [3 x i1]]]* %arr, i32 0, i32 %piece_type19
   %subscript = load [4 x [3 x i1]], [4 x [3 x i1]]* %7
-  %arr21 = alloca [4 x [3 x i1]]
-  store [4 x [3 x i1]] %subscript, [4 x [3 x i1]]* %arr21
-  %8 = getelementptr [4 x [3 x i1]], [4 x [3 x i1]]* %arr21, i32 0, i32 %y19
-  %subscript22 = load [3 x i1], [3 x i1]* %8
-  %arr23 = alloca [3 x i1]
-  store [3 x i1] %subscript22, [3 x i1]* %arr23
-  %9 = getelementptr [3 x i1], [3 x i1]* %arr23, i32 0, i32 %x18
-  %subscript24 = load i1, i1* %9
-  br i1 %subscript24, label %then, label %else
+  %arr20 = alloca [4 x [3 x i1]]
+  store [4 x [3 x i1]] %subscript, [4 x [3 x i1]]* %arr20
+  %8 = getelementptr [4 x [3 x i1]], [4 x [3 x i1]]* %arr20, i32 0, i32 %y17
+  %subscript21 = load [3 x i1], [3 x i1]* %8
+  %arr22 = alloca [3 x i1]
+  store [3 x i1] %subscript21, [3 x i1]* %arr22
+  %9 = getelementptr [3 x i1], [3 x i1]* %arr22, i32 0, i32 %x16
+  %subscript23 = load i1, i1* %9
+  br i1 %subscript23, label %then, label %else
 
-merge14:                                          ; preds = %while12
-  br label %block_end10
+merge12:                                          ; preds = %while10
+  br label %block_end9
 
-block_end17:                                      ; preds = %merge25
-  br label %while12
+block_end15:                                      ; preds = %merge24
+  br label %while10
 
-merge25:                                          ; preds = %block_end41, %block_end26
-  %le42 = load i32, i32* %x11
+merge24:                                          ; preds = %block_end41, %block_end25
+  %le42 = load i32, i32* %x
   %Asn43 = add i32 %le42, 1
-  store i32 %Asn43, i32* %x11
-  %10 = load i32, i32* %x11
-  br label %block_end17
+  store i32 %Asn43, i32* %x
+  %10 = load i32, i32* %x
+  br label %block_end15
 
-then:                                             ; preds = %while_body13
+then:                                             ; preds = %while_body11
+  %k26 = load i32, i32* %k
+  %blocks = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 12
+  %subscript27 = getelementptr [4 x %objref], [4 x %objref]* %blocks, i32 0, i32 %k26
   %malloccall = tail call i8* @malloc(i32 ptrtoint (%Block* getelementptr (%Block, %Block* null, i32 1) to i32))
   %Block = bitcast i8* %malloccall to %Block*
   store %Block zeroinitializer, %Block* %Block
@@ -2781,8 +2412,8 @@ then:                                             ; preds = %while_body13
   call void @list_add(%node* %Block_objnode, %node* @"node.object::Block.head")
   %Block_parent = getelementptr inbounds %Block, %Block* %Block, i32 0, i32 0
   %object_objnode = getelementptr inbounds %gameobj, %gameobj* %Block_parent, i32 0, i32 1
-  %marker27 = getelementptr inbounds %node, %node* %object_objnode, i32 0, i32 2
-  store i1 true, i1* %marker27
+  %marker28 = getelementptr inbounds %node, %node* %object_objnode, i32 0, i32 2
+  store i1 true, i1* %marker28
   call void @list_add(%node* %object_objnode, %node* @node.gameobj.head)
   %object_parent = getelementptr inbounds %gameobj, %gameobj* %Block_parent, i32 0, i32 0
   %old_id = load i64, i64* @last_objid
@@ -2794,21 +2425,20 @@ then:                                             ; preds = %while_body13
   store i64 %new_id, i64* %12
   %13 = insertvalue %objref undef, i64 %new_id, 0
   %14 = insertvalue %objref %13, %gameobj* %Block_gen, 1
-  %x28 = load i32, i32* %x11
-  %tmp29 = sub i32 %x28, 1
-  %y30 = load i32, i32* %y7
-  %tmp31 = sub i32 %y30, 1
-  %this32 = load %objref, %objref* %this1
-  call void @"object::Block.event.create"(%objref %14, i32 %tmp29, i32 %tmp31, %objref %this32)
-  %k33 = load i32, i32* %k
-  %subscript34 = getelementptr [4 x %objref], [4 x %objref]* %blocks, i32 0, i32 %k33
-  store %objref %14, %objref* %subscript34
-  %15 = load %objref, %objref* %subscript34
-  %k35 = load i32, i32* %k
-  %blocks36 = load [4 x %objref], [4 x %objref]* %blocks
+  %x29 = load i32, i32* %x
+  %tmp30 = sub i32 %x29, 1
+  %y31 = load i32, i32* %y
+  %tmp32 = sub i32 %y31, 1
+  %this33 = load %objref, %objref* %this1
+  call void @"object::Block.event.create"(%objref %14, i32 %tmp30, i32 %tmp32, %objref %this33)
+  store %objref %14, %objref* %subscript27
+  %15 = load %objref, %objref* %subscript27
+  %k34 = load i32, i32* %k
+  %blocks35 = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 12
+  %blocks36 = load [4 x %objref], [4 x %objref]* %blocks35
   %arr37 = alloca [4 x %objref]
   store [4 x %objref] %blocks36, [4 x %objref]* %arr37
-  %16 = getelementptr [4 x %objref], [4 x %objref]* %arr37, i32 0, i32 %k35
+  %16 = getelementptr [4 x %objref], [4 x %objref]* %arr37, i32 0, i32 %k34
   %subscript38 = load %objref, %objref* %16
   %piece_type_x39 = load i32, i32* %piece_type_x
   %piece_type_y40 = load i32, i32* %piece_type_y
@@ -2817,16 +2447,16 @@ then:                                             ; preds = %while_body13
   %Asn = add i32 %le, 1
   store i32 %Asn, i32* %k
   %17 = load i32, i32* %k
-  br label %block_end26
+  br label %block_end25
 
-block_end26:                                      ; preds = %then
-  br label %merge25
+block_end25:                                      ; preds = %then
+  br label %merge24
 
-else:                                             ; preds = %while_body13
+else:                                             ; preds = %while_body11
   br label %block_end41
 
 block_end41:                                      ; preds = %else
-  br label %merge25
+  br label %merge24
 }
 
 define void @"delete_%Piece = type { %gameobj, %node, %objref, i32, i32, i1, i32, i32, i32, i32, i32, %objref, [4 x %objref] }"(%objref) {
@@ -2849,29 +2479,20 @@ entry:
   %thisref = load %objref, %objref* %this1
   %objptr_gen = extractvalue %objref %thisref, 1
   %objptr = bitcast %gameobj* %objptr_gen to %Piece*
-  %next = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 2
-  %hard_drop = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 3
-  %piece_type = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 4
-  %active = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 5
-  %drop_points = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 6
-  %horiz_timer = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 7
-  %curr_timer = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 8
-  %y = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 9
-  %x = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 10
-  %board = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 11
-  %blocks = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 12
   %i = alloca i32
   store i32 0, i32* %i
   br label %while
 
-block_end:                                        ; preds = %merge31
+block_end:                                        ; preds = %merge29
   ret void
 
 block_end2:                                       ; preds = %merge
   %drop = load %sfSound*, %sfSound** @"variable::snds::drop"
   call void @"function:file-../../lib/sound.mg::play"(%sfSound* %drop)
-  %board17 = load %objref, %objref* %board
+  %board16 = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 11
+  %board17 = load %objref, %objref* %board16
   call void @"object::Board.function.checkRows"(%objref %board17)
+  %active = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 5
   store i1 false, i1* %active
   %0 = load i1, i1* %active
   %this18 = load %objref, %objref* %this1
@@ -2889,17 +2510,12 @@ block_end2:                                       ; preds = %merge
   %score_count = load %objref, %objref* @"variable::score_count"
   %objptr_gen22 = extractvalue %objref %score_count, 1
   %objptr23 = bitcast %gameobj* %objptr_gen22 to %Draw*
-  %digits = getelementptr inbounds %Draw, %Draw* %objptr23, i32 0, i32 2
   %n = getelementptr inbounds %Draw, %Draw* %objptr23, i32 0, i32 3
-  %height = getelementptr inbounds %Draw, %Draw* %objptr23, i32 0, i32 4
-  %width = getelementptr inbounds %Draw, %Draw* %objptr23, i32 0, i32 5
-  %y24 = getelementptr inbounds %Draw, %Draw* %objptr23, i32 0, i32 6
-  %x25 = getelementptr inbounds %Draw, %Draw* %objptr23, i32 0, i32 7
-  %spr = getelementptr inbounds %Draw, %Draw* %objptr23, i32 0, i32 8
-  %le26 = load i32, i32* %n
-  %drop_points27 = load i32, i32* %drop_points
-  %Asn28 = add i32 %le26, %drop_points27
-  store i32 %Asn28, i32* %n
+  %le24 = load i32, i32* %n
+  %drop_points = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 6
+  %drop_points25 = load i32, i32* %drop_points
+  %Asn26 = add i32 %le24, %drop_points25
+  store i32 %Asn26, i32* %n
   %2 = load i32, i32* %n
   %tail = alloca %node
   %marker = getelementptr inbounds %node, %node* %tail, i32 0, i32 2
@@ -2910,7 +2526,7 @@ block_end2:                                       ; preds = %merge
   store %node* @"node.object::game_over.head", %node** %curr_ptr
   %3 = load %node*, %node** getelementptr inbounds (%node, %node* @"node.object::game_over.head", i32 0, i32 1)
   store %node* %3, %node** %next_ptr
-  br label %while29
+  br label %while27
 
 while:                                            ; preds = %block_end4, %entry
   %i3 = load i32, i32* %i
@@ -2919,28 +2535,25 @@ while:                                            ; preds = %block_end4, %entry
 
 while_body:                                       ; preds = %while
   %i6 = load i32, i32* %i
+  %blocks = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 12
   %blocks7 = load [4 x %objref], [4 x %objref]* %blocks
   %arr = alloca [4 x %objref]
   store [4 x %objref] %blocks7, [4 x %objref]* %arr
   %4 = getelementptr [4 x %objref], [4 x %objref]* %arr, i32 0, i32 %i6
   %subscript = load %objref, %objref* %4
+  %board = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 11
   %board8 = load %objref, %objref* %board
   call void @"object::Block.function.settlePosition"(%objref %subscript, %objref %board8)
   %i9 = load i32, i32* %i
-  %blocks10 = load [4 x %objref], [4 x %objref]* %blocks
-  %arr11 = alloca [4 x %objref]
-  store [4 x %objref] %blocks10, [4 x %objref]* %arr11
-  %5 = getelementptr [4 x %objref], [4 x %objref]* %arr11, i32 0, i32 %i9
-  %subscript12 = load %objref, %objref* %5
-  %objptr_gen13 = extractvalue %objref %subscript12, 1
-  %objptr14 = bitcast %gameobj* %objptr_gen13 to %Block*
-  %piece = getelementptr inbounds %Block, %Block* %objptr14, i32 0, i32 2
-  %s = getelementptr inbounds %Block, %Block* %objptr14, i32 0, i32 3
-  %type_rect = getelementptr inbounds %Block, %Block* %objptr14, i32 0, i32 4
-  %type_y = getelementptr inbounds %Block, %Block* %objptr14, i32 0, i32 5
-  %type_x = getelementptr inbounds %Block, %Block* %objptr14, i32 0, i32 6
-  %y15 = getelementptr inbounds %Block, %Block* %objptr14, i32 0, i32 7
-  %x16 = getelementptr inbounds %Block, %Block* %objptr14, i32 0, i32 8
+  %blocks10 = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 12
+  %blocks11 = load [4 x %objref], [4 x %objref]* %blocks10
+  %arr12 = alloca [4 x %objref]
+  store [4 x %objref] %blocks11, [4 x %objref]* %arr12
+  %5 = getelementptr [4 x %objref], [4 x %objref]* %arr12, i32 0, i32 %i9
+  %subscript13 = load %objref, %objref* %5
+  %objptr_gen14 = extractvalue %objref %subscript13, 1
+  %objptr15 = bitcast %gameobj* %objptr_gen14 to %Block*
+  %piece = getelementptr inbounds %Block, %Block* %objptr15, i32 0, i32 2
   store %objref zeroinitializer, %objref* %piece
   %6 = load %objref, %objref* %piece
   br label %block_end5
@@ -2958,79 +2571,80 @@ block_end5:                                       ; preds = %while_body
   %7 = load i32, i32* %i
   br label %block_end4
 
-while29:                                          ; preds = %merge35, %block_end2
+while27:                                          ; preds = %merge32, %block_end2
   %curr = load %node*, %node** %next_ptr
   %8 = getelementptr inbounds %node, %node* %curr, i32 0, i32 1
-  %next32 = load %node*, %node** %8
+  %next = load %node*, %node** %8
   %9 = ptrtoint %node* %curr to i64
-  %10 = ptrtoint %node* %next32 to i64
+  %10 = ptrtoint %node* %next to i64
   %11 = ptrtoint %node* %tail to i64
   store %node* %curr, %node** %curr_ptr
-  store %node* %next32, %node** %next_ptr
+  store %node* %next, %node** %next_ptr
   %cont = icmp ne %node* %curr, @"node.object::game_over.head"
-  br i1 %cont, label %while_body30, label %merge31
+  br i1 %cont, label %while_body28, label %merge29
 
-while_body30:                                     ; preds = %while29
+while_body28:                                     ; preds = %while27
   %markerptr = getelementptr inbounds %node, %node* %curr, i32 0, i32 2
-  %marker33 = load i1, i1* %markerptr
-  %cont34 = icmp eq i1 %marker33, true
-  br i1 %cont34, label %then, label %else41
+  %marker30 = load i1, i1* %markerptr
+  %cont31 = icmp eq i1 %marker30, true
+  br i1 %cont31, label %then, label %else38
 
-merge31:                                          ; preds = %while29
+merge29:                                          ; preds = %while27
   call void @list_rem(%node* %tail)
-  %next46 = load %objref, %objref* %next
-  call void @"object::Piece.function.activate"(%objref %next46)
-  %drop47 = load %sfSound*, %sfSound** @"variable::snds::drop"
-  call void @"function:file-../../lib/sound.mg::play"(%sfSound* %drop47)
+  %next43 = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 2
+  %next44 = load %objref, %objref* %next43
+  call void @"object::Piece.function.activate"(%objref %next44)
+  %drop45 = load %sfSound*, %sfSound** @"variable::snds::drop"
+  call void @"function:file-../../lib/sound.mg::play"(%sfSound* %drop45)
   br label %block_end
 
-merge35:                                          ; preds = %merge43, %merge37
-  br label %while29
+merge32:                                          ; preds = %merge40, %merge34
+  br label %while27
 
-then:                                             ; preds = %while_body30
+then:                                             ; preds = %while_body28
   %intptr = ptrtoint %node* %curr to i64
   %intnew = sub i64 %intptr, ptrtoint (%node* getelementptr inbounds (%game_over, %game_over* null, i32 0, i32 1) to i64)
   %game_over = inttoptr i64 %intnew to %gameobj*
   %id_ptr = getelementptr inbounds %gameobj, %gameobj* %game_over, i32 0, i32 2
-  %id36 = load i64, i64* %id_ptr
-  %is_removed = icmp ne i64 %id36, 0
-  br i1 %is_removed, label %then38, label %else
+  %id33 = load i64, i64* %id_ptr
+  %is_removed = icmp ne i64 %id33, 0
+  br i1 %is_removed, label %then35, label %else
 
-merge37:                                          ; preds = %else, %block_end40
-  br label %merge35
+merge34:                                          ; preds = %else, %block_end37
+  br label %merge32
 
-then38:                                           ; preds = %then
+then35:                                           ; preds = %then
   %12 = getelementptr inbounds %gameobj, %gameobj* %game_over, i32 0, i32 2
-  %id39 = load i64, i64* %12
-  %13 = insertvalue %objref undef, i64 %id39, 0
+  %id36 = load i64, i64* %12
+  %13 = insertvalue %objref undef, i64 %id36, 0
   %14 = insertvalue %objref %13, %gameobj* %game_over, 1
   %ref = alloca %objref
   store %objref %14, %objref* %ref
   ret void
 
-block_end40:                                      ; preds = %postret
-  br label %merge37
+block_end37:                                      ; preds = %postret
+  br label %merge34
 
 postret:                                          ; No predecessors!
-  br label %block_end40
+  br label %block_end37
 
 else:                                             ; preds = %then
-  br label %merge37
+  br label %merge34
 
-else41:                                           ; preds = %while_body30
-  %cont42 = icmp eq %node* %curr, %tail
-  br i1 %cont42, label %then44, label %else45
+else38:                                           ; preds = %while_body28
+  %cont39 = icmp eq %node* %curr, %tail
+  br i1 %cont39, label %then41, label %else42
 
-merge43:                                          ; preds = %else45, %then44
-  br label %merge35
+merge40:                                          ; preds = %else42, %then41
+  br label %merge32
 
-then44:                                           ; preds = %else41
+then41:                                           ; preds = %else38
   call void @list_rem(%node* %tail)
   call void @list_add(%node* %tail, %node* @"node.object::game_over.head")
-  br label %merge43
+  br label %merge40
 
-else45:                                           ; preds = %else41
-  br label %merge43
+else42:                                           ; preds = %else38
+  br label %merge40
 }
 
 define void @"object::Piece.function.moveDown"(%objref %this) {
@@ -3040,20 +2654,11 @@ entry:
   %thisref = load %objref, %objref* %this1
   %objptr_gen = extractvalue %objref %thisref, 1
   %objptr = bitcast %gameobj* %objptr_gen to %Piece*
-  %next = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 2
-  %hard_drop = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 3
-  %piece_type = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 4
-  %active = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 5
-  %drop_points = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 6
-  %horiz_timer = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 7
   %curr_timer = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 8
-  %y = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 9
-  %x = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 10
-  %board = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 11
-  %blocks = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 12
   %current_speed_result = call i32 @"function::current_speed"()
   store i32 %current_speed_result, i32* %curr_timer
   %0 = load i32, i32* %curr_timer
+  %y = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 9
   %le = load i32, i32* %y
   %Asn = add i32 %le, 1
   store i32 %Asn, i32* %y
@@ -3065,25 +2670,26 @@ entry:
 block_end:                                        ; preds = %merge
   ret void
 
-merge:                                            ; preds = %block_end7, %block_end3
+merge:                                            ; preds = %block_end8, %block_end3
   br label %block_end
 
 then:                                             ; preds = %entry
-  %le4 = load i32, i32* %y
-  %Asn5 = sub i32 %le4, 1
-  store i32 %Asn5, i32* %y
-  %2 = load i32, i32* %y
-  %this6 = load %objref, %objref* %this1
-  call void @"object::Piece.function.settlePosition"(%objref %this6)
+  %y4 = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 9
+  %le5 = load i32, i32* %y4
+  %Asn6 = sub i32 %le5, 1
+  store i32 %Asn6, i32* %y4
+  %2 = load i32, i32* %y4
+  %this7 = load %objref, %objref* %this1
+  call void @"object::Piece.function.settlePosition"(%objref %this7)
   br label %block_end3
 
 block_end3:                                       ; preds = %then
   br label %merge
 
 else:                                             ; preds = %entry
-  br label %block_end7
+  br label %block_end8
 
-block_end7:                                       ; preds = %else
+block_end8:                                       ; preds = %else
   br label %merge
 }
 
@@ -3094,17 +2700,7 @@ entry:
   %thisref = load %objref, %objref* %this1
   %objptr_gen = extractvalue %objref %thisref, 1
   %objptr = bitcast %gameobj* %objptr_gen to %Piece*
-  %next = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 2
-  %hard_drop = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 3
-  %piece_type = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 4
-  %active = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 5
-  %drop_points = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 6
-  %horiz_timer = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 7
-  %curr_timer = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 8
-  %y = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 9
   %x = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 10
-  %board = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 11
-  %blocks = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 12
   %le = load i32, i32* %x
   %Asn = add i32 %le, 1
   store i32 %Asn, i32* %x
@@ -3120,10 +2716,11 @@ merge:                                            ; preds = %else, %then
   br label %block_end
 
 then:                                             ; preds = %entry
-  %le3 = load i32, i32* %x
-  %Asn4 = sub i32 %le3, 1
-  store i32 %Asn4, i32* %x
-  %1 = load i32, i32* %x
+  %x3 = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 10
+  %le4 = load i32, i32* %x3
+  %Asn5 = sub i32 %le4, 1
+  store i32 %Asn5, i32* %x3
+  %1 = load i32, i32* %x3
   br label %merge
 
 else:                                             ; preds = %entry
@@ -3139,17 +2736,7 @@ entry:
   %thisref = load %objref, %objref* %this1
   %objptr_gen = extractvalue %objref %thisref, 1
   %objptr = bitcast %gameobj* %objptr_gen to %Piece*
-  %next = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 2
-  %hard_drop = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 3
-  %piece_type = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 4
-  %active = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 5
-  %drop_points = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 6
-  %horiz_timer = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 7
-  %curr_timer = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 8
-  %y = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 9
   %x = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 10
-  %board = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 11
-  %blocks = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 12
   %le = load i32, i32* %x
   %Asn = sub i32 %le, 1
   store i32 %Asn, i32* %x
@@ -3165,10 +2752,11 @@ merge:                                            ; preds = %else, %then
   br label %block_end
 
 then:                                             ; preds = %entry
-  %le3 = load i32, i32* %x
-  %Asn4 = add i32 %le3, 1
-  store i32 %Asn4, i32* %x
-  %1 = load i32, i32* %x
+  %x3 = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 10
+  %le4 = load i32, i32* %x3
+  %Asn5 = add i32 %le4, 1
+  store i32 %Asn5, i32* %x3
+  %1 = load i32, i32* %x3
   br label %merge
 
 else:                                             ; preds = %entry
@@ -3184,17 +2772,6 @@ entry:
   %thisref = load %objref, %objref* %this1
   %objptr_gen = extractvalue %objref %thisref, 1
   %objptr = bitcast %gameobj* %objptr_gen to %Piece*
-  %next = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 2
-  %hard_drop = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 3
-  %piece_type = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 4
-  %active = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 5
-  %drop_points = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 6
-  %horiz_timer = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 7
-  %curr_timer = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 8
-  %y = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 9
-  %x = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 10
-  %board = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 11
-  %blocks = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 12
   %i = alloca i32
   store i32 0, i32* %i
   br label %while
@@ -3214,6 +2791,7 @@ while:                                            ; preds = %block_end4, %entry
 
 while_body:                                       ; preds = %while
   %i5 = load i32, i32* %i
+  %blocks = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 12
   %blocks6 = load [4 x %objref], [4 x %objref]* %blocks
   %arr = alloca [4 x %objref]
   store [4 x %objref] %blocks6, [4 x %objref]* %arr
@@ -3250,15 +2828,16 @@ while11:                                          ; preds = %block_end16, %then
 
 while_body12:                                     ; preds = %while11
   %i17 = load i32, i32* %i10
-  %blocks18 = load [4 x %objref], [4 x %objref]* %blocks
-  %arr19 = alloca [4 x %objref]
-  store [4 x %objref] %blocks18, [4 x %objref]* %arr19
-  %2 = getelementptr [4 x %objref], [4 x %objref]* %arr19, i32 0, i32 %i17
-  %subscript20 = load %objref, %objref* %2
-  call void @"object::Block.function.rotateLeft"(%objref %subscript20)
-  %le21 = load i32, i32* %i10
-  %Asn22 = add i32 %le21, 1
-  store i32 %Asn22, i32* %i10
+  %blocks18 = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 12
+  %blocks19 = load [4 x %objref], [4 x %objref]* %blocks18
+  %arr20 = alloca [4 x %objref]
+  store [4 x %objref] %blocks19, [4 x %objref]* %arr20
+  %2 = getelementptr [4 x %objref], [4 x %objref]* %arr20, i32 0, i32 %i17
+  %subscript21 = load %objref, %objref* %2
+  call void @"object::Block.function.rotateLeft"(%objref %subscript21)
+  %le22 = load i32, i32* %i10
+  %Asn23 = add i32 %le22, 1
+  store i32 %Asn23, i32* %i10
   %3 = load i32, i32* %i10
   br label %block_end16
 
@@ -3281,17 +2860,6 @@ entry:
   %thisref = load %objref, %objref* %this1
   %objptr_gen = extractvalue %objref %thisref, 1
   %objptr = bitcast %gameobj* %objptr_gen to %Piece*
-  %next = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 2
-  %hard_drop = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 3
-  %piece_type = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 4
-  %active = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 5
-  %drop_points = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 6
-  %horiz_timer = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 7
-  %curr_timer = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 8
-  %y = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 9
-  %x = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 10
-  %board = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 11
-  %blocks = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 12
   %i = alloca i32
   store i32 0, i32* %i
   br label %while
@@ -3311,6 +2879,7 @@ while:                                            ; preds = %block_end4, %entry
 
 while_body:                                       ; preds = %while
   %i5 = load i32, i32* %i
+  %blocks = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 12
   %blocks6 = load [4 x %objref], [4 x %objref]* %blocks
   %arr = alloca [4 x %objref]
   store [4 x %objref] %blocks6, [4 x %objref]* %arr
@@ -3347,15 +2916,16 @@ while11:                                          ; preds = %block_end16, %then
 
 while_body12:                                     ; preds = %while11
   %i17 = load i32, i32* %i10
-  %blocks18 = load [4 x %objref], [4 x %objref]* %blocks
-  %arr19 = alloca [4 x %objref]
-  store [4 x %objref] %blocks18, [4 x %objref]* %arr19
-  %2 = getelementptr [4 x %objref], [4 x %objref]* %arr19, i32 0, i32 %i17
-  %subscript20 = load %objref, %objref* %2
-  call void @"object::Block.function.rotateRight"(%objref %subscript20)
-  %le21 = load i32, i32* %i10
-  %Asn22 = add i32 %le21, 1
-  store i32 %Asn22, i32* %i10
+  %blocks18 = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 12
+  %blocks19 = load [4 x %objref], [4 x %objref]* %blocks18
+  %arr20 = alloca [4 x %objref]
+  store [4 x %objref] %blocks19, [4 x %objref]* %arr20
+  %2 = getelementptr [4 x %objref], [4 x %objref]* %arr20, i32 0, i32 %i17
+  %subscript21 = load %objref, %objref* %2
+  call void @"object::Block.function.rotateRight"(%objref %subscript21)
+  %le22 = load i32, i32* %i10
+  %Asn23 = add i32 %le22, 1
+  store i32 %Asn23, i32* %i10
   %3 = load i32, i32* %i10
   br label %block_end16
 
@@ -3378,22 +2948,11 @@ entry:
   %thisref = load %objref, %objref* %this1
   %objptr_gen = extractvalue %objref %thisref, 1
   %objptr = bitcast %gameobj* %objptr_gen to %Piece*
-  %next = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 2
-  %hard_drop = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 3
-  %piece_type = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 4
-  %active = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 5
-  %drop_points = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 6
-  %horiz_timer = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 7
-  %curr_timer = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 8
-  %y = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 9
-  %x = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 10
-  %board = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 11
-  %blocks = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 12
   %i = alloca i32
   store i32 0, i32* %i
   br label %while
 
-block_end:                                        ; preds = %postret33
+block_end:                                        ; preds = %postret27
   ret i1 false
 
 block_end2:                                       ; preds = %merge
@@ -3405,8 +2964,10 @@ while:                                            ; preds = %block_end4, %entry
   br i1 %tmp, label %while_body, label %merge
 
 while_body:                                       ; preds = %while
+  %board = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 11
   %board5 = load %objref, %objref* %board
   %i6 = load i32, i32* %i
+  %blocks = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 12
   %blocks7 = load [4 x %objref], [4 x %objref]* %blocks
   %arr = alloca [4 x %objref]
   store [4 x %objref] %blocks7, [4 x %objref]* %arr
@@ -3414,44 +2975,35 @@ while_body:                                       ; preds = %while
   %subscript = load %objref, %objref* %0
   %objptr_gen8 = extractvalue %objref %subscript, 1
   %objptr9 = bitcast %gameobj* %objptr_gen8 to %Block*
-  %piece = getelementptr inbounds %Block, %Block* %objptr9, i32 0, i32 2
-  %s = getelementptr inbounds %Block, %Block* %objptr9, i32 0, i32 3
-  %type_rect = getelementptr inbounds %Block, %Block* %objptr9, i32 0, i32 4
-  %type_y = getelementptr inbounds %Block, %Block* %objptr9, i32 0, i32 5
-  %type_x = getelementptr inbounds %Block, %Block* %objptr9, i32 0, i32 6
-  %y10 = getelementptr inbounds %Block, %Block* %objptr9, i32 0, i32 7
-  %x11 = getelementptr inbounds %Block, %Block* %objptr9, i32 0, i32 8
+  %x = getelementptr inbounds %Block, %Block* %objptr9, i32 0, i32 8
+  %x10 = load i32, i32* %x
+  %x11 = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 10
   %x12 = load i32, i32* %x11
-  %x13 = load i32, i32* %x
-  %tmp14 = add i32 %x12, %x13
-  %i15 = load i32, i32* %i
-  %blocks16 = load [4 x %objref], [4 x %objref]* %blocks
+  %tmp13 = add i32 %x10, %x12
+  %i14 = load i32, i32* %i
+  %blocks15 = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 12
+  %blocks16 = load [4 x %objref], [4 x %objref]* %blocks15
   %arr17 = alloca [4 x %objref]
   store [4 x %objref] %blocks16, [4 x %objref]* %arr17
-  %1 = getelementptr [4 x %objref], [4 x %objref]* %arr17, i32 0, i32 %i15
+  %1 = getelementptr [4 x %objref], [4 x %objref]* %arr17, i32 0, i32 %i14
   %subscript18 = load %objref, %objref* %1
   %objptr_gen19 = extractvalue %objref %subscript18, 1
   %objptr20 = bitcast %gameobj* %objptr_gen19 to %Block*
-  %piece21 = getelementptr inbounds %Block, %Block* %objptr20, i32 0, i32 2
-  %s22 = getelementptr inbounds %Block, %Block* %objptr20, i32 0, i32 3
-  %type_rect23 = getelementptr inbounds %Block, %Block* %objptr20, i32 0, i32 4
-  %type_y24 = getelementptr inbounds %Block, %Block* %objptr20, i32 0, i32 5
-  %type_x25 = getelementptr inbounds %Block, %Block* %objptr20, i32 0, i32 6
-  %y26 = getelementptr inbounds %Block, %Block* %objptr20, i32 0, i32 7
-  %x27 = getelementptr inbounds %Block, %Block* %objptr20, i32 0, i32 8
-  %y28 = load i32, i32* %y26
-  %y29 = load i32, i32* %y
-  %tmp30 = add i32 %y28, %y29
-  %occupied_result = call i1 @"object::Board.function.occupied"(%objref %board5, i32 %tmp14, i32 %tmp30)
+  %y = getelementptr inbounds %Block, %Block* %objptr20, i32 0, i32 7
+  %y21 = load i32, i32* %y
+  %y22 = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 9
+  %y23 = load i32, i32* %y22
+  %tmp24 = add i32 %y21, %y23
+  %occupied_result = call i1 @"object::Board.function.occupied"(%objref %board5, i32 %tmp13, i32 %tmp24)
   br i1 %occupied_result, label %then, label %else
 
 merge:                                            ; preds = %while
   br label %block_end2
 
-block_end4:                                       ; preds = %merge31
+block_end4:                                       ; preds = %merge25
   br label %while
 
-merge31:                                          ; preds = %block_end32, %postret
+merge25:                                          ; preds = %block_end26, %postret
   %le = load i32, i32* %i
   %Asn = add i32 %le, 1
   store i32 %Asn, i32* %i
@@ -3462,15 +3014,15 @@ then:                                             ; preds = %while_body
   ret i1 true
 
 postret:                                          ; No predecessors!
-  br label %merge31
+  br label %merge25
 
 else:                                             ; preds = %while_body
-  br label %block_end32
+  br label %block_end26
 
-block_end32:                                      ; preds = %else
-  br label %merge31
+block_end26:                                      ; preds = %else
+  br label %merge25
 
-postret33:                                        ; No predecessors!
+postret27:                                        ; No predecessors!
   br label %block_end
 }
 
@@ -3481,17 +3033,7 @@ entry:
   %thisref = load %objref, %objref* %this1
   %objptr_gen = extractvalue %objref %thisref, 1
   %objptr = bitcast %gameobj* %objptr_gen to %Piece*
-  %next = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 2
-  %hard_drop = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 3
   %piece_type = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 4
-  %active = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 5
-  %drop_points = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 6
-  %horiz_timer = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 7
-  %curr_timer = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 8
-  %y = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 9
-  %x = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 10
-  %board = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 11
-  %blocks = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 12
   %piece_type2 = load i32, i32* %piece_type
   %piece_counts = load [7 x %objref], [7 x %objref]* @"variable::piece_counts"
   %arr = alloca [7 x %objref]
@@ -3500,19 +3042,15 @@ entry:
   %subscript = load %objref, %objref* %0
   %objptr_gen3 = extractvalue %objref %subscript, 1
   %objptr4 = bitcast %gameobj* %objptr_gen3 to %Draw*
-  %digits = getelementptr inbounds %Draw, %Draw* %objptr4, i32 0, i32 2
   %n = getelementptr inbounds %Draw, %Draw* %objptr4, i32 0, i32 3
-  %height = getelementptr inbounds %Draw, %Draw* %objptr4, i32 0, i32 4
-  %width = getelementptr inbounds %Draw, %Draw* %objptr4, i32 0, i32 5
-  %y5 = getelementptr inbounds %Draw, %Draw* %objptr4, i32 0, i32 6
-  %x6 = getelementptr inbounds %Draw, %Draw* %objptr4, i32 0, i32 7
-  %spr = getelementptr inbounds %Draw, %Draw* %objptr4, i32 0, i32 8
   %le = load i32, i32* %n
   %Asn = add i32 %le, 1
   store i32 %Asn, i32* %n
   %1 = load i32, i32* %n
+  %active = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 5
   store i1 true, i1* %active
   %2 = load i1, i1* %active
+  %next = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 2
   %malloccall = tail call i8* @malloc(i32 ptrtoint (%Piece* getelementptr (%Piece, %Piece* null, i32 1) to i32))
   %Piece = bitcast i8* %malloccall to %Piece*
   store %Piece zeroinitializer, %Piece* %Piece
@@ -3523,8 +3061,8 @@ entry:
   call void @list_add(%node* %Piece_objnode, %node* @"node.object::Piece.head")
   %Piece_parent = getelementptr inbounds %Piece, %Piece* %Piece, i32 0, i32 0
   %object_objnode = getelementptr inbounds %gameobj, %gameobj* %Piece_parent, i32 0, i32 1
-  %marker7 = getelementptr inbounds %node, %node* %object_objnode, i32 0, i32 2
-  store i1 true, i1* %marker7
+  %marker5 = getelementptr inbounds %node, %node* %object_objnode, i32 0, i32 2
+  store i1 true, i1* %marker5
   call void @list_add(%node* %object_objnode, %node* @node.gameobj.head)
   %object_parent = getelementptr inbounds %gameobj, %gameobj* %Piece_parent, i32 0, i32 0
   %old_id = load i64, i64* @last_objid
@@ -3536,12 +3074,15 @@ entry:
   store i64 %new_id, i64* %4
   %5 = insertvalue %objref undef, i64 %new_id, 0
   %6 = insertvalue %objref %5, %gameobj* %Piece_gen, 1
-  %board8 = load %objref, %objref* %board
-  call void @"object::Piece.event.create"(%objref %6, %objref %board8)
+  %board = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 11
+  %board6 = load %objref, %objref* %board
+  call void @"object::Piece.event.create"(%objref %6, %objref %board6)
   store %objref %6, %objref* %next
   %7 = load %objref, %objref* %next
+  %x = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 10
   store i32 5, i32* %x
   %8 = load i32, i32* %x
+  %y = getelementptr inbounds %Piece, %Piece* %objptr, i32 0, i32 9
   store i32 1, i32* %y
   %9 = load i32, i32* %y
   br label %block_end
@@ -3557,7 +3098,6 @@ entry:
   %thisref = load %objref, %objref* %this1
   %objptr_gen = extractvalue %objref %thisref, 1
   %objptr = bitcast %gameobj* %objptr_gen to %Board*
-  %pieces = getelementptr inbounds %Board, %Board* %objptr, i32 0, i32 2
   %y = alloca i32
   store i32 0, i32* %y
   br label %while
@@ -3599,10 +3139,11 @@ while6:                                           ; preds = %block_end11, %while
   br i1 %tmp10, label %while_body7, label %merge8
 
 while_body7:                                      ; preds = %while6
-  %y12 = load i32, i32* %y
-  %subscript = getelementptr [24 x [10 x %objref]], [24 x [10 x %objref]]* %pieces, i32 0, i32 %y12
-  %x13 = load i32, i32* %x
-  %subscript14 = getelementptr [10 x %objref], [10 x %objref]* %subscript, i32 0, i32 %x13
+  %x12 = load i32, i32* %x
+  %y13 = load i32, i32* %y
+  %pieces = getelementptr inbounds %Board, %Board* %objptr, i32 0, i32 2
+  %subscript = getelementptr [24 x [10 x %objref]], [24 x [10 x %objref]]* %pieces, i32 0, i32 %y13
+  %subscript14 = getelementptr [10 x %objref], [10 x %objref]* %subscript, i32 0, i32 %x12
   store %objref zeroinitializer, %objref* %subscript14
   %1 = load %objref, %objref* %subscript14
   %le = load i32, i32* %x
@@ -3642,7 +3183,6 @@ entry:
   %thisref = load %objref, %objref* %this1
   %objptr_gen = extractvalue %objref %thisref, 1
   %objptr = bitcast %gameobj* %objptr_gen to %Board*
-  %pieces = getelementptr inbounds %Board, %Board* %objptr, i32 0, i32 2
   %x4 = load i32, i32* %x2
   %tmp = icmp slt i32 %x4, 0
   %x5 = load i32, i32* %x2
@@ -3678,6 +3218,7 @@ block_end11:                                      ; preds = %else
 merge14:                                          ; preds = %block_end18, %postret16
   %x19 = load i32, i32* %x2
   %y20 = load i32, i32* %y3
+  %pieces = getelementptr inbounds %Board, %Board* %objptr, i32 0, i32 2
   %pieces21 = load [24 x [10 x %objref]], [24 x [10 x %objref]]* %pieces
   %arr = alloca [24 x [10 x %objref]]
   store [24 x [10 x %objref]] %pieces21, [24 x [10 x %objref]]* %arr
@@ -3731,12 +3272,11 @@ entry:
   %thisref = load %objref, %objref* %this1
   %objptr_gen = extractvalue %objref %thisref, 1
   %objptr = bitcast %gameobj* %objptr_gen to %Board*
-  %pieces = getelementptr inbounds %Board, %Board* %objptr, i32 0, i32 2
   %x = alloca i32
   store i32 0, i32* %x
   br label %while
 
-block_end:                                        ; preds = %postret191
+block_end:                                        ; preds = %postret158
   ret i1 false
 
 block_end3:                                       ; preds = %merge
@@ -3753,6 +3293,7 @@ while:                                            ; preds = %block_end5, %entry
 while_body:                                       ; preds = %while
   %x6 = load i32, i32* %x
   %r7 = load i32, i32* %r2
+  %pieces = getelementptr inbounds %Board, %Board* %objptr, i32 0, i32 2
   %pieces8 = load [24 x [10 x %objref]], [24 x [10 x %objref]]* %pieces
   %arr = alloca [24 x [10 x %objref]]
   store [24 x [10 x %objref]] %pieces8, [24 x [10 x %objref]]* %arr
@@ -3793,9 +3334,9 @@ block_end13:                                      ; preds = %else
 
 block_end14:                                      ; preds = %merge18
   %y = alloca i32
-  %r36 = load i32, i32* %r2
-  store i32 %r36, i32* %y
-  br label %while37
+  %r37 = load i32, i32* %r2
+  store i32 %r37, i32* %y
+  br label %while38
 
 while16:                                          ; preds = %block_end22, %block_end3
   %x19 = load i32, i32* %x15
@@ -3806,29 +3347,30 @@ while16:                                          ; preds = %block_end22, %block
 while_body17:                                     ; preds = %while16
   %x23 = load i32, i32* %x15
   %r24 = load i32, i32* %r2
-  %pieces25 = load [24 x [10 x %objref]], [24 x [10 x %objref]]* %pieces
-  %arr26 = alloca [24 x [10 x %objref]]
-  store [24 x [10 x %objref]] %pieces25, [24 x [10 x %objref]]* %arr26
-  %3 = getelementptr [24 x [10 x %objref]], [24 x [10 x %objref]]* %arr26, i32 0, i32 %r24
-  %subscript27 = load [10 x %objref], [10 x %objref]* %3
-  %arr28 = alloca [10 x %objref]
-  store [10 x %objref] %subscript27, [10 x %objref]* %arr28
-  %4 = getelementptr [10 x %objref], [10 x %objref]* %arr28, i32 0, i32 %x23
-  %subscript29 = load %objref, %objref* %4
-  %objptr30 = extractvalue %objref %subscript29, 1
-  %5 = bitcast %gameobj* %objptr30 to { void (%objref)*, void (%objref)*, void (%objref)*, void (%objref)* }**
+  %pieces25 = getelementptr inbounds %Board, %Board* %objptr, i32 0, i32 2
+  %pieces26 = load [24 x [10 x %objref]], [24 x [10 x %objref]]* %pieces25
+  %arr27 = alloca [24 x [10 x %objref]]
+  store [24 x [10 x %objref]] %pieces26, [24 x [10 x %objref]]* %arr27
+  %3 = getelementptr [24 x [10 x %objref]], [24 x [10 x %objref]]* %arr27, i32 0, i32 %r24
+  %subscript28 = load [10 x %objref], [10 x %objref]* %3
+  %arr29 = alloca [10 x %objref]
+  store [10 x %objref] %subscript28, [10 x %objref]* %arr29
+  %4 = getelementptr [10 x %objref], [10 x %objref]* %arr29, i32 0, i32 %x23
+  %subscript30 = load %objref, %objref* %4
+  %objptr31 = extractvalue %objref %subscript30, 1
+  %5 = bitcast %gameobj* %objptr31 to { void (%objref)*, void (%objref)*, void (%objref)*, void (%objref)* }**
   %tbl = load { void (%objref)*, void (%objref)*, void (%objref)*, void (%objref)* }*, { void (%objref)*, void (%objref)*, void (%objref)*, void (%objref)* }** %5
   %eventptr = getelementptr inbounds { void (%objref)*, void (%objref)*, void (%objref)*, void (%objref)* }, { void (%objref)*, void (%objref)*, void (%objref)*, void (%objref)* }* %tbl, i32 0, i32 3
   %event = load void (%objref)*, void (%objref)** %eventptr
-  %eventptr31 = getelementptr inbounds { void (%objref)*, void (%objref)*, void (%objref)*, void (%objref)* }, { void (%objref)*, void (%objref)*, void (%objref)*, void (%objref)* }* %tbl, i32 0, i32 1
-  %event32 = load void (%objref)*, void (%objref)** %eventptr31
-  call void %event32(%objref %subscript29)
-  call void %event(%objref %subscript29)
-  %id = getelementptr inbounds %gameobj, %gameobj* %objptr30, i32 0, i32 2
+  %eventptr32 = getelementptr inbounds { void (%objref)*, void (%objref)*, void (%objref)*, void (%objref)* }, { void (%objref)*, void (%objref)*, void (%objref)*, void (%objref)* }* %tbl, i32 0, i32 1
+  %event33 = load void (%objref)*, void (%objref)** %eventptr32
+  call void %event33(%objref %subscript30)
+  call void %event(%objref %subscript30)
+  %id = getelementptr inbounds %gameobj, %gameobj* %objptr31, i32 0, i32 2
   store i64 0, i64* %id
-  %le33 = load i32, i32* %x15
-  %Asn34 = add i32 %le33, 1
-  store i32 %Asn34, i32* %x15
+  %le34 = load i32, i32* %x15
+  %Asn35 = add i32 %le34, 1
+  store i32 %Asn35, i32* %x15
   %6 = load i32, i32* %x15
   br label %block_end22
 
@@ -3838,266 +3380,223 @@ merge18:                                          ; preds = %while16
 block_end22:                                      ; preds = %while_body17
   br label %while16
 
-block_end35:                                      ; preds = %merge39
-  %x96 = alloca i32
-  store i32 0, i32* %x96
-  br label %while97
+block_end36:                                      ; preds = %merge40
+  %x100 = alloca i32
+  store i32 0, i32* %x100
+  br label %while101
 
-while37:                                          ; preds = %block_end42, %block_end14
-  %y40 = load i32, i32* %y
-  %tmp41 = icmp sgt i32 %y40, 0
-  br i1 %tmp41, label %while_body38, label %merge39
+while38:                                          ; preds = %block_end43, %block_end14
+  %y41 = load i32, i32* %y
+  %tmp42 = icmp sgt i32 %y41, 0
+  br i1 %tmp42, label %while_body39, label %merge40
 
-while_body38:                                     ; preds = %while37
-  %x44 = alloca i32
-  store i32 0, i32* %x44
-  br label %while45
+while_body39:                                     ; preds = %while38
+  %x45 = alloca i32
+  store i32 0, i32* %x45
+  br label %while46
 
-merge39:                                          ; preds = %while37
-  br label %block_end35
+merge40:                                          ; preds = %while38
+  br label %block_end36
 
-block_end42:                                      ; preds = %block_end43
-  br label %while37
+block_end43:                                      ; preds = %block_end44
+  br label %while38
 
-block_end43:                                      ; preds = %merge47
-  %le93 = load i32, i32* %y
-  %Asn94 = sub i32 %le93, 1
-  store i32 %Asn94, i32* %y
+block_end44:                                      ; preds = %merge48
+  %le97 = load i32, i32* %y
+  %Asn98 = sub i32 %le97, 1
+  store i32 %Asn98, i32* %y
   %7 = load i32, i32* %y
-  br label %block_end42
-
-while45:                                          ; preds = %block_end51, %while_body38
-  %x48 = load i32, i32* %x44
-  %board_width49 = load i32, i32* @"variable::board_width"
-  %tmp50 = icmp slt i32 %x48, %board_width49
-  br i1 %tmp50, label %while_body46, label %merge47
-
-while_body46:                                     ; preds = %while45
-  %x53 = load i32, i32* %x44
-  %y54 = load i32, i32* %y
-  %tmp55 = sub i32 %y54, 1
-  %pieces56 = load [24 x [10 x %objref]], [24 x [10 x %objref]]* %pieces
-  %arr57 = alloca [24 x [10 x %objref]]
-  store [24 x [10 x %objref]] %pieces56, [24 x [10 x %objref]]* %arr57
-  %8 = getelementptr [24 x [10 x %objref]], [24 x [10 x %objref]]* %arr57, i32 0, i32 %tmp55
-  %subscript58 = load [10 x %objref], [10 x %objref]* %8
-  %arr59 = alloca [10 x %objref]
-  store [10 x %objref] %subscript58, [10 x %objref]* %arr59
-  %9 = getelementptr [10 x %objref], [10 x %objref]* %arr59, i32 0, i32 %x53
-  %subscript60 = load %objref, %objref* %9
-  %y61 = load i32, i32* %y
-  %subscript62 = getelementptr [24 x [10 x %objref]], [24 x [10 x %objref]]* %pieces, i32 0, i32 %y61
-  %x63 = load i32, i32* %x44
-  %subscript64 = getelementptr [10 x %objref], [10 x %objref]* %subscript62, i32 0, i32 %x63
-  store %objref %subscript60, %objref* %subscript64
-  %10 = load %objref, %objref* %subscript64
-  %x65 = load i32, i32* %x44
-  %y66 = load i32, i32* %y
-  %pieces67 = load [24 x [10 x %objref]], [24 x [10 x %objref]]* %pieces
-  %arr68 = alloca [24 x [10 x %objref]]
-  store [24 x [10 x %objref]] %pieces67, [24 x [10 x %objref]]* %arr68
-  %11 = getelementptr [24 x [10 x %objref]], [24 x [10 x %objref]]* %arr68, i32 0, i32 %y66
-  %subscript69 = load [10 x %objref], [10 x %objref]* %11
-  %arr70 = alloca [10 x %objref]
-  store [10 x %objref] %subscript69, [10 x %objref]* %arr70
-  %12 = getelementptr [10 x %objref], [10 x %objref]* %arr70, i32 0, i32 %x65
-  %subscript71 = load %objref, %objref* %12
-  %tmp_lid72 = extractvalue %objref %subscript71, 0
-  %tmp73 = icmp ne i64 %tmp_lid72, 0
-  br i1 %tmp73, label %then75, label %else89
-
-merge47:                                          ; preds = %while45
   br label %block_end43
 
-block_end51:                                      ; preds = %block_end52
-  br label %while45
+while46:                                          ; preds = %block_end52, %while_body39
+  %x49 = load i32, i32* %x45
+  %board_width50 = load i32, i32* @"variable::board_width"
+  %tmp51 = icmp slt i32 %x49, %board_width50
+  br i1 %tmp51, label %while_body47, label %merge48
 
-block_end52:                                      ; preds = %merge74
-  %le91 = load i32, i32* %x44
-  %Asn92 = add i32 %le91, 1
-  store i32 %Asn92, i32* %x44
-  %13 = load i32, i32* %x44
-  br label %block_end51
+while_body47:                                     ; preds = %while46
+  %x54 = load i32, i32* %x45
+  %y55 = load i32, i32* %y
+  %pieces56 = getelementptr inbounds %Board, %Board* %objptr, i32 0, i32 2
+  %subscript57 = getelementptr [24 x [10 x %objref]], [24 x [10 x %objref]]* %pieces56, i32 0, i32 %y55
+  %subscript58 = getelementptr [10 x %objref], [10 x %objref]* %subscript57, i32 0, i32 %x54
+  %x59 = load i32, i32* %x45
+  %y60 = load i32, i32* %y
+  %tmp61 = sub i32 %y60, 1
+  %pieces62 = getelementptr inbounds %Board, %Board* %objptr, i32 0, i32 2
+  %pieces63 = load [24 x [10 x %objref]], [24 x [10 x %objref]]* %pieces62
+  %arr64 = alloca [24 x [10 x %objref]]
+  store [24 x [10 x %objref]] %pieces63, [24 x [10 x %objref]]* %arr64
+  %8 = getelementptr [24 x [10 x %objref]], [24 x [10 x %objref]]* %arr64, i32 0, i32 %tmp61
+  %subscript65 = load [10 x %objref], [10 x %objref]* %8
+  %arr66 = alloca [10 x %objref]
+  store [10 x %objref] %subscript65, [10 x %objref]* %arr66
+  %9 = getelementptr [10 x %objref], [10 x %objref]* %arr66, i32 0, i32 %x59
+  %subscript67 = load %objref, %objref* %9
+  store %objref %subscript67, %objref* %subscript58
+  %10 = load %objref, %objref* %subscript58
+  %x68 = load i32, i32* %x45
+  %y69 = load i32, i32* %y
+  %pieces70 = getelementptr inbounds %Board, %Board* %objptr, i32 0, i32 2
+  %pieces71 = load [24 x [10 x %objref]], [24 x [10 x %objref]]* %pieces70
+  %arr72 = alloca [24 x [10 x %objref]]
+  store [24 x [10 x %objref]] %pieces71, [24 x [10 x %objref]]* %arr72
+  %11 = getelementptr [24 x [10 x %objref]], [24 x [10 x %objref]]* %arr72, i32 0, i32 %y69
+  %subscript73 = load [10 x %objref], [10 x %objref]* %11
+  %arr74 = alloca [10 x %objref]
+  store [10 x %objref] %subscript73, [10 x %objref]* %arr74
+  %12 = getelementptr [10 x %objref], [10 x %objref]* %arr74, i32 0, i32 %x68
+  %subscript75 = load %objref, %objref* %12
+  %tmp_lid76 = extractvalue %objref %subscript75, 0
+  %tmp77 = icmp ne i64 %tmp_lid76, 0
+  br i1 %tmp77, label %then79, label %else93
 
-merge74:                                          ; preds = %block_end90, %then75
+merge48:                                          ; preds = %while46
+  br label %block_end44
+
+block_end52:                                      ; preds = %block_end53
+  br label %while46
+
+block_end53:                                      ; preds = %merge78
+  %le95 = load i32, i32* %x45
+  %Asn96 = add i32 %le95, 1
+  store i32 %Asn96, i32* %x45
+  %13 = load i32, i32* %x45
   br label %block_end52
 
-then75:                                           ; preds = %while_body46
-  %x76 = load i32, i32* %x44
-  %y77 = load i32, i32* %y
-  %pieces78 = load [24 x [10 x %objref]], [24 x [10 x %objref]]* %pieces
-  %arr79 = alloca [24 x [10 x %objref]]
-  store [24 x [10 x %objref]] %pieces78, [24 x [10 x %objref]]* %arr79
-  %14 = getelementptr [24 x [10 x %objref]], [24 x [10 x %objref]]* %arr79, i32 0, i32 %y77
-  %subscript80 = load [10 x %objref], [10 x %objref]* %14
-  %arr81 = alloca [10 x %objref]
-  store [10 x %objref] %subscript80, [10 x %objref]* %arr81
-  %15 = getelementptr [10 x %objref], [10 x %objref]* %arr81, i32 0, i32 %x76
-  %subscript82 = load %objref, %objref* %15
-  %objptr_gen83 = extractvalue %objref %subscript82, 1
-  %objptr84 = bitcast %gameobj* %objptr_gen83 to %Block*
-  %piece = getelementptr inbounds %Block, %Block* %objptr84, i32 0, i32 2
-  %s = getelementptr inbounds %Block, %Block* %objptr84, i32 0, i32 3
-  %type_rect = getelementptr inbounds %Block, %Block* %objptr84, i32 0, i32 4
-  %type_y = getelementptr inbounds %Block, %Block* %objptr84, i32 0, i32 5
-  %type_x = getelementptr inbounds %Block, %Block* %objptr84, i32 0, i32 6
-  %y85 = getelementptr inbounds %Block, %Block* %objptr84, i32 0, i32 7
-  %x86 = getelementptr inbounds %Block, %Block* %objptr84, i32 0, i32 8
-  %le87 = load i32, i32* %y85
-  %Asn88 = add i32 %le87, 1
-  store i32 %Asn88, i32* %y85
-  %16 = load i32, i32* %y85
-  br label %merge74
+merge78:                                          ; preds = %block_end94, %then79
+  br label %block_end53
 
-else89:                                           ; preds = %while_body46
-  br label %block_end90
+then79:                                           ; preds = %while_body47
+  %x80 = load i32, i32* %x45
+  %y81 = load i32, i32* %y
+  %pieces82 = getelementptr inbounds %Board, %Board* %objptr, i32 0, i32 2
+  %pieces83 = load [24 x [10 x %objref]], [24 x [10 x %objref]]* %pieces82
+  %arr84 = alloca [24 x [10 x %objref]]
+  store [24 x [10 x %objref]] %pieces83, [24 x [10 x %objref]]* %arr84
+  %14 = getelementptr [24 x [10 x %objref]], [24 x [10 x %objref]]* %arr84, i32 0, i32 %y81
+  %subscript85 = load [10 x %objref], [10 x %objref]* %14
+  %arr86 = alloca [10 x %objref]
+  store [10 x %objref] %subscript85, [10 x %objref]* %arr86
+  %15 = getelementptr [10 x %objref], [10 x %objref]* %arr86, i32 0, i32 %x80
+  %subscript87 = load %objref, %objref* %15
+  %objptr_gen88 = extractvalue %objref %subscript87, 1
+  %objptr89 = bitcast %gameobj* %objptr_gen88 to %Block*
+  %y90 = getelementptr inbounds %Block, %Block* %objptr89, i32 0, i32 7
+  %le91 = load i32, i32* %y90
+  %Asn92 = add i32 %le91, 1
+  store i32 %Asn92, i32* %y90
+  %16 = load i32, i32* %y90
+  br label %merge78
 
-block_end90:                                      ; preds = %else89
-  br label %merge74
+else93:                                           ; preds = %while_body47
+  br label %block_end94
 
-block_end95:                                      ; preds = %merge99
+block_end94:                                      ; preds = %else93
+  br label %merge78
+
+block_end99:                                      ; preds = %merge103
   %lines_count = load %objref, %objref* @"variable::lines_count"
-  %objptr_gen109 = extractvalue %objref %lines_count, 1
-  %objptr110 = bitcast %gameobj* %objptr_gen109 to %Draw*
-  %digits = getelementptr inbounds %Draw, %Draw* %objptr110, i32 0, i32 2
-  %n = getelementptr inbounds %Draw, %Draw* %objptr110, i32 0, i32 3
-  %height = getelementptr inbounds %Draw, %Draw* %objptr110, i32 0, i32 4
-  %width = getelementptr inbounds %Draw, %Draw* %objptr110, i32 0, i32 5
-  %y111 = getelementptr inbounds %Draw, %Draw* %objptr110, i32 0, i32 6
-  %x112 = getelementptr inbounds %Draw, %Draw* %objptr110, i32 0, i32 7
-  %spr = getelementptr inbounds %Draw, %Draw* %objptr110, i32 0, i32 8
-  %le113 = load i32, i32* %n
-  %Asn114 = add i32 %le113, 1
-  store i32 %Asn114, i32* %n
+  %objptr_gen114 = extractvalue %objref %lines_count, 1
+  %objptr115 = bitcast %gameobj* %objptr_gen114 to %Draw*
+  %n = getelementptr inbounds %Draw, %Draw* %objptr115, i32 0, i32 3
+  %le116 = load i32, i32* %n
+  %Asn117 = add i32 %le116, 1
+  store i32 %Asn117, i32* %n
   %17 = load i32, i32* %n
-  %lines_count115 = load %objref, %objref* @"variable::lines_count"
-  %objptr_gen116 = extractvalue %objref %lines_count115, 1
-  %objptr117 = bitcast %gameobj* %objptr_gen116 to %Draw*
-  %digits118 = getelementptr inbounds %Draw, %Draw* %objptr117, i32 0, i32 2
-  %n119 = getelementptr inbounds %Draw, %Draw* %objptr117, i32 0, i32 3
-  %height120 = getelementptr inbounds %Draw, %Draw* %objptr117, i32 0, i32 4
-  %width121 = getelementptr inbounds %Draw, %Draw* %objptr117, i32 0, i32 5
-  %y122 = getelementptr inbounds %Draw, %Draw* %objptr117, i32 0, i32 6
-  %x123 = getelementptr inbounds %Draw, %Draw* %objptr117, i32 0, i32 7
-  %spr124 = getelementptr inbounds %Draw, %Draw* %objptr117, i32 0, i32 8
-  %n125 = load i32, i32* %n119
-  %tmp126 = sdiv i32 %n125, 5
+  %lines_count118 = load %objref, %objref* @"variable::lines_count"
+  %objptr_gen119 = extractvalue %objref %lines_count118, 1
+  %objptr120 = bitcast %gameobj* %objptr_gen119 to %Draw*
+  %n121 = getelementptr inbounds %Draw, %Draw* %objptr120, i32 0, i32 3
+  %n122 = load i32, i32* %n121
+  %tmp123 = sdiv i32 %n122, 5
   %level_count = load %objref, %objref* @"variable::level_count"
-  %objptr_gen127 = extractvalue %objref %level_count, 1
-  %objptr128 = bitcast %gameobj* %objptr_gen127 to %Draw*
-  %digits129 = getelementptr inbounds %Draw, %Draw* %objptr128, i32 0, i32 2
-  %n130 = getelementptr inbounds %Draw, %Draw* %objptr128, i32 0, i32 3
-  %height131 = getelementptr inbounds %Draw, %Draw* %objptr128, i32 0, i32 4
-  %width132 = getelementptr inbounds %Draw, %Draw* %objptr128, i32 0, i32 5
-  %y133 = getelementptr inbounds %Draw, %Draw* %objptr128, i32 0, i32 6
-  %x134 = getelementptr inbounds %Draw, %Draw* %objptr128, i32 0, i32 7
-  %spr135 = getelementptr inbounds %Draw, %Draw* %objptr128, i32 0, i32 8
-  %n136 = load i32, i32* %n130
-  %tmp137 = icmp sgt i32 %tmp126, %n136
-  br i1 %tmp137, label %then139, label %else163
+  %objptr_gen124 = extractvalue %objref %level_count, 1
+  %objptr125 = bitcast %gameobj* %objptr_gen124 to %Draw*
+  %n126 = getelementptr inbounds %Draw, %Draw* %objptr125, i32 0, i32 3
+  %n127 = load i32, i32* %n126
+  %tmp128 = icmp sgt i32 %tmp123, %n127
+  br i1 %tmp128, label %then130, label %else142
 
-while97:                                          ; preds = %block_end103, %block_end35
-  %x100 = load i32, i32* %x96
-  %board_width101 = load i32, i32* @"variable::board_width"
-  %tmp102 = icmp slt i32 %x100, %board_width101
-  br i1 %tmp102, label %while_body98, label %merge99
+while101:                                         ; preds = %block_end107, %block_end36
+  %x104 = load i32, i32* %x100
+  %board_width105 = load i32, i32* @"variable::board_width"
+  %tmp106 = icmp slt i32 %x104, %board_width105
+  br i1 %tmp106, label %while_body102, label %merge103
 
-while_body98:                                     ; preds = %while97
-  %subscript104 = getelementptr [24 x [10 x %objref]], [24 x [10 x %objref]]* %pieces, i32 0, i32 0
-  %x105 = load i32, i32* %x96
-  %subscript106 = getelementptr [10 x %objref], [10 x %objref]* %subscript104, i32 0, i32 %x105
-  store %objref zeroinitializer, %objref* %subscript106
-  %18 = load %objref, %objref* %subscript106
-  %le107 = load i32, i32* %x96
-  %Asn108 = add i32 %le107, 1
-  store i32 %Asn108, i32* %x96
-  %19 = load i32, i32* %x96
-  br label %block_end103
+while_body102:                                    ; preds = %while101
+  %x108 = load i32, i32* %x100
+  %pieces109 = getelementptr inbounds %Board, %Board* %objptr, i32 0, i32 2
+  %subscript110 = getelementptr [24 x [10 x %objref]], [24 x [10 x %objref]]* %pieces109, i32 0, i32 0
+  %subscript111 = getelementptr [10 x %objref], [10 x %objref]* %subscript110, i32 0, i32 %x108
+  store %objref zeroinitializer, %objref* %subscript111
+  %18 = load %objref, %objref* %subscript111
+  %le112 = load i32, i32* %x100
+  %Asn113 = add i32 %le112, 1
+  store i32 %Asn113, i32* %x100
+  %19 = load i32, i32* %x100
+  br label %block_end107
 
-merge99:                                          ; preds = %while97
-  br label %block_end95
+merge103:                                         ; preds = %while101
+  br label %block_end99
 
-block_end103:                                     ; preds = %while_body98
-  br label %while97
+block_end107:                                     ; preds = %while_body102
+  br label %while101
 
-merge138:                                         ; preds = %block_end164, %block_end140
-  %level_count165 = load %objref, %objref* @"variable::level_count"
-  %objptr_gen166 = extractvalue %objref %level_count165, 1
-  %objptr167 = bitcast %gameobj* %objptr_gen166 to %Draw*
-  %digits168 = getelementptr inbounds %Draw, %Draw* %objptr167, i32 0, i32 2
-  %n169 = getelementptr inbounds %Draw, %Draw* %objptr167, i32 0, i32 3
-  %height170 = getelementptr inbounds %Draw, %Draw* %objptr167, i32 0, i32 4
-  %width171 = getelementptr inbounds %Draw, %Draw* %objptr167, i32 0, i32 5
-  %y172 = getelementptr inbounds %Draw, %Draw* %objptr167, i32 0, i32 6
-  %x173 = getelementptr inbounds %Draw, %Draw* %objptr167, i32 0, i32 7
-  %spr174 = getelementptr inbounds %Draw, %Draw* %objptr167, i32 0, i32 8
-  %n175 = load i32, i32* %n169
-  %tmp176 = icmp sgt i32 %n175, 99
-  br i1 %tmp176, label %then178, label %else189
+merge129:                                         ; preds = %block_end143, %block_end131
+  %level_count144 = load %objref, %objref* @"variable::level_count"
+  %objptr_gen145 = extractvalue %objref %level_count144, 1
+  %objptr146 = bitcast %gameobj* %objptr_gen145 to %Draw*
+  %n147 = getelementptr inbounds %Draw, %Draw* %objptr146, i32 0, i32 3
+  %n148 = load i32, i32* %n147
+  %tmp149 = icmp sgt i32 %n148, 99
+  br i1 %tmp149, label %then151, label %else156
 
-then139:                                          ; preds = %block_end95
-  %lines_count141 = load %objref, %objref* @"variable::lines_count"
-  %objptr_gen142 = extractvalue %objref %lines_count141, 1
-  %objptr143 = bitcast %gameobj* %objptr_gen142 to %Draw*
-  %digits144 = getelementptr inbounds %Draw, %Draw* %objptr143, i32 0, i32 2
-  %n145 = getelementptr inbounds %Draw, %Draw* %objptr143, i32 0, i32 3
-  %height146 = getelementptr inbounds %Draw, %Draw* %objptr143, i32 0, i32 4
-  %width147 = getelementptr inbounds %Draw, %Draw* %objptr143, i32 0, i32 5
-  %y148 = getelementptr inbounds %Draw, %Draw* %objptr143, i32 0, i32 6
-  %x149 = getelementptr inbounds %Draw, %Draw* %objptr143, i32 0, i32 7
-  %spr150 = getelementptr inbounds %Draw, %Draw* %objptr143, i32 0, i32 8
-  %n151 = load i32, i32* %n145
-  %tmp152 = sdiv i32 %n151, 5
-  %level_count153 = load %objref, %objref* @"variable::level_count"
-  %objptr_gen154 = extractvalue %objref %level_count153, 1
-  %objptr155 = bitcast %gameobj* %objptr_gen154 to %Draw*
-  %digits156 = getelementptr inbounds %Draw, %Draw* %objptr155, i32 0, i32 2
-  %n157 = getelementptr inbounds %Draw, %Draw* %objptr155, i32 0, i32 3
-  %height158 = getelementptr inbounds %Draw, %Draw* %objptr155, i32 0, i32 4
-  %width159 = getelementptr inbounds %Draw, %Draw* %objptr155, i32 0, i32 5
-  %y160 = getelementptr inbounds %Draw, %Draw* %objptr155, i32 0, i32 6
-  %x161 = getelementptr inbounds %Draw, %Draw* %objptr155, i32 0, i32 7
-  %spr162 = getelementptr inbounds %Draw, %Draw* %objptr155, i32 0, i32 8
-  store i32 %tmp152, i32* %n157
-  %20 = load i32, i32* %n157
+then130:                                          ; preds = %block_end99
+  %level_count132 = load %objref, %objref* @"variable::level_count"
+  %objptr_gen133 = extractvalue %objref %level_count132, 1
+  %objptr134 = bitcast %gameobj* %objptr_gen133 to %Draw*
+  %n135 = getelementptr inbounds %Draw, %Draw* %objptr134, i32 0, i32 3
+  %lines_count136 = load %objref, %objref* @"variable::lines_count"
+  %objptr_gen137 = extractvalue %objref %lines_count136, 1
+  %objptr138 = bitcast %gameobj* %objptr_gen137 to %Draw*
+  %n139 = getelementptr inbounds %Draw, %Draw* %objptr138, i32 0, i32 3
+  %n140 = load i32, i32* %n139
+  %tmp141 = sdiv i32 %n140, 5
+  store i32 %tmp141, i32* %n135
+  %20 = load i32, i32* %n135
   %level = load %sfSound*, %sfSound** @"variable::snds::level"
   call void @"function:file-../../lib/sound.mg::play"(%sfSound* %level)
-  br label %block_end140
+  br label %block_end131
 
-block_end140:                                     ; preds = %then139
-  br label %merge138
+block_end131:                                     ; preds = %then130
+  br label %merge129
 
-else163:                                          ; preds = %block_end95
-  br label %block_end164
+else142:                                          ; preds = %block_end99
+  br label %block_end143
 
-block_end164:                                     ; preds = %else163
-  br label %merge138
+block_end143:                                     ; preds = %else142
+  br label %merge129
 
-merge177:                                         ; preds = %block_end190, %then178
+merge150:                                         ; preds = %block_end157, %then151
   ret i1 true
 
-then178:                                          ; preds = %merge138
-  %level_count179 = load %objref, %objref* @"variable::level_count"
-  %objptr_gen180 = extractvalue %objref %level_count179, 1
-  %objptr181 = bitcast %gameobj* %objptr_gen180 to %Draw*
-  %digits182 = getelementptr inbounds %Draw, %Draw* %objptr181, i32 0, i32 2
-  %n183 = getelementptr inbounds %Draw, %Draw* %objptr181, i32 0, i32 3
-  %height184 = getelementptr inbounds %Draw, %Draw* %objptr181, i32 0, i32 4
-  %width185 = getelementptr inbounds %Draw, %Draw* %objptr181, i32 0, i32 5
-  %y186 = getelementptr inbounds %Draw, %Draw* %objptr181, i32 0, i32 6
-  %x187 = getelementptr inbounds %Draw, %Draw* %objptr181, i32 0, i32 7
-  %spr188 = getelementptr inbounds %Draw, %Draw* %objptr181, i32 0, i32 8
-  store i32 99, i32* %n183
-  %21 = load i32, i32* %n183
-  br label %merge177
+then151:                                          ; preds = %merge129
+  %level_count152 = load %objref, %objref* @"variable::level_count"
+  %objptr_gen153 = extractvalue %objref %level_count152, 1
+  %objptr154 = bitcast %gameobj* %objptr_gen153 to %Draw*
+  %n155 = getelementptr inbounds %Draw, %Draw* %objptr154, i32 0, i32 3
+  store i32 99, i32* %n155
+  %21 = load i32, i32* %n155
+  br label %merge150
 
-else189:                                          ; preds = %merge138
-  br label %block_end190
+else156:                                          ; preds = %merge129
+  br label %block_end157
 
-block_end190:                                     ; preds = %else189
-  br label %merge177
+block_end157:                                     ; preds = %else156
+  br label %merge150
 
-postret191:                                       ; No predecessors!
+postret158:                                       ; No predecessors!
   br label %block_end
 }
 
@@ -4108,7 +3607,6 @@ entry:
   %thisref = load %objref, %objref* %this1
   %objptr_gen = extractvalue %objref %thisref, 1
   %objptr = bitcast %gameobj* %objptr_gen to %Board*
-  %pieces = getelementptr inbounds %Board, %Board* %objptr, i32 0, i32 2
   %lines = alloca i32
   store i32 0, i32* %lines
   %y = alloca i32
@@ -4165,35 +3663,23 @@ merge13:                                          ; preds = %merge18, %then14
   %score_count = load %objref, %objref* @"variable::score_count"
   %objptr_gen22 = extractvalue %objref %score_count, 1
   %objptr23 = bitcast %gameobj* %objptr_gen22 to %Draw*
-  %digits = getelementptr inbounds %Draw, %Draw* %objptr23, i32 0, i32 2
   %n = getelementptr inbounds %Draw, %Draw* %objptr23, i32 0, i32 3
-  %height = getelementptr inbounds %Draw, %Draw* %objptr23, i32 0, i32 4
-  %width = getelementptr inbounds %Draw, %Draw* %objptr23, i32 0, i32 5
-  %y24 = getelementptr inbounds %Draw, %Draw* %objptr23, i32 0, i32 6
-  %x = getelementptr inbounds %Draw, %Draw* %objptr23, i32 0, i32 7
-  %spr = getelementptr inbounds %Draw, %Draw* %objptr23, i32 0, i32 8
-  %le25 = load i32, i32* %n
-  %lines26 = load i32, i32* %lines
+  %le24 = load i32, i32* %n
+  %lines25 = load i32, i32* %lines
   %points = load [5 x i32], [5 x i32]* @"variable::points"
   %arr = alloca [5 x i32]
   store [5 x i32] %points, [5 x i32]* %arr
-  %2 = getelementptr [5 x i32], [5 x i32]* %arr, i32 0, i32 %lines26
+  %2 = getelementptr [5 x i32], [5 x i32]* %arr, i32 0, i32 %lines25
   %subscript = load i32, i32* %2
   %level_count = load %objref, %objref* @"variable::level_count"
-  %objptr_gen27 = extractvalue %objref %level_count, 1
-  %objptr28 = bitcast %gameobj* %objptr_gen27 to %Draw*
-  %digits29 = getelementptr inbounds %Draw, %Draw* %objptr28, i32 0, i32 2
-  %n30 = getelementptr inbounds %Draw, %Draw* %objptr28, i32 0, i32 3
-  %height31 = getelementptr inbounds %Draw, %Draw* %objptr28, i32 0, i32 4
-  %width32 = getelementptr inbounds %Draw, %Draw* %objptr28, i32 0, i32 5
-  %y33 = getelementptr inbounds %Draw, %Draw* %objptr28, i32 0, i32 6
-  %x34 = getelementptr inbounds %Draw, %Draw* %objptr28, i32 0, i32 7
-  %spr35 = getelementptr inbounds %Draw, %Draw* %objptr28, i32 0, i32 8
-  %n36 = load i32, i32* %n30
-  %tmp37 = add i32 %n36, 1
-  %tmp38 = mul i32 %subscript, %tmp37
-  %Asn39 = add i32 %le25, %tmp38
-  store i32 %Asn39, i32* %n
+  %objptr_gen26 = extractvalue %objref %level_count, 1
+  %objptr27 = bitcast %gameobj* %objptr_gen26 to %Draw*
+  %n28 = getelementptr inbounds %Draw, %Draw* %objptr27, i32 0, i32 3
+  %n29 = load i32, i32* %n28
+  %tmp30 = add i32 %n29, 1
+  %tmp31 = mul i32 %subscript, %tmp30
+  %Asn32 = add i32 %le24, %tmp31
+  store i32 %Asn32, i32* %n
   %3 = load i32, i32* %n
   br label %block_end
 
@@ -4355,31 +3841,19 @@ entry:
   %objptr_gen = extractvalue %objref %thisref, 1
   %objptr = bitcast %gameobj* %objptr_gen to %room*
   %objptr2 = bitcast %gameobj* %objptr_gen to %game_room*
-  %score_count = load %objref, %objref* @"variable::score_count"
-  %objptr_gen3 = extractvalue %objref %score_count, 1
-  %objptr4 = bitcast %gameobj* %objptr_gen3 to %Draw*
-  %digits = getelementptr inbounds %Draw, %Draw* %objptr4, i32 0, i32 2
-  %n = getelementptr inbounds %Draw, %Draw* %objptr4, i32 0, i32 3
-  %height = getelementptr inbounds %Draw, %Draw* %objptr4, i32 0, i32 4
-  %width = getelementptr inbounds %Draw, %Draw* %objptr4, i32 0, i32 5
-  %y = getelementptr inbounds %Draw, %Draw* %objptr4, i32 0, i32 6
-  %x = getelementptr inbounds %Draw, %Draw* %objptr4, i32 0, i32 7
-  %spr = getelementptr inbounds %Draw, %Draw* %objptr4, i32 0, i32 8
-  %n5 = load i32, i32* %n
   %top_count = load %objref, %objref* @"variable::top_count"
-  %objptr_gen6 = extractvalue %objref %top_count, 1
-  %objptr7 = bitcast %gameobj* %objptr_gen6 to %Draw*
-  %digits8 = getelementptr inbounds %Draw, %Draw* %objptr7, i32 0, i32 2
-  %n9 = getelementptr inbounds %Draw, %Draw* %objptr7, i32 0, i32 3
-  %height10 = getelementptr inbounds %Draw, %Draw* %objptr7, i32 0, i32 4
-  %width11 = getelementptr inbounds %Draw, %Draw* %objptr7, i32 0, i32 5
-  %y12 = getelementptr inbounds %Draw, %Draw* %objptr7, i32 0, i32 6
-  %x13 = getelementptr inbounds %Draw, %Draw* %objptr7, i32 0, i32 7
-  %spr14 = getelementptr inbounds %Draw, %Draw* %objptr7, i32 0, i32 8
-  store i32 %n5, i32* %n9
-  %0 = load i32, i32* %n9
-  %this15 = load %objref, %objref* %this1
-  call void @_empty_fn(%objref %this15)
+  %objptr_gen3 = extractvalue %objref %top_count, 1
+  %objptr4 = bitcast %gameobj* %objptr_gen3 to %Draw*
+  %n = getelementptr inbounds %Draw, %Draw* %objptr4, i32 0, i32 3
+  %score_count = load %objref, %objref* @"variable::score_count"
+  %objptr_gen5 = extractvalue %objref %score_count, 1
+  %objptr6 = bitcast %gameobj* %objptr_gen5 to %Draw*
+  %n7 = getelementptr inbounds %Draw, %Draw* %objptr6, i32 0, i32 3
+  %n8 = load i32, i32* %n7
+  store i32 %n8, i32* %n
+  %0 = load i32, i32* %n
+  %this9 = load %objref, %objref* %this1
+  call void @_empty_fn(%objref %this9)
   br label %block_end
 
 block_end:                                        ; preds = %entry
@@ -4570,35 +4044,35 @@ while:                                            ; preds = %block_end7, %entry
   br i1 %tmp, label %while_body, label %merge
 
 while_body:                                       ; preds = %while
-  %malloccall8 = tail call i8* @malloc(i32 ptrtoint (%Draw* getelementptr (%Draw, %Draw* null, i32 1) to i32))
-  %Draw = bitcast i8* %malloccall8 to %Draw*
+  %i8 = load i32, i32* %i
+  %subscript = getelementptr [7 x %objref], [7 x %objref]* @"variable::piece_counts", i32 0, i32 %i8
+  %malloccall9 = tail call i8* @malloc(i32 ptrtoint (%Draw* getelementptr (%Draw, %Draw* null, i32 1) to i32))
+  %Draw = bitcast i8* %malloccall9 to %Draw*
   store %Draw zeroinitializer, %Draw* %Draw
   %Draw_gen = bitcast %Draw* %Draw to %gameobj*
   %Draw_objnode = getelementptr inbounds %Draw, %Draw* %Draw, i32 0, i32 1
-  %marker9 = getelementptr inbounds %node, %node* %Draw_objnode, i32 0, i32 2
-  store i1 true, i1* %marker9
+  %marker10 = getelementptr inbounds %node, %node* %Draw_objnode, i32 0, i32 2
+  store i1 true, i1* %marker10
   call void @list_add(%node* %Draw_objnode, %node* @"node.object:file-/home/steven/Files/Desktop/Schoolwork/7/plt/makergame/demo/tetris/draw_numbers.mg::Draw.head")
   %Draw_parent = getelementptr inbounds %Draw, %Draw* %Draw, i32 0, i32 0
-  %object_objnode10 = getelementptr inbounds %gameobj, %gameobj* %Draw_parent, i32 0, i32 1
-  %marker11 = getelementptr inbounds %node, %node* %object_objnode10, i32 0, i32 2
-  store i1 true, i1* %marker11
-  call void @list_add(%node* %object_objnode10, %node* @node.gameobj.head)
-  %object_parent12 = getelementptr inbounds %gameobj, %gameobj* %Draw_parent, i32 0, i32 0
-  %old_id13 = load i64, i64* @last_objid
-  %new_id14 = add i64 %old_id13, 1
-  store i64 %new_id14, i64* @last_objid
+  %object_objnode11 = getelementptr inbounds %gameobj, %gameobj* %Draw_parent, i32 0, i32 1
+  %marker12 = getelementptr inbounds %node, %node* %object_objnode11, i32 0, i32 2
+  store i1 true, i1* %marker12
+  call void @list_add(%node* %object_objnode11, %node* @node.gameobj.head)
+  %object_parent13 = getelementptr inbounds %gameobj, %gameobj* %Draw_parent, i32 0, i32 0
+  %old_id14 = load i64, i64* @last_objid
+  %new_id15 = add i64 %old_id14, 1
+  store i64 %new_id15, i64* @last_objid
   %28 = getelementptr inbounds %gameobj, %gameobj* %Draw_gen, i32 0, i32 0
   store { void (%objref)*, void (%objref)*, void (%objref)*, void (%objref)* }* @Draw.vtable, { void (%objref)*, void (%objref)*, void (%objref)*, void (%objref)* }** %28
   %29 = getelementptr inbounds %gameobj, %gameobj* %Draw_gen, i32 0, i32 2
-  store i64 %new_id14, i64* %29
-  %30 = insertvalue %objref undef, i64 %new_id14, 0
+  store i64 %new_id15, i64* %29
+  %30 = insertvalue %objref undef, i64 %new_id15, 0
   %31 = insertvalue %objref %30, %gameobj* %Draw_gen, 1
-  %i15 = load i32, i32* %i
-  %tmp16 = mul i32 16, %i15
-  %tmp17 = add i32 88, %tmp16
-  call void @"object:file-/home/steven/Files/Desktop/Schoolwork/7/plt/makergame/demo/tetris/draw_numbers.mg::Draw.event.create"(%objref %31, i32 48, i32 %tmp17, i32 3)
-  %i18 = load i32, i32* %i
-  %subscript = getelementptr [7 x %objref], [7 x %objref]* @"variable::piece_counts", i32 0, i32 %i18
+  %i16 = load i32, i32* %i
+  %tmp17 = mul i32 16, %i16
+  %tmp18 = add i32 88, %tmp17
+  call void @"object:file-/home/steven/Files/Desktop/Schoolwork/7/plt/makergame/demo/tetris/draw_numbers.mg::Draw.event.create"(%objref %31, i32 48, i32 %tmp18, i32 3)
   store %objref %31, %objref* %subscript
   %32 = load %objref, %objref* %subscript
   %le = load i32, i32* %i
@@ -4638,7 +4112,6 @@ entry:
   %objptr_gen = extractvalue %objref %thisref, 1
   %objptr = bitcast %gameobj* %objptr_gen to %room*
   %objptr2 = bitcast %gameobj* %objptr_gen to %game_over*
-  %n = getelementptr inbounds %game_over, %game_over* %objptr2, i32 0, i32 2
   %timer = getelementptr inbounds %game_over, %game_over* %objptr2, i32 0, i32 3
   %timer3 = load i32, i32* %timer
   %game_over_fade = load i32, i32* @"variable::game_over_fade"
@@ -4671,41 +4144,37 @@ entry:
   %objptr_gen = extractvalue %objref %thisref, 1
   %objptr = bitcast %gameobj* %objptr_gen to %room*
   %objptr2 = bitcast %gameobj* %objptr_gen to %game_over*
-  %n = getelementptr inbounds %game_over, %game_over* %objptr2, i32 0, i32 2
   %timer = getelementptr inbounds %game_over, %game_over* %objptr2, i32 0, i32 3
   %le = load i32, i32* %timer
   %Asn = add i32 %le, 1
   store i32 %Asn, i32* %timer
   %0 = load i32, i32* %timer
-  %timer3 = load i32, i32* %timer
+  %timer3 = getelementptr inbounds %game_over, %game_over* %objptr2, i32 0, i32 3
+  %timer4 = load i32, i32* %timer3
   %game_over_fade = load i32, i32* @"variable::game_over_fade"
-  %tmp = icmp eq i32 %timer3, %game_over_fade
+  %tmp = icmp eq i32 %timer4, %game_over_fade
   br i1 %tmp, label %then, label %else
 
-block_end:                                        ; preds = %merge17
+block_end:                                        ; preds = %merge19
   ret void
 
-merge:                                            ; preds = %block_end5, %then
-  %timer6 = load i32, i32* %timer
-  %game_over_fade7 = load i32, i32* @"variable::game_over_fade"
+merge:                                            ; preds = %block_end6, %then
+  %timer7 = getelementptr inbounds %game_over, %game_over* %objptr2, i32 0, i32 3
+  %timer8 = load i32, i32* %timer7
+  %game_over_fade9 = load i32, i32* @"variable::game_over_fade"
   %game_over_delay = load i32, i32* @"variable::game_over_delay"
-  %tmp8 = add i32 %game_over_fade7, %game_over_delay
-  %tmp9 = icmp sge i32 %timer6, %tmp8
+  %tmp10 = add i32 %game_over_fade9, %game_over_delay
+  %tmp11 = icmp sge i32 %timer8, %tmp10
   %score_count = load %objref, %objref* @"variable::score_count"
-  %objptr_gen10 = extractvalue %objref %score_count, 1
-  %objptr11 = bitcast %gameobj* %objptr_gen10 to %Draw*
-  %digits = getelementptr inbounds %Draw, %Draw* %objptr11, i32 0, i32 2
-  %n12 = getelementptr inbounds %Draw, %Draw* %objptr11, i32 0, i32 3
-  %height = getelementptr inbounds %Draw, %Draw* %objptr11, i32 0, i32 4
-  %width = getelementptr inbounds %Draw, %Draw* %objptr11, i32 0, i32 5
-  %y = getelementptr inbounds %Draw, %Draw* %objptr11, i32 0, i32 6
-  %x = getelementptr inbounds %Draw, %Draw* %objptr11, i32 0, i32 7
-  %spr = getelementptr inbounds %Draw, %Draw* %objptr11, i32 0, i32 8
-  %n13 = load i32, i32* %n12
+  %objptr_gen12 = extractvalue %objref %score_count, 1
+  %objptr13 = bitcast %gameobj* %objptr_gen12 to %Draw*
+  %n = getelementptr inbounds %Draw, %Draw* %objptr13, i32 0, i32 3
   %n14 = load i32, i32* %n
-  %tmp15 = icmp slt i32 %n13, %n14
-  %tmp16 = and i1 %tmp9, %tmp15
-  br i1 %tmp16, label %then18, label %else66
+  %n15 = getelementptr inbounds %game_over, %game_over* %objptr2, i32 0, i32 2
+  %n16 = load i32, i32* %n15
+  %tmp17 = icmp slt i32 %n14, %n16
+  %tmp18 = and i1 %tmp11, %tmp17
+  br i1 %tmp18, label %then20, label %else53
 
 then:                                             ; preds = %entry
   %malloccall = tail call i8* @malloc(i32 ptrtoint (%Draw* getelementptr (%Draw, %Draw* null, i32 1) to i32))
@@ -4718,8 +4187,8 @@ then:                                             ; preds = %entry
   call void @list_add(%node* %Draw_objnode, %node* @"node.object:file-/home/steven/Files/Desktop/Schoolwork/7/plt/makergame/demo/tetris/draw_numbers.mg::Draw.head")
   %Draw_parent = getelementptr inbounds %Draw, %Draw* %Draw, i32 0, i32 0
   %object_objnode = getelementptr inbounds %gameobj, %gameobj* %Draw_parent, i32 0, i32 1
-  %marker4 = getelementptr inbounds %node, %node* %object_objnode, i32 0, i32 2
-  store i1 true, i1* %marker4
+  %marker5 = getelementptr inbounds %node, %node* %object_objnode, i32 0, i32 2
+  store i1 true, i1* %marker5
   call void @list_add(%node* %object_objnode, %node* @node.gameobj.head)
   %object_parent = getelementptr inbounds %gameobj, %gameobj* %Draw_parent, i32 0, i32 0
   %old_id = load i64, i64* @last_objid
@@ -4737,87 +4206,72 @@ then:                                             ; preds = %entry
   br label %merge
 
 else:                                             ; preds = %entry
-  br label %block_end5
+  br label %block_end6
 
-block_end5:                                       ; preds = %else
+block_end6:                                       ; preds = %else
   br label %merge
 
-merge17:                                          ; preds = %block_end67, %block_end19
-  %this68 = load %objref, %objref* %this1
-  call void @_empty_fn(%objref %this68)
+merge19:                                          ; preds = %block_end54, %block_end21
+  %this55 = load %objref, %objref* %this1
+  call void @_empty_fn(%objref %this55)
   br label %block_end
 
-then18:                                           ; preds = %merge
+then20:                                           ; preds = %merge
   %add = alloca i32
-  %n20 = load i32, i32* %n
-  %game_over_delay21 = load i32, i32* @"variable::game_over_delay"
-  %tmp22 = sdiv i32 %n20, %game_over_delay21
-  %tmp23 = sdiv i32 %tmp22, 2
-  %tmp24 = add i32 %tmp23, 1
-  store i32 %tmp24, i32* %add
-  %score_count25 = load %objref, %objref* @"variable::score_count"
-  %objptr_gen26 = extractvalue %objref %score_count25, 1
-  %objptr27 = bitcast %gameobj* %objptr_gen26 to %Draw*
-  %digits28 = getelementptr inbounds %Draw, %Draw* %objptr27, i32 0, i32 2
-  %n29 = getelementptr inbounds %Draw, %Draw* %objptr27, i32 0, i32 3
-  %height30 = getelementptr inbounds %Draw, %Draw* %objptr27, i32 0, i32 4
-  %width31 = getelementptr inbounds %Draw, %Draw* %objptr27, i32 0, i32 5
-  %y32 = getelementptr inbounds %Draw, %Draw* %objptr27, i32 0, i32 6
-  %x33 = getelementptr inbounds %Draw, %Draw* %objptr27, i32 0, i32 7
-  %spr34 = getelementptr inbounds %Draw, %Draw* %objptr27, i32 0, i32 8
-  %le35 = load i32, i32* %n29
-  %add36 = load i32, i32* %add
-  %Asn37 = add i32 %le35, %add36
-  store i32 %Asn37, i32* %n29
-  %6 = load i32, i32* %n29
-  %score_count38 = load %objref, %objref* @"variable::score_count"
-  %objptr_gen39 = extractvalue %objref %score_count38, 1
-  %objptr40 = bitcast %gameobj* %objptr_gen39 to %Draw*
-  %digits41 = getelementptr inbounds %Draw, %Draw* %objptr40, i32 0, i32 2
-  %n42 = getelementptr inbounds %Draw, %Draw* %objptr40, i32 0, i32 3
-  %height43 = getelementptr inbounds %Draw, %Draw* %objptr40, i32 0, i32 4
-  %width44 = getelementptr inbounds %Draw, %Draw* %objptr40, i32 0, i32 5
-  %y45 = getelementptr inbounds %Draw, %Draw* %objptr40, i32 0, i32 6
-  %x46 = getelementptr inbounds %Draw, %Draw* %objptr40, i32 0, i32 7
-  %spr47 = getelementptr inbounds %Draw, %Draw* %objptr40, i32 0, i32 8
-  %n48 = load i32, i32* %n42
-  %n49 = load i32, i32* %n
-  %tmp50 = icmp sgt i32 %n48, %n49
-  br i1 %tmp50, label %then52, label %else64
+  %n22 = getelementptr inbounds %game_over, %game_over* %objptr2, i32 0, i32 2
+  %n23 = load i32, i32* %n22
+  %game_over_delay24 = load i32, i32* @"variable::game_over_delay"
+  %tmp25 = sdiv i32 %n23, %game_over_delay24
+  %tmp26 = sdiv i32 %tmp25, 2
+  %tmp27 = add i32 %tmp26, 1
+  store i32 %tmp27, i32* %add
+  %score_count28 = load %objref, %objref* @"variable::score_count"
+  %objptr_gen29 = extractvalue %objref %score_count28, 1
+  %objptr30 = bitcast %gameobj* %objptr_gen29 to %Draw*
+  %n31 = getelementptr inbounds %Draw, %Draw* %objptr30, i32 0, i32 3
+  %le32 = load i32, i32* %n31
+  %add33 = load i32, i32* %add
+  %Asn34 = add i32 %le32, %add33
+  store i32 %Asn34, i32* %n31
+  %6 = load i32, i32* %n31
+  %score_count35 = load %objref, %objref* @"variable::score_count"
+  %objptr_gen36 = extractvalue %objref %score_count35, 1
+  %objptr37 = bitcast %gameobj* %objptr_gen36 to %Draw*
+  %n38 = getelementptr inbounds %Draw, %Draw* %objptr37, i32 0, i32 3
+  %n39 = load i32, i32* %n38
+  %n40 = getelementptr inbounds %game_over, %game_over* %objptr2, i32 0, i32 2
+  %n41 = load i32, i32* %n40
+  %tmp42 = icmp sgt i32 %n39, %n41
+  br i1 %tmp42, label %then44, label %else51
 
-block_end19:                                      ; preds = %merge51
-  br label %merge17
+block_end21:                                      ; preds = %merge43
+  br label %merge19
 
-merge51:                                          ; preds = %block_end65, %then52
-  br label %block_end19
+merge43:                                          ; preds = %block_end52, %then44
+  br label %block_end21
 
-then52:                                           ; preds = %then18
-  %n53 = load i32, i32* %n
-  %score_count54 = load %objref, %objref* @"variable::score_count"
-  %objptr_gen55 = extractvalue %objref %score_count54, 1
-  %objptr56 = bitcast %gameobj* %objptr_gen55 to %Draw*
-  %digits57 = getelementptr inbounds %Draw, %Draw* %objptr56, i32 0, i32 2
-  %n58 = getelementptr inbounds %Draw, %Draw* %objptr56, i32 0, i32 3
-  %height59 = getelementptr inbounds %Draw, %Draw* %objptr56, i32 0, i32 4
-  %width60 = getelementptr inbounds %Draw, %Draw* %objptr56, i32 0, i32 5
-  %y61 = getelementptr inbounds %Draw, %Draw* %objptr56, i32 0, i32 6
-  %x62 = getelementptr inbounds %Draw, %Draw* %objptr56, i32 0, i32 7
-  %spr63 = getelementptr inbounds %Draw, %Draw* %objptr56, i32 0, i32 8
-  store i32 %n53, i32* %n58
-  %7 = load i32, i32* %n58
-  br label %merge51
+then44:                                           ; preds = %then20
+  %score_count45 = load %objref, %objref* @"variable::score_count"
+  %objptr_gen46 = extractvalue %objref %score_count45, 1
+  %objptr47 = bitcast %gameobj* %objptr_gen46 to %Draw*
+  %n48 = getelementptr inbounds %Draw, %Draw* %objptr47, i32 0, i32 3
+  %n49 = getelementptr inbounds %game_over, %game_over* %objptr2, i32 0, i32 2
+  %n50 = load i32, i32* %n49
+  store i32 %n50, i32* %n48
+  %7 = load i32, i32* %n48
+  br label %merge43
 
-else64:                                           ; preds = %then18
-  br label %block_end65
+else51:                                           ; preds = %then20
+  br label %block_end52
 
-block_end65:                                      ; preds = %else64
-  br label %merge51
+block_end52:                                      ; preds = %else51
+  br label %merge43
 
-else66:                                           ; preds = %merge
-  br label %block_end67
+else53:                                           ; preds = %merge
+  br label %block_end54
 
-block_end67:                                      ; preds = %else66
-  br label %merge17
+block_end54:                                      ; preds = %else53
+  br label %merge19
 }
 
 define void @"object::game_over.event.create"(%objref %this, i32 %score) {
@@ -4830,10 +4284,9 @@ entry:
   %objptr_gen = extractvalue %objref %thisref, 1
   %objptr = bitcast %gameobj* %objptr_gen to %room*
   %objptr3 = bitcast %gameobj* %objptr_gen to %game_over*
-  %n = getelementptr inbounds %game_over, %game_over* %objptr3, i32 0, i32 2
-  %timer = getelementptr inbounds %game_over, %game_over* %objptr3, i32 0, i32 3
   %this4 = load %objref, %objref* %this1
   call void @"object:file-../../lib/game.mg::room.event.create"(%objref %this4)
+  %n = getelementptr inbounds %game_over, %game_over* %objptr3, i32 0, i32 2
   %score5 = load i32, i32* %score2
   store i32 %score5, i32* %n
   %0 = load i32, i32* %n
